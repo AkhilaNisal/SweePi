@@ -1,0 +1,154 @@
+<?xml version="1.0" ?>
+<sdf version="1.9">
+  <world name="empty_world">
+
+    <!-- ============================================================ -->
+    <!-- PHYSICS SIMULATION -->
+    <!-- ============================================================ -->
+    <physics name="default_physics" type="ode">
+      <!-- Maximum time for each simulation step (seconds) -->
+      <max_step_size>0.001</max_step_size>
+
+      <!-- Real-time factor: 1.0 = real-time, >1.0 = faster -->
+      <real_time_factor>1.0</real_time_factor>
+
+      <!-- Update rate for physics simulation (Hz) -->
+      <real_time_update_rate>1000</real_time_update_rate>
+
+      <!-- ODE solver parameters -->
+      <ode>
+        <solver>
+          <!-- Type of solver: quick, world -->
+          <type>quick</type>
+
+          <!-- Iterations for constraint solving -->
+          <iters>50</iters>
+
+          <!-- Successive over-relaxation parameter (0 < sor < 2) -->
+          <sor>1.3</sor>
+
+          <!-- Preconditioning: none, jacobi -->
+          <precon_iterations>0</precon_iterations>
+        </solver>
+
+        <!-- Contact constraints -->
+        <constraints>
+          <!-- CFM: Constraint Force Mixing -->
+          <cfm>0</cfm>
+
+          <!-- ERP: Error Reduction Parameter (0 < erp < 1) -->
+          <erp>0.2</erp>
+
+          <!-- Contact max correcting velocity (m/s) -->
+          <contact_max_correcting_vel>100.0</contact_max_correcting_vel>
+
+          <!-- Contact surface layer (meters) -->
+          <contact_surface_layer>0.001</contact_surface_layer>
+        </constraints>
+      </ode>
+    </physics>
+
+    <!-- ============================================================ -->
+    <!-- SCENE AND RENDERING -->
+    <!-- ============================================================ -->
+    <scene>
+      <!-- Ambient light color (RGBA) -->
+      <ambient>0.4 0.4 0.4 1.0</ambient>
+
+      <!-- Background color (RGB) -->
+      <background>0.7 0.7 0.7 1.0</background>
+
+      <!-- Enable shadows -->
+      <shadows>true</shadows>
+
+      <!-- Grid size -->
+      <grid>false</grid>
+    </scene>
+
+    <!-- ============================================================ -->
+    <!-- LIGHTING -->
+    <!-- ============================================================ -->
+    <!-- Sun/directional light -->
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+
+      <!-- Light position and orientation -->
+      <pose>0 0 10 0 0 0</pose>
+
+      <!-- Light colors -->
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+
+      <!-- Light attenuation -->
+      <attenuation>
+        <range>1000</range>
+        <linear>0.01</linear>
+        <constant>0.1</constant>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+
+      <!-- Light direction -->
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <!-- ============================================================ -->
+    <!-- GROUND PLANE -->
+    <!-- ============================================================ -->
+    <model name="ground_plane">
+      <!-- Static model (doesn't move) -->
+      <static>true</static>
+
+      <!-- Model link -->
+      <link name="link">
+        <!-- Collision for physics -->
+        <collision name="collision">
+          <geometry>
+            <!-- Infinite plane at z=0 -->
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+
+          <!-- Friction properties -->
+          <friction>
+            <ode>
+              <mu>1.0</mu>
+              <mu2>1.0</mu2>
+              <slip1>0</slip1>
+              <slip2>0</slip2>
+            </ode>
+          </friction>
+        </collision>
+
+        <!-- Visual representation -->
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+
+          <!-- Ground texture/material -->
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+            <specular>0.8 0.8 0.8 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ============================================================ -->
+    <!-- GRAVITY -->
+    <!-- ============================================================ -->
+    <gravity>0 0 -9.81</gravity>
+
+    <!-- ============================================================ -->
+    <!-- MAGNETIC FIELD -->
+    <!-- ============================================================ -->
+    <magnetic_field>0.000000 0.000000 0.000000</magnetic_field>
+
+  </world>
+</sdf>
