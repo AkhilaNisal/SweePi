@@ -3,5 +3,8 @@
 <robot name="sweepi" xmlns:xacro="http://www.ros.org/wiki/xacro">
 
   <xacro:include filename="robot_base.xacro"/>
+  <xacro:include filename="camera.xacro"/>
+  <xacro:include filename="lidar.xacro"/>
+  <xacro:include filename="robot_base_gazebo.xacro"/>
 
 </robot>
