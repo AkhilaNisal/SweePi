@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+
+<robot name="sweepi" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:include filename="robot_base.xacro"/>
+
+</robot>

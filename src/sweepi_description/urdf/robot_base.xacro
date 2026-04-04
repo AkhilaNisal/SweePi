@@ -1,0 +1,181 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:property name="body_radius"        value="0.200" />
+  <xacro:property name="body_height"        value="0.100" />
+  <xacro:property name="ground_clearance"   value="0.020" />
+
+  <xacro:property name="drive_wheel_radius" value="0.025" />
+  <xacro:property name="drive_wheel_width"  value="0.020" />
+  <xacro:property name="wheel_span"         value="0.300" />
+
+  <xacro:property name="caster_offset_x"    value="0.160" />
+
+  <xacro:property name="caster_radius"      value="${ground_clearance / 2.0}" />
+
+  <xacro:property name="base_joint_z"
+      value="${ground_clearance + body_height / 2.0}" />
+
+  <xacro:property name="wheel_z_offset"
+      value="${drive_wheel_radius - base_joint_z}" />
+
+  <xacro:property name="caster_z_offset"
+      value="${ground_clearance - caster_radius - base_joint_z}" />
+
+  <material name="white_gray">
+    <color rgba="0.88 0.88 0.85 1.0"/>
+  </material>
+
+  <material name="black">
+    <color rgba="0.10 0.10 0.10 1.0"/>
+  </material>
+
+  <material name="orange">
+    <color rgba="0.90 0.48 0.13 1.0"/>
+  </material>
+
+  <xacro:macro name="cylinder_inertia" params="m r l o_xyz o_rpy">
+    <inertial>
+      <mass value="${m}"/>
+      <origin xyz="${o_xyz}" rpy="${o_rpy}"/>
+      <inertia
+        ixx="${m * (3 * r * r + l * l) / 12.0}" ixy="0" ixz="0"
+        iyy="${m * (3 * r * r + l * l) / 12.0}" iyz="0"
+        izz="${m * r * r / 2.0}"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="sphere_inertia" params="m r o_xyz o_rpy">
+    <inertial>
+      <mass value="${m}"/>
+      <origin xyz="${o_xyz}" rpy="${o_rpy}"/>
+      <inertia
+        ixx="${2.0 * m * r * r / 5.0}" ixy="0" ixz="0"
+        iyy="${2.0 * m * r * r / 5.0}" iyz="0"
+        izz="${2.0 * m * r * r / 5.0}"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="body_inertia" params="m r h o_xyz o_rpy">
+    <inertial>
+      <mass value="${m}"/>
+      <origin xyz="${o_xyz}" rpy="${o_rpy}"/>
+      <inertia
+        ixx="${m * (3 * r * r + h * h) / 12.0}" ixy="0" ixz="0"
+        iyy="${m * (3 * r * r + h * h) / 12.0}" iyz="0"
+        izz="${m * r * r / 2.0}"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="drive_wheel_link" params="prefix">
+    <link name="${prefix}_wheel_link">
+      <visual>
+        <geometry>
+          <cylinder radius="${drive_wheel_radius}" length="${drive_wheel_width}"/>
+        </geometry>
+        <origin xyz="0 0 0" rpy="${pi / 2.0} 0 0"/>
+        <material name="black"/>
+      </visual>
+      <collision>
+        <geometry>
+          <sphere radius="${drive_wheel_radius}"/>
+        </geometry>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+      </collision>
+      <xacro:cylinder_inertia
+        m="0.15"
+        r="${drive_wheel_radius}"
+        l="${drive_wheel_width}"
+        o_xyz="0 0 0"
+        o_rpy="${pi / 2.0} 0 0"/>
+    </link>
+  </xacro:macro>
+
+  <xacro:drive_wheel_link prefix="right"/>
+  <xacro:drive_wheel_link prefix="left"/>
+
+  <xacro:macro name="caster_link" params="prefix">
+    <link name="${prefix}_caster_link">
+      <visual>
+        <geometry>
+          <sphere radius="${caster_radius}"/>
+        </geometry>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <material name="orange"/>
+      </visual>
+      <collision>
+        <geometry>
+          <sphere radius="${caster_radius}"/>
+        </geometry>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+      </collision>
+      <xacro:sphere_inertia
+        m="0.05"
+        r="${caster_radius}"
+        o_xyz="0 0 0"
+        o_rpy="0 0 0"/>
+    </link>
+  </xacro:macro>
+
+  <xacro:caster_link prefix="front"/>
+  <xacro:caster_link prefix="rear"/>
+
+  <link name="base_footprint"/>
+
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <cylinder radius="${body_radius}" length="${body_height}"/>
+      </geometry>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <material name="white_gray"/>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="${body_radius}" length="${body_height}"/>
+      </geometry>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </collision>
+    <xacro:body_inertia
+      m="3.0"
+      r="${body_radius}"
+      h="${body_height}"
+      o_xyz="0 0 0"
+      o_rpy="0 0 0"/>
+  </link>
+
+  <joint name="base_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child  link="base_link"/>
+    <origin xyz="0 0 ${base_joint_z}" rpy="0 0 0"/>
+  </joint>
+
+  <joint name="base_right_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child  link="right_wheel_link"/>
+    <origin xyz="0 ${-(wheel_span / 2.0)} ${wheel_z_offset}" rpy="0 0 0"/>
+    <axis   xyz="0 1 0"/>
+    <dynamics damping="0.01" friction="0.01"/>
+  </joint>
+
+  <joint name="base_left_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child  link="left_wheel_link"/>
+    <origin xyz="0 ${wheel_span / 2.0} ${wheel_z_offset}" rpy="0 0 0"/>
+    <axis   xyz="0 1 0"/>
+    <dynamics damping="0.01" friction="0.01"/>
+  </joint>
+
+  <joint name="base_front_caster_joint" type="fixed">
+    <parent link="base_link"/>
+    <child  link="front_caster_link"/>
+    <origin xyz="${caster_offset_x} 0 ${caster_z_offset}" rpy="0 0 0"/>
+  </joint>
+
+  <joint name="base_rear_caster_joint" type="fixed">
+    <parent link="base_link"/>
+    <child  link="rear_caster_link"/>
+    <origin xyz="${-caster_offset_x} 0 ${caster_z_offset}" rpy="0 0 0"/>
+  </joint>
+
+</robot>
