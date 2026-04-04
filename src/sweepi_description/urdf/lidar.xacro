@@ -41,40 +41,4 @@
     <origin xyz="${lidar_offset_x} 0 ${body_height / 2.0 + lidar_height / 2.0}" rpy="0 0 0"/>
   </joint>
 
-  <gazebo reference="lidar_link">
-    <sensor name="rplidar_c1" type="gpu_lidar">
-      <topic>scan</topic>
-      <update_rate>10</update_rate>
-      <always_on>1</always_on>
-      <visualize>true</visualize>
-      <lidar>
-        <scan>
-          <horizontal>
-            <samples>720</samples>
-            <resolution>1</resolution>
-            <min_angle>-3.14159</min_angle>
-            <max_angle>3.14159</max_angle>
-          </horizontal>
-        </scan>
-        <range>
-          <min>0.05</min>
-          <max>12.0</max>
-          <resolution>0.005</resolution>
-        </range>
-        <noise>
-          <type>gaussian</type>
-          <mean>0.0</mean>
-          <stddev>0.001</stddev>
-        </noise>
-      </lidar>
-    </sensor>
-  </gazebo>
-
-  <gazebo>
-    <plugin name="gz::sim::systems::Sensors"
-            filename="gz-sim-sensors-system">
-      <render_engine>ogre2</render_engine>
-    </plugin>
-  </gazebo>
-
 </robot>

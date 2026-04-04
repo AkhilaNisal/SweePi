@@ -1,0 +1,41 @@
+<launch>
+    <arg name="world" default="sweepi_world" />
+    
+    <let name="urdf_path" 
+        value="$(find-pkg-share sweepi_description)/urdf/sweepi.urdf.xacro" />
+    <let name="gazebo_config_path"
+        value="$(find-pkg-share sweepi_bringup)/config/gazebo_bridge.yaml" />
+    <let name="rviz_config_path" 
+        value="$(find-pkg-share sweepi_description)/rviz/urdf_config.rviz"/>
+    <let name="world_path"
+        value="$(find-pkg-share sweepi_bringup)/worlds/sweepi_world.sdf" />
+
+    <!-- robot_state_publisher: publishes TF from URDF + joint states -->
+    <node pkg="robot_state_publisher" exec="robot_state_publisher">
+        <param name="robot_description"
+            value="$(command 'xacro $(var urdf_path)')" />
+        <param name="use_sim_time" value="true" />
+    </node>
+
+    <!-- Start Gazebo with the world -->
+    <include file="$(find-pkg-share ros_gz_sim)/launch/gz_sim.launch.py">
+        <arg name="gz_args" value="$(var world_path) -r" />
+    </include>
+
+    <!-- Spawn the robot into Gazebo from robot_description topic -->
+    <node pkg="ros_gz_sim" exec="create"
+          args="-topic robot_description -name sweepi -z 0.05" />
+
+    <!-- Bridge Gazebo <-> ROS2 topics -->
+    <node pkg="ros_gz_bridge" exec="parameter_bridge">
+        <param name="config_file" value="$(var gazebo_config_path)" />
+        <param name="use_sim_time" value="true" />
+    </node>
+
+    <!-- RViz2 -->
+    <node pkg="rviz2" exec="rviz2" output="screen"
+          args="-d $(var rviz_config_path)">
+        <param name="use_sim_time" value="true" />
+    </node>
+
+</launch>
