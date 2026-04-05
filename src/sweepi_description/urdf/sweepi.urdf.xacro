@@ -6,10 +6,10 @@
 
   <!-- Include sensors (camera and lidar) -->
   <xacro:include filename="camera.xacro"/>
-  <xacro:include filename="lidar.xacro"/>
+  <!-- <xacro:include filename="lidar.xacro"/> -->
 
   <!-- Include Gazebo sensor plugins -->
-  <xacro:include filename="sensor_gazebo.xacro"/>
+  <!-- <xacro:include filename="sensor_gazebo.xacro"/> -->
 
   <!-- Include Gazebo base plugins and controller -->
   <xacro:include filename="robot_base_gazebo.xacro"/>

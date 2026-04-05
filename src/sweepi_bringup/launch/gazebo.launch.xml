@@ -4,7 +4,7 @@
     <let name="urdf_path" 
         value="$(find-pkg-share sweepi_description)/urdf/sweepi.urdf.xacro" />
     <let name="gazebo_config_path"
-        value="$(find-pkg-share sweepi_bringup)/config/gazebo_bridge.yaml" />
+        value="$(find-pkg-share sweepi_bringup)/config/gazebo.bridge.yaml" />
     <let name="rviz_config_path" 
         value="$(find-pkg-share sweepi_description)/rviz/urdf_config.rviz"/>
     <let name="world_path"
