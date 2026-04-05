@@ -1,21 +1,44 @@
-<sdf version='1.10'>
-  <world name='sweepi_world'>
-    <physics name='1ms' type='ignored'>
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <world name="sweepi_world">
+    <!-- Physics Engine -->
+    <physics type="ode">
       <max_step_size>0.001</max_step_size>
       <real_time_factor>1</real_time_factor>
       <real_time_update_rate>1000</real_time_update_rate>
+      <ode>
+        <solver>
+          <type>quick</type>
+          <iters>150</iters>
+          <precon_iters>0</precon_iters>
+          <sor>1.400000</sor>
+          <use_dynamic_moi_rescaling>1</use_dynamic_moi_rescaling>
+        </solver>
+        <constraints>
+          <cfm>0.00001</cfm>
+          <erp>0.2</erp>
+          <contact_max_correcting_vel>2000.000000</contact_max_correcting_vel>
+          <contact_surface_layer>0.01000</contact_surface_layer>
+        </constraints>
+      </ode>
     </physics>
-    <plugin name='gz::sim::systems::Physics' filename='gz-sim-physics-system'/>
-    <plugin name='gz::sim::systems::UserCommands' filename='gz-sim-user-commands-system'/>
-    <plugin name='gz::sim::systems::SceneBroadcaster' filename='gz-sim-scene-broadcaster-system'/>
-    <plugin name='gz::sim::systems::Contact' filename='gz-sim-contact-system'/>
-    <plugin name='gz::sim::systems::Sensors' filename='gz-sim-sensors-system'>
+
+    <!-- Gazebo Systems Plugins (CRITICAL for sensors) -->
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-contact-system" name="gz::sim::systems::Contact"/>
+    <!-- CRITICAL: Sensors system with ogre2 renderer for GPU LIDAR -->
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
       <render_engine>ogre2</render_engine>
     </plugin>
+    <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu"/>
 
+    <!-- Gravity and Magnetic Field -->
     <gravity>0 0 -9.81</gravity>
     <magnetic_field>5.5645e-06 2.28758e-05 -4.23884e-05</magnetic_field>
     
+    <!-- Scene Settings -->
     <scene>
       <ambient>0.4 0.4 0.4 1</ambient>
       <background>0.7 0.7 0.7 1</background>
@@ -23,10 +46,10 @@
     </scene>
 
     <!-- Ground Plane -->
-    <model name='ground_plane'>
+    <model name="ground_plane">
       <static>true</static>
-      <link name='link'>
-        <collision name='collision'>
+      <link name="link">
+        <collision name="collision">
           <geometry>
             <plane>
               <normal>0 0 1</normal>
@@ -41,7 +64,7 @@
             <contact/>
           </surface>
         </collision>
-        <visual name='visual'>
+        <visual name="visual">
           <geometry>
             <plane>
               <normal>0 0 1</normal>
@@ -58,17 +81,17 @@
     </model>
 
     <!-- Wall 1 (North) -->
-    <model name='wall_north'>
+    <model name="wall_north">
       <static>true</static>
-      <link name='link'>
-        <collision name='collision'>
+      <link name="link">
+        <collision name="collision">
           <geometry>
             <box>
               <size>5 0.1 1.0</size>
             </box>
           </geometry>
         </collision>
-        <visual name='visual'>
+        <visual name="visual">
           <geometry>
             <box>
               <size>5 0.1 1.0</size>
@@ -85,17 +108,17 @@
     </model>
 
     <!-- Wall 2 (South) -->
-    <model name='wall_south'>
+    <model name="wall_south">
       <static>true</static>
-      <link name='link'>
-        <collision name='collision'>
+      <link name="link">
+        <collision name="collision">
           <geometry>
             <box>
               <size>5 0.1 1.0</size>
             </box>
           </geometry>
         </collision>
-        <visual name='visual'>
+        <visual name="visual">
           <geometry>
             <box>
               <size>5 0.1 1.0</size>
@@ -112,17 +135,17 @@
     </model>
 
     <!-- Wall 3 (East) -->
-    <model name='wall_east'>
+    <model name="wall_east">
       <static>true</static>
-      <link name='link'>
-        <collision name='collision'>
+      <link name="link">
+        <collision name="collision">
           <geometry>
             <box>
               <size>0.1 5 1.0</size>
             </box>
           </geometry>
         </collision>
-        <visual name='visual'>
+        <visual name="visual">
           <geometry>
             <box>
               <size>0.1 5 1.0</size>
@@ -139,17 +162,17 @@
     </model>
 
     <!-- Wall 4 (West) -->
-    <model name='wall_west'>
+    <model name="wall_west">
       <static>true</static>
-      <link name='link'>
-        <collision name='collision'>
+      <link name="link">
+        <collision name="collision">
           <geometry>
             <box>
               <size>0.1 5 1.0</size>
             </box>
           </geometry>
         </collision>
-        <visual name='visual'>
+        <visual name="visual">
           <geometry>
             <box>
               <size>0.1 5 1.0</size>
@@ -165,12 +188,8 @@
       <pose>-2.5 0 0.5 0 0 0</pose>
     </model>
 
-   
-
-    
-
     <!-- Sun Light -->
-    <light name='sun' type='directional'>
+    <light name="sun" type="directional">
       <pose>0 0 10 0 0 0</pose>
       <cast_shadows>true</cast_shadows>
       <intensity>1</intensity>
@@ -184,6 +203,6 @@
         <quadratic>0.001</quadratic>
       </attenuation>
     </light>
-    
+
   </world>
 </sdf>
