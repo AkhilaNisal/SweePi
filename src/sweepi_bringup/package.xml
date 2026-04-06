@@ -9,14 +9,39 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
+  <!-- Core ROS2 Dependencies -->
+  <depend>rclcpp</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>std_msgs</depend>
 
-  <exec_depend>robot_state_publisher</exec_depend>
-  <exec_depend>ros_gz_sim</exec_depend>
-  <exec_depend>rviz2</exec_depend>
-  <exec_depend>ros_gz_bridge</exec_depend>
-  <exec_depend>controller_manager</exec_depend>
-  <exec_depend>sweepi_description</exec_depend>
-  <exec_depend>joint_state_publisher_gui</exec_depend>
+  <!-- Gazebo Simulation -->
+  <depend>gazebo</depend>
+  <depend>gazebo_ros</depend>
+  <depend>gazebo_ros2_control</depend>
+  <depend>gz_ros2_control</depend>
+  <depend>ros_gz</depend>
+  <depend>ros_gz_sim</depend>
+  <depend>ros_gz_bridge</depend>
+
+  <!-- Robot Control -->
+  <depend>robot_state_publisher</depend>
+  <depend>joint_state_publisher</depend>
+  <depend>joint_state_publisher_gui</depend>
+  <depend>urdf</depend>
+  <depend>xacro</depend>
+  <depend>controller_manager</depend>
+  <depend>diff_drive_controller</depend>
+
+  <!-- Visualization -->
+  <depend>rviz2</depend>
+  <depend>rviz_common</depend>
+
+  <!-- Package Dependencies -->
+  <depend>sweepi_description</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

@@ -1,57 +1,77 @@
 <?xml version="1.0"?>
+
 <launch>
-    <arg name="use_sim_time" default="true"/>
-    <arg name="x_pose" default="0.0"/>
-    <arg name="y_pose" default="0.0"/>
 
-    <let name="urdf_path" 
-        value="$(find-pkg-share sweepi_description)/urdf/sweepi.urdf.xacro" />
-    <let name="gazebo_config_path"
-        value="$(find-pkg-share sweepi_bringup)/config/gazebo.bridge.yaml" />
-    <let name="rviz_config_path" 
-        value="$(find-pkg-share sweepi_description)/rviz/urdf_config.rviz"/>
-    <let name="world_path"
-        value="$(find-pkg-share sweepi_bringup)/worlds/sweepi_world.world" />
+  <!-- Arguments -->
+  <arg name="use_sim_time" default="true"/>
+  <arg name="x_pose" default="0.0"/>
+  <arg name="y_pose" default="0.0"/>
+  <arg name="headless" default="false"/>
 
-    <!-- Gazebo Server -->
-    <include file="$(find-pkg-share ros_gz_sim)/launch/gz_sim.launch.py">
-        <arg name="gz_args" value="$(var world_path) -r -s -v2" />
-        <arg name="on_exit_shutdown" value="true" />
-    </include>
+  <!-- Path Variables -->
+  <let name="urdf_path"
+       value="$(find-pkg-share sweepi_description)/urdf/sweepi.urdf.xacro" />
 
-    <!-- Gazebo Client (GUI) -->
-    <include file="$(find-pkg-share ros_gz_sim)/launch/gz_sim.launch.py">
-        <arg name="gz_args" value="-g -v2" />
-        <arg name="on_exit_shutdown" value="true" />
-    </include>
+  <let name="gazebo_bridge_config"
+       value="$(find-pkg-share sweepi_bringup)/config/gazebo.bridge.yaml" />
 
-    <!-- Robot State Publisher -->
-    <node pkg="robot_state_publisher" exec="robot_state_publisher">
-        <param name="robot_description"
-            value="$(command 'xacro $(var urdf_path)')" />
-        <param name="use_sim_time" value="$(var use_sim_time)" />
-    </node>
+  <let name="rviz_config_path"
+       value="$(find-pkg-share sweepi_description)/rviz/urdf_config.rviz"/>
 
-    <!-- Spawn Robot -->
-    <node pkg="ros_gz_sim" exec="create"
-          args="-topic robot_description -name sweepi -x $(var x_pose) -y $(var y_pose) -z 0.05" />
+  <let name="world_path"
+       value="$(find-pkg-share sweepi_bringup)/worlds/sweepi_world.world" />
 
-    <!-- ROS-Gazebo Bridge -->
-    <node pkg="ros_gz_bridge" exec="parameter_bridge">
-        <param name="config_file" value="$(var gazebo_config_path)" />
-        <param name="use_sim_time" value="$(var use_sim_time)" />
-    </node>
+  <!-- Gazebo Server -->
+  <include file="$(find-pkg-share ros_gz_sim)/launch/gz_sim.launch.py">
+    <arg name="gz_args" value="-r -s $(var world_path)" />
+    <arg name="on_exit_shutdown" value="true" />
+  </include>
 
-    <!-- Static TF for LIDAR (FIXED: removed nested <name> tag) -->
-    <node pkg="tf2_ros" exec="static_transform_publisher" 
-          args="0 0 0.15 0 0 0 base_link base_scan"
-          name="lidar_static_tf" />
+<!-- Gazebo GUI (optional) -->
+<group unless="$(var headless)">
+  <include file="$(find-pkg-share ros_gz_sim)/launch/gz_sim.launch.py">
+    <arg name="gz_args" value="-g" />
+    <arg name="on_exit_shutdown" value="true" />
+  </include>
+</group>
+  <!-- Robot State Publisher -->
+  <node pkg="robot_state_publisher"
+        exec="robot_state_publisher"
+        name="robot_state_publisher"
+        output="screen">
+        
+    <param name="robot_description"
+           value="$(command 'xacro $(var urdf_path)')" />
+    <param name="use_sim_time" value="$(var use_sim_time)" />
+    <param name="publish_frequency" value="50.0" />
+  </node>
 
-    <!-- RViz -->
-    <node pkg="rviz2" exec="rviz2" output="screen"
-          args="-d $(var rviz_config_path)"
-          name="rviz2">
-        <param name="use_sim_time" value="$(var use_sim_time)" />
-    </node>
+  <!-- Spawn Robot -->
+  <node pkg="ros_gz_sim"
+        exec="create"
+        name="spawn_robot"
+        output="screen"
+        args="-topic robot_description -name sweepi -x $(var x_pose) -y $(var y_pose) -z 0.05" />
+
+  <!-- ROS-Gazebo Bridge -->
+  <node pkg="ros_gz_bridge"
+        exec="parameter_bridge"
+        name="ros_gz_bridge"
+        output="screen">
+        
+    <param name="config_file" value="$(var gazebo_bridge_config)" />
+    <param name="use_sim_time" value="$(var use_sim_time)" />
+    <param name="lazy_subscribers" value="false" />
+  </node>
+
+  <!-- RViz -->
+  <node pkg="rviz2"
+        exec="rviz2"
+        name="rviz2"
+        output="screen"
+        args="-d $(var rviz_config_path)">
+        
+    <param name="use_sim_time" value="$(var use_sim_time)" />
+  </node>
 
 </launch>
