@@ -42,9 +42,15 @@
         <param name="use_sim_time" value="$(var use_sim_time)" />
     </node>
 
+    <!-- Static TF for LIDAR (FIXED: removed nested <name> tag) -->
+    <node pkg="tf2_ros" exec="static_transform_publisher" 
+          args="0 0 0.15 0 0 0 base_link base_scan"
+          name="lidar_static_tf" />
+
     <!-- RViz -->
     <node pkg="rviz2" exec="rviz2" output="screen"
-          args="-d $(var rviz_config_path)">
+          args="-d $(var rviz_config_path)"
+          name="rviz2">
         <param name="use_sim_time" value="$(var use_sim_time)" />
     </node>
 
