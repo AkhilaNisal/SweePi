@@ -12,7 +12,6 @@
     <mu2>0.1</mu2>
   </gazebo>
 
-
   <!-- Differential Drive Controller -->
   <gazebo>
     <plugin filename="gz-sim-diff-drive-system"
