@@ -1,0 +1,158 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- =========================
+       CLIFF SENSOR PARAMETERS
+       ========================= -->
+  <!-- Detection range (meters) -->
+  <xacro:property name="cliff_min_range" value="0.01"/>
+  <xacro:property name="cliff_max_range" value="0.25"/>
+
+  <!-- Placement relative to base_link (which is at the center of the cylinder body) -->
+  <!-- Put them near the front-left / front-right under the chassis -->
+  <xacro:property name="cliff_x" value="${body_radius * 0.75}"/>
+  <xacro:property name="cliff_y" value="${body_radius * 0.55}"/>
+
+  <!-- base_link bottom is at z = -body_height/2 -->
+  <!-- place the sensor slightly above that bottom surface -->
+  <xacro:property name="cliff_z" value="${-body_height / 2.0 + 0.005}"/>
+
+  <!-- Small visual size for sensor body -->
+  <xacro:property name="cliff_box_x" value="0.02"/>
+  <xacro:property name="cliff_box_y" value="0.02"/>
+  <xacro:property name="cliff_box_z" value="0.01"/>
+
+  <!-- =========================
+       LEFT CLIFF SENSOR LINK
+       ========================= -->
+  <link name="cliff_left_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${cliff_box_x} ${cliff_box_y} ${cliff_box_z}"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${cliff_box_x} ${cliff_box_y} ${cliff_box_z}"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.01"/>
+      <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6"/>
+    </inertial>
+  </link>
+
+  <joint name="base_cliff_left_joint" type="fixed">
+    <parent link="base_link"/>
+    <child  link="cliff_left_link"/>
+    <!-- front-left underside -->
+    <origin xyz="${cliff_x} ${cliff_y} ${cliff_z}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- =========================
+       RIGHT CLIFF SENSOR LINK
+       ========================= -->
+  <link name="cliff_right_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${cliff_box_x} ${cliff_box_y} ${cliff_box_z}"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${cliff_box_x} ${cliff_box_y} ${cliff_box_z}"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.01"/>
+      <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6"/>
+    </inertial>
+  </link>
+
+  <joint name="base_cliff_right_joint" type="fixed">
+    <parent link="base_link"/>
+    <child  link="cliff_right_link"/>
+    <!-- front-right underside -->
+    <origin xyz="${cliff_x} ${-cliff_y} ${cliff_z}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- =========================
+       GAZEBO RAY SENSORS
+       ========================= -->
+  <!-- 
+       Ray sensor points along +X by default in its own frame.
+       To point DOWN (-Z), rotate about Y by -90deg.
+       If your rays point UP, change -1.57079632679 to +1.57079632679.
+  -->
+
+  <gazebo reference="cliff_left_link">
+    <sensor name="cliff_left" type="ray">
+      <pose>0 0 0 0 -1.57079632679 0</pose>
+      <always_on>1</always_on>
+      <update_rate>30</update_rate>
+      <visualize>false</visualize>
+      <topic>/cliff_left</topic>
+
+      <ray>
+        <scan>
+          <horizontal>
+            <samples>1</samples>
+            <resolution>1</resolution>
+            <min_angle>0.0001</min_angle>
+            <max_angle>0.005</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>${cliff_min_range}</min>
+          <max>${cliff_max_range}</max>
+          <resolution>0.001</resolution>
+        </range>
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.002</stddev>
+        </noise>
+      </ray>
+    </sensor>
+  </gazebo>
+
+  <gazebo reference="cliff_right_link">
+    <sensor name="cliff_right" type="ray">
+      <pose>0 0 0 0 -1.57079632679 0</pose>
+      <always_on>1</always_on>
+      <update_rate>30</update_rate>
+      <visualize>false</visualize>
+      <topic>/cliff_right</topic>
+
+      <ray>
+        <scan>
+          <horizontal>
+            <samples>1</samples>
+            <resolution>1</resolution>
+            <min_angle>0.0001</min_angle>
+            <max_angle>0.005</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>${cliff_min_range}</min>
+          <max>${cliff_max_range}</max>
+          <resolution>0.001</resolution>
+        </range>
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.002</stddev>
+        </noise>
+      </ray>
+    </sensor>
+  </gazebo>
+
+</robot>
