@@ -27,24 +27,34 @@
     <arg name="on_exit_shutdown" value="true" />
   </include>
 
-<!-- Gazebo GUI (optional) -->
-<group unless="$(var headless)">
-  <include file="$(find-pkg-share ros_gz_sim)/launch/gz_sim.launch.py">
-    <arg name="gz_args" value="-g" />
-    <arg name="on_exit_shutdown" value="true" />
-  </include>
-</group>
+  <!-- Gazebo GUI (optional) -->
+  <group unless="$(var headless)">
+    <include file="$(find-pkg-share ros_gz_sim)/launch/gz_sim.launch.py">
+      <arg name="gz_args" value="-g" />
+      <arg name="on_exit_shutdown" value="true" />
+    </include>
+  </group>
+
   <!-- Robot State Publisher -->
   <node pkg="robot_state_publisher"
         exec="robot_state_publisher"
         name="robot_state_publisher"
         output="screen">
-        
     <param name="robot_description"
            value="$(command 'xacro $(var urdf_path)')" />
     <param name="use_sim_time" value="$(var use_sim_time)" />
     <param name="publish_frequency" value="50.0" />
   </node>
+
+  <!-- FIX: provide TF for Gazebo scan frame_id so RViz can place /scan correctly -->
+  <!-- Your /scan.header.frame_id is: "sweepi/base_footprint/gpu_lidar"
+       but your TF tree uses: "base_footprint", "base_link", "lidar_link", ...
+       This creates the missing frame permanently. -->
+  <node pkg="tf2_ros"
+        exec="static_transform_publisher"
+        name="lidar_scan_frame_fix"
+        output="screen"
+        args="0 0 0 0 0 0 lidar_link sweepi/base_footprint/gpu_lidar" />
 
   <!-- Spawn Robot -->
   <node pkg="ros_gz_sim"
@@ -58,7 +68,6 @@
         exec="parameter_bridge"
         name="ros_gz_bridge"
         output="screen">
-        
     <param name="config_file" value="$(var gazebo_bridge_config)" />
     <param name="use_sim_time" value="$(var use_sim_time)" />
     <param name="lazy_subscribers" value="false" />
@@ -70,7 +79,6 @@
         name="rviz2"
         output="screen"
         args="-d $(var rviz_config_path)">
-        
     <param name="use_sim_time" value="$(var use_sim_time)" />
   </node>
 
