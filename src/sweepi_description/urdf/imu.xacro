@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <link name="imu_link"/>
+
+  <joint name="base_imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <!-- place it somewhere inside the body -->
+    <origin xyz="0 0 0.05" rpy="0 0 0"/>
+  </joint>
+
+  <gazebo reference="imu_link">
+    <sensor name="imu_sensor" type="imu">
+      <pose>0 0 0 0 0 0</pose>
+      <always_on>1</always_on>
+      <update_rate>100</update_rate>
+      <visualize>false</visualize>
+
+      <!-- This is the Gazebo transport topic -->
+      <topic>/imu</topic>
+
+      <imu>
+        <angular_velocity>
+          <x><noise type="gaussian"><mean>0</mean><stddev>0.0002</stddev></noise></x>
+          <y><noise type="gaussian"><mean>0</mean><stddev>0.0002</stddev></noise></y>
+          <z><noise type="gaussian"><mean>0</mean><stddev>0.0002</stddev></noise></z>
+        </angular_velocity>
+        <linear_acceleration>
+          <x><noise type="gaussian"><mean>0</mean><stddev>0.01</stddev></noise></x>
+          <y><noise type="gaussian"><mean>0</mean><stddev>0.01</stddev></noise></y>
+          <z><noise type="gaussian"><mean>0</mean><stddev>0.01</stddev></noise></z>
+        </linear_acceleration>
+      </imu>
+    </sensor>
+  </gazebo>
+
+</robot>
