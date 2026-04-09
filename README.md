@@ -1,2 +1,2 @@
-# SweePi
-Autonomous Cleaning Robot
+## SweePi
+Autonomous Cleaning Robot.
