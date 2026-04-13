@@ -161,8 +161,7 @@ Or open RViz manually and add:
 Override on launch:
 
 ```bash
-ros2 launch sweepi_exploration exploration.launch.py \
-  frontier_min_size:=10 cluster_distance:=0.8
+ros2 launch sweepi_exploration exploration.launch.py frontier_min_size:=10 cluster_distance:=0.8
 ```
 
 ### Nav2 parameters (`config/nav2_params.yaml`)

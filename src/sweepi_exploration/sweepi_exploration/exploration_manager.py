@@ -15,7 +15,6 @@ Architecture
 """
 
 import math
-import subprocess
 from datetime import datetime
 
 import numpy as np
@@ -230,11 +229,11 @@ class ExplorationManager(Node):
         if not frontiers:
             return None
 
-        # Sort by distance from map origin (proxy for robot position since we
-        # don't subscribe to /odom to keep the node lightweight)
+        # Sort by distance from map center (approximation for robot position since
+        # we don't subscribe to /odom to keep the node lightweight)
         info = self.map_info
-        origin_x = info.origin.position.x + info.width * info.resolution / 2.0
-        origin_y = info.origin.position.y + info.height * info.resolution / 2.0
+        origin_x = info.origin.position.x + (info.width / 2.0) * info.resolution
+        origin_y = info.origin.position.y + (info.height / 2.0) * info.resolution
 
         sorted_frontiers = sorted(
             frontiers,
@@ -360,6 +359,8 @@ class ExplorationManager(Node):
 
     def _save_map(self):
         """Save map via nav2_map_server map_saver_cli."""
+        import os
+        import subprocess
         self.get_logger().info('💾 Saving map...')
         try:
             from ament_index_python.packages import get_package_share_directory
