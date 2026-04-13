@@ -83,9 +83,9 @@
   </node>
 
    <!-- SLAM Toolbox - Online Async Mapping -->
-  <include file="$(find-pkg-share sweepi_slam)/launch/slam_toolbox.launch.py">
+  <!-- <include file="$(find-pkg-share sweepi_slam)/launch/slam_toolbox.launch.py">
     <arg name="use_sim_time" value="$(var use_sim_time)" />
-  </include>
+  </include> -->
 
   
 </launch>
