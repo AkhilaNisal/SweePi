@@ -10,7 +10,7 @@ find_package(ament_cmake_python REQUIRED)
 find_package(rclpy REQUIRED)
 
 # Install Python package
-ament_python_install_package(${PROJECT_NAME})
+ament_python_install_package(sweepi_exploration)
 
 # Install launch files
 install(
@@ -18,28 +18,22 @@ install(
   DESTINATION share/${PROJECT_NAME}/launch
 )
 
-# Install config files
-install(
-  DIRECTORY config/
-  DESTINATION share/${PROJECT_NAME}/config
-)
-
-# Install maps directory (initially empty, filled at runtime)
+# Install maps directory
 install(
   DIRECTORY maps/
   DESTINATION share/${PROJECT_NAME}/maps
 )
 
-# Install the exploration manager as an executable
+# Install executable
 install(
-  PROGRAMS
-    sweepi_exploration/exploration_manager.py
+  PROGRAMS sweepi_exploration/wavefront_explorer.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
-if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  ament_lint_auto_find_test_dependencies()
-endif()
+# Install config files
+install(
+  DIRECTORY config/
+  DESTINATION share/${PROJECT_NAME}/config
+)
 
 ament_package()

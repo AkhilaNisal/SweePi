@@ -1,0 +1,75 @@
+/**:
+  ros__parameters:
+    # ============================================================
+    # SweePi Wavefront Frontier Exploration Configuration
+    # ============================================================
+    
+    # Simulation Time
+    # Use simulation clock (Gazebo) instead of wall clock
+    use_sim_time: true
+    
+    # ============================================================
+    # Frontier Detection Parameters
+    # ============================================================
+    
+    # Minimum cells per frontier cluster
+    # - Higher = larger frontier clusters (faster but coarser)
+    # - Lower = more detailed frontier detection (slower but thorough)
+    # Range: 3-50 | Default: 15
+    frontier_min_size: 15
+    
+    # Distance threshold for clustering frontier cells (meters)
+    # - Higher = group distant frontiers together (fewer goals)
+    # - Lower = separate close frontiers (more goals)
+    # Range: 0.5-3.0 | Default: 1.5
+    cluster_distance: 1.5
+    
+    # ============================================================
+    # Exploration Loop Parameters
+    # ============================================================
+    
+    # How often to detect frontiers and send new goals (Hz)
+    # - Higher = more responsive (higher CPU load)
+    # - Lower = more relaxed (lower CPU load)
+    # Range: 0.5-10.0 | Default: 3.0
+    exploration_frequency: 3.0
+    
+    # Timeout for navigation goals (seconds)
+    # - Higher = more patient (robot waits longer at stuck goals)
+    # - Lower = more aggressive (abandons stuck goals faster)
+    # Range: 10-60 | Default: 30.0
+    nav_timeout: 30.0
+
+/**:
+  ros__parameters:
+    # ============================================================
+    # DOCUMENTATION
+    # ============================================================
+    # 
+    # TUNING GUIDE:
+    # 
+    # For FAST exploration (large areas):
+    #   frontier_min_size: 10
+    #   cluster_distance: 2.0
+    #   exploration_frequency: 2.0
+    # 
+    # For THOROUGH exploration (small detailed areas):
+    #   frontier_min_size: 5
+    #   cluster_distance: 0.8
+    #   exploration_frequency: 4.0
+    # 
+    # For EFFICIENT exploration (balance):
+    #   frontier_min_size: 12
+    #   cluster_distance: 1.2
+    #   exploration_frequency: 2.5
+    # 
+    # PARAMETER EFFECTS:
+    # 
+    # frontier_min_size ↑  → Fewer, larger frontiers → Faster exploration
+    # frontier_min_size ↓  → More, detailed frontiers → Thorough exploration
+    # 
+    # cluster_distance ↑   → Larger clusters → Robot moves less often
+    # cluster_distance ↓   → Smaller clusters → Robot explores more locally
+    # 
+    # exploration_frequency ↑  → More responsive → Higher CPU load
+    # exploration_frequency ↓  → Less responsive → Lower CPU load
