@@ -1,0 +1,23 @@
+# =============================================================================
+# planner_server.yaml – Global path planner configuration for SweePi
+# =============================================================================
+# Provides standalone configuration for the Nav2 planner server.
+# This file is sourced by exploration.launch.py so parameters can be
+# adjusted without editing the combined nav2_params.yaml.
+# =============================================================================
+
+planner_server:
+  ros__parameters:
+    use_sim_time: true
+    expected_planner_frequency: 20.0
+
+    # NavFn planner – reliable A* / Dijkstra global planner
+    planner_plugins: ["GridBased"]
+    GridBased:
+      plugin: "nav2_navfn_planner::NavfnPlanner"
+      # Euclidean tolerance (metres) when the goal cell is occupied
+      tolerance: 0.5
+      # Set true to use A* instead of Dijkstra
+      use_astar: false
+      # Allow planning through unknown space (important for exploration!)
+      allow_unknown: true

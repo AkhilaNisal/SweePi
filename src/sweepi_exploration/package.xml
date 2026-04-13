@@ -2,25 +2,38 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>sweepi_exploration</name>
-  <version>0.0.0</version>
-  <description>Autonomous frontier exploration for SweePi robot</description>
+  <version>0.1.0</version>
+  <description>Autonomous frontier exploration for SweePi robot using Nav2 and sweepi_slam</description>
   <maintainer email="wedamestrigean@gmail.com">akhila-wedamestrige</maintainer>
   <license>Apache-2.0</license>
 
-  <!-- Build tool -->
+  <!-- Build tools -->
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_cmake_python</buildtool_depend>
 
-  <!-- Core ROS 2 -->
+  <!-- Runtime: depends on the working SLAM package -->
+  <depend>sweepi_slam</depend>
+
+  <!-- Core ROS 2 Python -->
   <depend>rclpy</depend>
   <depend>std_msgs</depend>
   <depend>nav_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>sensor_msgs</depend>
+  <depend>action_msgs</depend>
 
-  <!-- Navigation -->
+  <!-- Nav2 – navigation stack -->
   <depend>nav2_msgs</depend>
+  <depend>nav2_bringup</depend>
+  <depend>nav2_bt_navigator</depend>
+  <depend>nav2_planner</depend>
+  <depend>nav2_controller</depend>
+  <depend>nav2_behaviors</depend>
+  <depend>nav2_lifecycle_manager</depend>
+  <depend>nav2_map_server</depend>
   <depend>nav2_util</depend>
+
+  <!-- TF2 -->
   <depend>tf2</depend>
   <depend>tf2_ros</depend>
   <depend>tf2_geometry_msgs</depend>
