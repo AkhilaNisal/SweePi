@@ -18,12 +18,6 @@ install(
   DESTINATION share/${PROJECT_NAME}/launch
 )
 
-# Install maps directory
-install(
-  DIRECTORY maps/
-  DESTINATION share/${PROJECT_NAME}/maps
-)
-
 # Install executable
 install(
   PROGRAMS sweepi_exploration/wavefront_explorer.py

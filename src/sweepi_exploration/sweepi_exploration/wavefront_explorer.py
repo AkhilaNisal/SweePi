@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-Wavefront-Based Frontier Explorer for SweePi (FINAL FIX)
-=========================================================
+Wavefront-Based Frontier Explorer for SweePi
+With automatic map saving on exploration completion
 """
 
 import math
+import os
 from collections import deque
 from datetime import datetime
 
@@ -20,21 +21,22 @@ from visualization_msgs.msg import Marker, MarkerArray
 
 
 class WavefrontExplorer(Node):
-    """Wavefront-based autonomous frontier explorer."""
+    """Wavefront-based autonomous frontier explorer with map saving."""
 
     def __init__(self):
         super().__init__('wavefront_explorer')
 
-        # Parameters
-        self.declare_parameter('exploration_frequency', 3.0)
+        # Declare only the parameters that come from launch file
         self.declare_parameter('frontier_min_size', 15)
         self.declare_parameter('cluster_distance', 1.5)
+        self.declare_parameter('exploration_frequency', 3.0)
         self.declare_parameter('nav_timeout', 30.0)
 
-        self.exploration_frequency = self.get_parameter('exploration_frequency').value
-        self.frontier_min_size = self.get_parameter('frontier_min_size').value
-        self.cluster_distance = self.get_parameter('cluster_distance').value
-        self.nav_timeout = self.get_parameter('nav_timeout').value
+        # Get parameters
+        self.frontier_min_size = int(self.get_parameter('frontier_min_size').value)
+        self.cluster_distance = float(self.get_parameter('cluster_distance').value)
+        self.exploration_frequency = float(self.get_parameter('exploration_frequency').value)
+        self.nav_timeout = float(self.get_parameter('nav_timeout').value)
 
         # State
         self.map_data = None
@@ -46,6 +48,9 @@ class WavefrontExplorer(Node):
         self.goals_attempted = 0
         self.start_time = None
         self.no_frontier_count = 0
+
+        # Setup maps directory
+        self.maps_dir = self._setup_maps_directory()
 
         # Subscribers
         self.map_sub = self.create_subscription(
@@ -64,8 +69,30 @@ class WavefrontExplorer(Node):
         self.timer = self.create_timer(self.exploration_frequency, self.explore)
 
         self.get_logger().info('🤖 Wavefront Explorer READY')
-        self.get_logger().info(f'   frontier_min_size={self.frontier_min_size}')
-        self.get_logger().info(f'   cluster_distance={self.cluster_distance}')
+        self.get_logger().info(f'   ⚙️  frontier_min_size: {self.frontier_min_size}')
+        self.get_logger().info(f'   ⚙️  cluster_distance: {self.cluster_distance}m')
+        self.get_logger().info(f'   ⚙️  exploration_frequency: {self.exploration_frequency}Hz')
+        self.get_logger().info(f'   ⚙️  nav_timeout: {self.nav_timeout}s')
+        self.get_logger().info(f'   📁 Maps directory: {self.maps_dir}')
+
+    def _setup_maps_directory(self):
+        """Setup maps directory in SweePi root."""
+        # Try to find SweePi home directory
+        home = os.path.expanduser('~')
+        maps_dir = os.path.join(home, 'SweePi', 'maps')
+        
+        # Create directory if it doesn't exist
+        try:
+            os.makedirs(maps_dir, exist_ok=True)
+            self.get_logger().info(f'✅ Maps directory ready: {maps_dir}')
+        except Exception as e:
+            self.get_logger().warn(f'⚠️  Could not create maps directory: {e}')
+            # Fallback to /tmp
+            maps_dir = '/tmp/swepi_maps'
+            os.makedirs(maps_dir, exist_ok=True)
+            self.get_logger().info(f'   Using fallback: {maps_dir}')
+        
+        return maps_dir
 
     def map_callback(self, msg):
         """Receive occupancy grid map."""
@@ -236,11 +263,98 @@ class WavefrontExplorer(Node):
             self.navigating = False
 
     def _finish_exploration(self):
-        """Complete exploration."""
+        """Complete exploration and save map."""
         elapsed = (datetime.now() - self.start_time).total_seconds()
         self.get_logger().info('✅ EXPLORATION COMPLETE')
-        self.get_logger().info(f'   Time: {elapsed:.1f}s | Goals: {self.goals_reached}/{self.goals_attempted}')
+        self.get_logger().info(f'   ⏱️  Time: {elapsed:.1f}s')
+        self.get_logger().info(f'   🎯 Goals: {self.goals_reached}/{self.goals_attempted}')
+        
+        # Save map
+        self._save_map(elapsed)
+        
         self.exploration_active = False
+
+    def _save_map(self, exploration_time):
+        """Save map to SweePi/maps directory."""
+        try:
+            # Generate timestamp
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            
+            # Create map files
+            map_name = f'swepi_exploration_map_{timestamp}'
+            pgm_file = os.path.join(self.maps_dir, f'{map_name}.pgm')
+            yaml_file = os.path.join(self.maps_dir, f'{map_name}.yaml')
+            
+            # ============================================================
+            # Save PGM (image) file
+            # ============================================================
+            self._save_pgm_file(pgm_file)
+            
+            # ============================================================
+            # Save YAML metadata file
+            # ============================================================
+            self._save_yaml_file(yaml_file, pgm_file, exploration_time)
+            
+            self.get_logger().info('✅ Map saved successfully!')
+            self.get_logger().info(f'   📄 PGM: {pgm_file}')
+            self.get_logger().info(f'   📄 YAML: {yaml_file}')
+            
+        except Exception as e:
+            self.get_logger().error(f'❌ Failed to save map: {e}')
+
+    def _save_pgm_file(self, filename):
+        """Save map as PGM image file."""
+        # Convert occupancy grid to image
+        # 0 = free (white), 100 = occupied (black), -1 = unknown (gray)
+        height, width = self.map_data.shape
+        image_data = np.zeros((height, width), dtype=np.uint8)
+        
+        for y in range(height):
+            for x in range(width):
+                cell = self.map_data[y, x]
+                if cell == -1:  # Unknown
+                    image_data[y, x] = 128
+                elif cell == 0:  # Free
+                    image_data[y, x] = 255
+                else:  # Occupied
+                    image_data[y, x] = 0
+        
+        # Write PGM file
+        with open(filename, 'wb') as f:
+            # PGM header
+            f.write(b'P5\n')
+            f.write(f'{width} {height}\n'.encode())
+            f.write(b'255\n')
+            # Image data
+            f.write(image_data.tobytes())
+        
+        self.get_logger().info(f'   💾 Saved PGM: {width}x{height}')
+
+    def _save_yaml_file(self, filename, pgm_file, exploration_time):
+        """Save map metadata as YAML file."""
+        yaml_content = f"""image: {os.path.basename(pgm_file)}
+resolution: {self.map_info.resolution}
+origin: [{self.map_info.origin.position.x}, {self.map_info.origin.position.y}, 0.0]
+negate: 0
+occupied_thresh: 0.65
+free_thresh: 0.196
+
+# SweePi Exploration Metadata
+swepi_metadata:
+  timestamp: {datetime.now().isoformat()}
+  exploration_time: {exploration_time:.2f}
+  goals_reached: {self.goals_reached}
+  goals_attempted: {self.goals_attempted}
+  frontier_min_size: {self.frontier_min_size}
+  cluster_distance: {self.cluster_distance}
+  map_width: {self.map_info.width}
+  map_height: {self.map_info.height}
+"""
+        
+        with open(filename, 'w') as f:
+            f.write(yaml_content)
+        
+        self.get_logger().info(f'   💾 Saved YAML metadata')
 
     def _publish_frontier_markers(self, frontiers):
         """Visualize frontiers."""
@@ -264,10 +378,9 @@ class WavefrontExplorer(Node):
         self.frontier_pub.publish(marker_array)
 
     def _make_pose_stamped(self, x, y):
-        """Create PoseStamped with CORRECT current timestamp."""
+        """Create PoseStamped with correct timestamp."""
         pose = PoseStamped()
         pose.header.frame_id = 'map'
-        # CRITICAL: Use current ROS time, not wall clock time
         pose.header.stamp = self.get_clock().now().to_msg()
         pose.pose.position.x = x
         pose.pose.position.y = y
@@ -290,4 +403,5 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
+
 
