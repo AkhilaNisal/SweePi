@@ -1,0 +1,17 @@
+image: swepi_exploration_map_20260414_020940.pgm
+resolution: 0.05000000074505806
+origin: [-2.4739687000660973, -2.4649877610741227, 0.0]
+negate: 0
+occupied_thresh: 0.65
+free_thresh: 0.196
+
+swepi_metadata:
+  timestamp: 2026-04-14T02:09:40.739588
+  exploration_time: 108.93
+  goals_reached: 5
+  goals_attempted: 5
+  unreachable_frontiers: 0
+  frontier_min_size: 5
+  cluster_distance: 2.0
+  map_width: 99
+  map_height: 99
