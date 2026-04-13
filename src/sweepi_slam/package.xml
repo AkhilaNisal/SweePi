@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>sweepi_bringup</name>
+  <name>sweepi_slam</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
   <maintainer email="wedamestrigean@gmail.com">akhila-wedamestrige</maintainer>
@@ -9,40 +9,23 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <!-- Core ROS2 Dependencies -->
+   <!-- Core Dependencies -->
   <depend>rclcpp</depend>
-  <depend>geometry_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>nav_msgs</depend>
-  <depend>tf2</depend>
+  <depend>geometry_msgs</depend>
   <depend>tf2_ros</depend>
+  <depend>tf2</depend>
   <depend>std_msgs</depend>
 
-  <!-- Gazebo Simulation -->
-  <depend>gazebo</depend>
-  <depend>gazebo_ros</depend>
-  <depend>gazebo_ros2_control</depend>
-  <depend>gz_ros2_control</depend>
-  <depend>ros_gz</depend>
-  <depend>ros_gz_sim</depend>
-  <depend>ros_gz_bridge</depend>
-
-  <!-- Robot Control -->
-  <depend>robot_state_publisher</depend>
-  <depend>joint_state_publisher</depend>
-  <depend>joint_state_publisher_gui</depend>
-  <depend>urdf</depend>
-  <depend>xacro</depend>
-  <depend>controller_manager</depend>
-  <depend>diff_drive_controller</depend>
+  <!-- SLAM -->
+  <depend>slam_toolbox</depend>
+  <depend>nav2_map_server</depend>
 
   <!-- Visualization -->
   <depend>rviz2</depend>
-  <depend>rviz_common</depend>
+  <depend>visualization_msgs</depend>
 
-  <!-- Package Dependencies -->
-  <depend>sweepi_description</depend>
-  <depend>sweepi_slam</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
