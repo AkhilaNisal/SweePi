@@ -1,0 +1,13 @@
+image: swepi_exploration_map_20260415_153125.pgm
+resolution: 0.05000000074505806
+origin: [-6.373923295421541, -5.8332393349772165, 0.0]
+negate: 0
+occupied_thresh: 0.65
+free_thresh: 0.196
+
+swepi_metadata:
+  timestamp: 2026-04-15T15:31:25.695818
+  exploration_time: 245.22
+  goals_reached: 9
+  goals_attempted: 13
+  unreachable_areas: 4
