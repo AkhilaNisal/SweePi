@@ -1,7 +1,16 @@
 #!/usr/bin/env python3
 """
 Wavefront-Based Frontier Explorer for SweePi
-CRITICAL FIX: Smarter proximity blocking + connectivity check
+FIXES:
+  - nav_timeout reduced (12 s) so dead-end frontiers are abandoned quickly
+  - max_attempts_per_frontier reduced (2) so regions are blocked sooner
+  - max_total_timeouts reduced (7) for faster global termination
+  - max_exploration_time reduced (360 s) as a safety net
+  - frontier_min_size raised (10) to skip tiny unreachable edge fragments
+  - _has_clearance() now ignores unknown cells (treats only obstacles as blocked)
+  - Timeout path now records the failed goal as an unreachable area so the
+    connectivity-aware BFS filter learns from timeouts, not just nav failures
+  - attempt_penalty doubled (1000) so heavily-retried frontiers score worse
 """
 
 import math
@@ -29,10 +38,10 @@ class WavefrontExplorer(Node):
         # ============================================================
         # FRONTIER DETECTION PARAMETERS
         # ============================================================
-        self.declare_parameter('frontier_min_size', 8)
+        self.declare_parameter('frontier_min_size', 10)
         self.declare_parameter('cluster_distance', 1.5)
         self.declare_parameter('exploration_frequency', 5.0)
-        self.declare_parameter('nav_timeout', 25.0)
+        self.declare_parameter('nav_timeout', 12.0)
 
         # ============================================================
         # SPEED CONTROL PARAMETERS
@@ -44,9 +53,9 @@ class WavefrontExplorer(Node):
         # ============================================================
         # ATTEMPT LIMITING
         # ============================================================
-        self.declare_parameter('max_attempts_per_frontier', 3)
+        self.declare_parameter('max_attempts_per_frontier', 2)
         self.declare_parameter('max_consecutive_timeouts', 3)
-        self.declare_parameter('max_exploration_time', 600)
+        self.declare_parameter('max_exploration_time', 360)
 
         # ============================================================
         # WALL OFFSET PARAMETERS
@@ -118,7 +127,11 @@ class WavefrontExplorer(Node):
         # ============================================================
         self.consecutive_timeout_count = 0
         self.total_timeout_count = 0
-        self.max_total_timeouts = 10
+        self.max_total_timeouts = 7
+
+        # World coordinates of the frontier currently being navigated to.
+        # Saved so the timeout handler can record it as an unreachable area.
+        self.current_goal_world_pos = None
 
         # Setup maps directory
         self.maps_dir = self._setup_maps_directory()
@@ -301,7 +314,11 @@ class WavefrontExplorer(Node):
         return (frontier_x, frontier_y)
 
     def _has_clearance(self, x, y):
-        """Check if position has enough clearance."""
+        """Check if position has enough clearance from obstacles.
+
+        Unknown cells (-1) are not treated as obstacles so that frontier
+        goals near the edge of the mapped area are not incorrectly rejected.
+        """
         clearance_cells = int(self.min_clearance / self.map_info.resolution) + 1
         height, width = self.map_data.shape
 
@@ -309,7 +326,7 @@ class WavefrontExplorer(Node):
             for dy in range(-clearance_cells, clearance_cells + 1):
                 nx, ny = x + dx, y + dy
                 if 0 <= nx < width and 0 <= ny < height:
-                    if self.map_data[ny, nx] != 0:
+                    if self.map_data[ny, nx] > 0:  # obstacle only; unknown (-1) is allowed
                         return False
         return True
 
@@ -447,7 +464,7 @@ class WavefrontExplorer(Node):
             x, y, size, region_key = f
             distance = math.hypot(x - map_center_x, y - map_center_y)
             attempts = self._get_region_attempts(region_key)
-            attempt_penalty = attempts * 500  # REDUCED penalty - allow more retries
+            attempt_penalty = attempts * 1000  # Heavily penalise already-tried frontiers
             score = (size * 10) - distance - attempt_penalty
             return -score
 
@@ -490,13 +507,19 @@ class WavefrontExplorer(Node):
                 if self.current_goal_region:
                     self.blocked_regions.add(self.current_goal_region)
 
+                # BUG FIX: record the timed-out location so the connectivity-aware
+                # BFS filter can skip nearby frontiers in the same dead-end region.
+                if self.current_goal_world_pos is not None:
+                    self._add_unreachable_area(*self.current_goal_world_pos)
+                    self.current_goal_world_pos = None
+
                 if self.total_timeout_count >= self.max_total_timeouts:
-                    self.get_logger().warn(f'🛑 Max total timeouts')
+                    self.get_logger().warn(f'🛑 Max total timeouts ({self.max_total_timeouts})')
                     self._finish_exploration()
                     return
 
                 if self.consecutive_timeout_count >= self.max_consecutive_timeouts:
-                    self.get_logger().warn(f'🛑 Max consecutive timeouts')
+                    self.get_logger().warn(f'🛑 Max consecutive timeouts ({self.max_consecutive_timeouts})')
                     self._finish_exploration()
                     return
             return
@@ -540,6 +563,9 @@ class WavefrontExplorer(Node):
         self.region_attempts[region_key] += 1
 
         self.current_goal_region = region_key
+        # Store the raw frontier world position so the timeout handler can
+        # record it as an unreachable area if Nav2 cannot reach the goal.
+        self.current_goal_world_pos = (frontier_x, frontier_y)
         attempts = self.region_attempts[region_key]
 
         self.get_logger().info(
@@ -599,6 +625,7 @@ class WavefrontExplorer(Node):
         finally:
             self.navigating = False
             self.current_goal_handle = None
+            self.current_goal_world_pos = None
 
     def _mark_frontier_failed(self, region_key, frontier_x, frontier_y):
         """Mark frontier as failed."""
