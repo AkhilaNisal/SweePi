@@ -17,11 +17,11 @@ def generate_launch_description():
     declare_frontier_min_size = DeclareLaunchArgument(
         'frontier_min_size', default_value='5')
     declare_cluster_distance = DeclareLaunchArgument(
-        'cluster_distance', default_value='1.2')
+        'cluster_distance', default_value='1.2') # 1.2
     declare_exploration_frequency = DeclareLaunchArgument(
         'exploration_frequency', default_value='3.0')
     declare_nav_timeout = DeclareLaunchArgument(
-        'nav_timeout', default_value='25.0')
+        'nav_timeout', default_value='15.0')
     declare_max_velocity = DeclareLaunchArgument(
         'max_velocity', default_value='0.1')
     declare_max_angular_velocity = DeclareLaunchArgument(

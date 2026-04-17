@@ -18,8 +18,13 @@
   <let name="rviz_config_path"
        value="$(find-pkg-share sweepi_description)/rviz/urdf_config.rviz"/>
 
+  <!-- <let name="world_path"
+       value="$(find-pkg-share sweepi_bringup)/worlds/sweepi_world.world" /> -->
+  <!-- <let name="world_path"
+       value="$(find-pkg-share sweepi_bringup)/worlds/turtlebot3_house.world" /> -->
   <let name="world_path"
-       value="$(find-pkg-share sweepi_bringup)/worlds/sweepi_world.world" />
+       value="$(find-pkg-share sweepi_bringup)/worlds/world2.sdf" />
+
 
   <!-- Gazebo Server -->
   <include file="$(find-pkg-share ros_gz_sim)/launch/gz_sim.launch.py">
