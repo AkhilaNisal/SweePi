@@ -56,6 +56,7 @@ class WavefrontExplorer(Node):
         self.declare_parameter('max_attempts_per_frontier', 2)
         self.declare_parameter('max_consecutive_timeouts', 3)
         self.declare_parameter('max_exploration_time', 360)
+        self.declare_parameter('max_total_timeouts', 7)
 
         # ============================================================
         # WALL OFFSET PARAMETERS
@@ -83,6 +84,7 @@ class WavefrontExplorer(Node):
         self.max_attempts_per_frontier = int(self.get_parameter('max_attempts_per_frontier').value)
         self.max_consecutive_timeouts = int(self.get_parameter('max_consecutive_timeouts').value)
         self.max_exploration_time = int(self.get_parameter('max_exploration_time').value)
+        self.max_total_timeouts = int(self.get_parameter('max_total_timeouts').value)
 
         self.goal_offset_distance = float(self.get_parameter('goal_offset_distance').value)
         self.robot_radius = float(self.get_parameter('robot_radius').value)
@@ -127,11 +129,10 @@ class WavefrontExplorer(Node):
         # ============================================================
         self.consecutive_timeout_count = 0
         self.total_timeout_count = 0
-        self.max_total_timeouts = 7
 
         # World coordinates of the frontier currently being navigated to.
         # Saved so the timeout handler can record it as an unreachable area.
-        self.current_goal_world_pos = None
+        self.current_frontier_world_pos = None
 
         # Setup maps directory
         self.maps_dir = self._setup_maps_directory()
@@ -509,9 +510,9 @@ class WavefrontExplorer(Node):
 
                 # BUG FIX: record the timed-out location so the connectivity-aware
                 # BFS filter can skip nearby frontiers in the same dead-end region.
-                if self.current_goal_world_pos is not None:
-                    self._add_unreachable_area(*self.current_goal_world_pos)
-                    self.current_goal_world_pos = None
+                if self.current_frontier_world_pos is not None:
+                    self._add_unreachable_area(*self.current_frontier_world_pos)
+                    self.current_frontier_world_pos = None
 
                 if self.total_timeout_count >= self.max_total_timeouts:
                     self.get_logger().warn(f'🛑 Max total timeouts ({self.max_total_timeouts})')
@@ -565,7 +566,7 @@ class WavefrontExplorer(Node):
         self.current_goal_region = region_key
         # Store the raw frontier world position so the timeout handler can
         # record it as an unreachable area if Nav2 cannot reach the goal.
-        self.current_goal_world_pos = (frontier_x, frontier_y)
+        self.current_frontier_world_pos = (frontier_x, frontier_y)
         attempts = self.region_attempts[region_key]
 
         self.get_logger().info(
@@ -625,7 +626,7 @@ class WavefrontExplorer(Node):
         finally:
             self.navigating = False
             self.current_goal_handle = None
-            self.current_goal_world_pos = None
+            self.current_frontier_world_pos = None
 
     def _mark_frontier_failed(self, region_key, frontier_x, frontier_y):
         """Mark frontier as failed."""
