@@ -22,6 +22,17 @@ def map_to_flat_index(map_x, map_y, width):
     return map_y * width + map_x
 
 
+def map_to_world(map_x, map_y, map_info):
+    """Convert map-cell coordinates to the cell-center world position."""
+    resolution = map_info.resolution
+    if resolution <= 0.0:
+        raise ValueError("Map resolution must be positive")
+
+    world_x = map_info.origin.position.x + (map_x + 0.5) * resolution
+    world_y = map_info.origin.position.y + (map_y + 0.5) * resolution
+    return world_x, world_y
+
+
 def in_bounds(map_x, map_y, width, height):
     """Return True when map-cell coordinates are inside the grid."""
     return 0 <= map_x < width and 0 <= map_y < height
@@ -32,3 +43,10 @@ def meters_to_cell_radius(radius_m, resolution):
     if resolution <= 0.0:
         raise ValueError("Map resolution must be positive")
     return max(0, int(math.ceil(radius_m / resolution)))
+
+
+def meters_to_cells(distance_m, resolution):
+    """Convert a metric distance to a whole number of grid cells."""
+    if resolution <= 0.0:
+        raise ValueError("Map resolution must be positive")
+    return max(1, int(distance_m / resolution))

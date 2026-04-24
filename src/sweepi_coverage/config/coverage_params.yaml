@@ -12,10 +12,37 @@ coverage_tracker_node:
 coverage_planner_node:
   ros__parameters:
     use_sim_time: true
+    coverage_map_topic: "/coverage_map"
+    coverage_path_topic: "/coverage_path"
+    planning_mask_topic: "/coverage_planning_mask"
+    coverage_percentage_topic: "/coverage_percentage"
+    coverage_stats_topic: "/coverage_stats"
+    coverage_cell_value: 50
+    coverage_spacing_m: 0.25
+    min_segment_length_m: 0.30
+    inflation_radius_m: 0.28
+    min_region_area_m2: 0.20
+    path_publish_rate_hz: 1.0
+    planning_direction: "auto"
+    publish_debug_mask: true
+    publish_debug_markers: true
+    replan_on_map_change: true
+    republish_last_path: true
 
 coverage_executor_node:
   ros__parameters:
     use_sim_time: true
+    coverage_path_topic: "/coverage_path"
+    coverage_waypoints_topic: "/coverage_waypoints"
+    coverage_waypoint_markers_topic: "/coverage_waypoint_markers"
+    coverage_waypoint_stats_topic: "/coverage_waypoint_stats"
+    waypoint_spacing_m: 0.75
+    min_turn_angle_deg: 45.0
+    min_waypoint_separation_m: 0.20
+    max_waypoints: 300
+    publish_waypoint_markers: true
+    waypoint_publish_rate_hz: 1.0
+    enable_nav2_execution: false
 
 coverage_manager_node:
   ros__parameters:
