@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
-"""Waypoint generator for Step 5 of the SweePi coverage system."""
+"""Waypoint generator and optional Nav2 executor for SweePi coverage."""
 
 import copy
 import math
 
 import rclpy
+from action_msgs.msg import GoalStatus
 from geometry_msgs.msg import Point
+from nav2_msgs.action import NavigateThroughPoses
 from nav_msgs.msg import Path
+from rclpy.action import ActionClient
+from rclpy.duration import Duration
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
+from rclpy.time import Time
 from std_msgs.msg import String
+from tf2_ros import Buffer, TransformException, TransformListener
 from visualization_msgs.msg import Marker, MarkerArray
 
 
@@ -30,13 +36,39 @@ class CoverageExecutorNode(Node):
             'coverage_waypoint_stats_topic',
             '/coverage_waypoint_stats',
         )
-        self.declare_parameter('waypoint_spacing_m', 0.75)
-        self.declare_parameter('min_turn_angle_deg', 45.0)
+        self.declare_parameter(
+            'coverage_execution_status_topic',
+            '/coverage_execution_status',
+        )
+        self.declare_parameter(
+            'coverage_current_batch_topic',
+            '/coverage_current_batch',
+        )
+        self.declare_parameter(
+            'coverage_nav2_feedback_topic',
+            '/coverage_nav2_feedback',
+        )
+        self.declare_parameter('waypoint_spacing_m', 0.4)
+        self.declare_parameter('min_turn_angle_deg', 35.0)
         self.declare_parameter('min_waypoint_separation_m', 0.20)
-        self.declare_parameter('max_waypoints', 300)
+        self.declare_parameter('max_waypoint_gap_m', 0.45)
+        self.declare_parameter('max_batch_segment_length_m', 0.5)
+        self.declare_parameter('max_waypoints', 200)
         self.declare_parameter('publish_waypoint_markers', True)
         self.declare_parameter('waypoint_publish_rate_hz', 1.0)
         self.declare_parameter('enable_nav2_execution', False)
+        self.declare_parameter('nav2_action_name', '/navigate_through_poses')
+        self.declare_parameter('max_waypoints_per_batch', 8)
+        self.declare_parameter('max_batches_to_execute', 1)
+        self.declare_parameter('wait_for_nav2_timeout_sec', 10.0)
+        self.declare_parameter('behavior_tree', '')
+        self.declare_parameter('recompute_waypoint_orientations', True)
+        self.declare_parameter('start_from_nearest_waypoint', True)
+        self.declare_parameter('retry_failed_batch', False)
+        self.declare_parameter('skip_failed_batch', False)
+        self.declare_parameter('max_retries_per_batch', 0)
+        self.declare_parameter('global_frame', 'map')
+        self.declare_parameter('robot_base_frame', 'base_link')
 
         self.coverage_path_topic = (
             self.get_parameter('coverage_path_topic').get_parameter_value().string_value
@@ -56,6 +88,21 @@ class CoverageExecutorNode(Node):
             .get_parameter_value()
             .string_value
         )
+        self.coverage_execution_status_topic = (
+            self.get_parameter('coverage_execution_status_topic')
+            .get_parameter_value()
+            .string_value
+        )
+        self.coverage_current_batch_topic = (
+            self.get_parameter('coverage_current_batch_topic')
+            .get_parameter_value()
+            .string_value
+        )
+        self.coverage_nav2_feedback_topic = (
+            self.get_parameter('coverage_nav2_feedback_topic')
+            .get_parameter_value()
+            .string_value
+        )
         self.waypoint_spacing_m = (
             self.get_parameter('waypoint_spacing_m').get_parameter_value().double_value
         )
@@ -64,6 +111,14 @@ class CoverageExecutorNode(Node):
         )
         self.min_waypoint_separation_m = (
             self.get_parameter('min_waypoint_separation_m')
+            .get_parameter_value()
+            .double_value
+        )
+        self.max_waypoint_gap_m = (
+            self.get_parameter('max_waypoint_gap_m').get_parameter_value().double_value
+        )
+        self.max_batch_segment_length_m = (
+            self.get_parameter('max_batch_segment_length_m')
             .get_parameter_value()
             .double_value
         )
@@ -83,22 +138,103 @@ class CoverageExecutorNode(Node):
         self.enable_nav2_execution = (
             self.get_parameter('enable_nav2_execution').get_parameter_value().bool_value
         )
+        self.nav2_action_name = (
+            self.get_parameter('nav2_action_name').get_parameter_value().string_value
+        )
+        self.max_waypoints_per_batch = (
+            self.get_parameter('max_waypoints_per_batch')
+            .get_parameter_value()
+            .integer_value
+        )
+        self.max_batches_to_execute = (
+            self.get_parameter('max_batches_to_execute')
+            .get_parameter_value()
+            .integer_value
+        )
+        self.wait_for_nav2_timeout_sec = (
+            self.get_parameter('wait_for_nav2_timeout_sec')
+            .get_parameter_value()
+            .double_value
+        )
+        self.behavior_tree = (
+            self.get_parameter('behavior_tree').get_parameter_value().string_value
+        )
+        self.recompute_waypoint_orientations = (
+            self.get_parameter('recompute_waypoint_orientations')
+            .get_parameter_value()
+            .bool_value
+        )
+        self.start_from_nearest_waypoint = (
+            self.get_parameter('start_from_nearest_waypoint')
+            .get_parameter_value()
+            .bool_value
+        )
+        self.retry_failed_batch = (
+            self.get_parameter('retry_failed_batch').get_parameter_value().bool_value
+        )
+        self.skip_failed_batch = (
+            self.get_parameter('skip_failed_batch').get_parameter_value().bool_value
+        )
+        self.max_retries_per_batch = (
+            self.get_parameter('max_retries_per_batch')
+            .get_parameter_value()
+            .integer_value
+        )
+        self.global_frame = (
+            self.get_parameter('global_frame').get_parameter_value().string_value
+        )
+        self.robot_base_frame = (
+            self.get_parameter('robot_base_frame').get_parameter_value().string_value
+        )
 
         self._sanitize_parameters()
 
+        self.execution_state = 'DISABLED'
         if self.enable_nav2_execution:
-            self.get_logger().warn(
-                'enable_nav2_execution is true, but Step 5 does not implement Nav2 '
-                'execution. No goals will be sent.'
+            self.nav2_action_client = ActionClient(
+                self,
+                NavigateThroughPoses,
+                self.nav2_action_name,
             )
+            self.nav2_wait_start_time = self.get_clock().now()
+            self.nav2_ready = False
+            self.execution_status = 'WAITING_FOR_NAV2'
+            self.execution_state = 'WAITING_FOR_NAV2'
+        else:
+            self.nav2_action_client = None
+            self.nav2_wait_start_time = None
+            self.nav2_ready = False
+            self.execution_status = 'EXECUTION_DISABLED'
+
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
 
         self.latest_input_path = None
         self.latest_path_checksum = None
         self.waypoints_dirty = False
         self.latest_waypoints = self._make_empty_path('map')
+        self.latest_execution_waypoints = self._make_empty_path('map')
+        self.latest_waypoints_checksum = None
+        self.pending_waypoints = None
+        self.pending_waypoints_checksum = None
         self.latest_markers = self._make_delete_markers('map')
         self.latest_stats_msg = String()
         self.latest_stats_msg.data = 'input_poses=0 waypoints=0 input_empty=true'
+        self.latest_base_stats_text = self.latest_stats_msg.data
+        self.latest_status_msg = String()
+        self.latest_status_msg.data = self.execution_status
+        self.latest_current_batch = self._make_empty_path('map')
+        self.execution_batches = []
+        self.current_batch_index = 0
+        self.executed_batch_count = 0
+        self.execution_active = False
+        self.execution_goal_in_flight = False
+        self.replan_received_during_execution = False
+        self.executed_waypoints_checksum = None
+        self.active_goal_signature = None
+        self.nav2_timeout_reported = False
+        self.selected_start_index = 0
+        self.current_batch_retry_count = 0
 
         qos = QoSProfile(
             depth=1,
@@ -110,6 +246,12 @@ class CoverageExecutorNode(Node):
             Path,
             self.coverage_path_topic,
             self.coverage_path_callback,
+            qos,
+        )
+        self.coverage_waypoints_sub = self.create_subscription(
+            Path,
+            self.coverage_waypoints_topic,
+            self.coverage_waypoints_callback,
             qos,
         )
         self.coverage_waypoints_pub = self.create_publisher(
@@ -127,18 +269,37 @@ class CoverageExecutorNode(Node):
             self.coverage_waypoint_stats_topic,
             qos,
         )
+        self.coverage_execution_status_pub = self.create_publisher(
+            String,
+            self.coverage_execution_status_topic,
+            qos,
+        )
+        self.coverage_current_batch_pub = self.create_publisher(
+            Path,
+            self.coverage_current_batch_topic,
+            qos,
+        )
+        self.coverage_nav2_feedback_pub = self.create_publisher(
+            String,
+            self.coverage_nav2_feedback_topic,
+            qos,
+        )
 
         publish_period = 1.0 / self.waypoint_publish_rate_hz
         self.timer = self.create_timer(publish_period, self.publish_outputs)
 
         self.get_logger().info(
             'Coverage waypoint generator started: path=%s, waypoints=%s, '
-            'markers=%s, stats=%s'
+            'markers=%s, stats=%s, execution_status=%s, current_batch=%s, '
+            'nav2_feedback=%s'
             % (
                 self.coverage_path_topic,
                 self.coverage_waypoints_topic,
                 self.coverage_waypoint_markers_topic,
                 self.coverage_waypoint_stats_topic,
+                self.coverage_execution_status_topic,
+                self.coverage_current_batch_topic,
+                self.coverage_nav2_feedback_topic,
             )
         )
 
@@ -152,19 +313,51 @@ class CoverageExecutorNode(Node):
         self.latest_input_path = msg
         self.waypoints_dirty = True
 
+    def coverage_waypoints_callback(self, msg):
+        """Store latest waypoint path for optional Nav2 batch execution."""
+        checksum = self._path_checksum(msg)
+        if checksum == self.latest_waypoints_checksum:
+            return
+
+        if self.execution_goal_in_flight:
+            self.pending_waypoints = copy.deepcopy(msg)
+            self.pending_waypoints_checksum = checksum
+            self.replan_received_during_execution = True
+            self._set_execution_status('REPLAN_RECEIVED_DURING_EXECUTION')
+            return
+
+        self.latest_waypoints_checksum = checksum
+        self.latest_execution_waypoints = copy.deepcopy(msg)
+
+        if self.enable_nav2_execution:
+            self.execution_active = False
+            self.execution_batches = []
+            self.current_batch_index = 0
+            self.executed_batch_count = 0
+            self.executed_waypoints_checksum = None
+            if self.execution_state in ('COMPLETED', 'FAILED'):
+                self.execution_state = 'WAITING_FOR_NAV2'
+
     def publish_outputs(self):
         """Regenerate dirty waypoints and republish the latest debug outputs."""
         if self.waypoints_dirty and self.latest_input_path is not None:
             result = self.generate_waypoints(self.latest_input_path)
             self.latest_waypoints = result['waypoints']
             self.latest_markers = result['markers']
-            self.latest_stats_msg.data = result['stats_text']
+            self.latest_base_stats_text = result['stats_text']
+            self.latest_stats_msg.data = self.latest_base_stats_text
             self.waypoints_dirty = False
             self.get_logger().info('Coverage waypoints: %s' % result['stats_text'])
+            self._store_execution_waypoints(self.latest_waypoints)
+
+        self._update_execution()
 
         stamp = self.get_clock().now().to_msg()
         self.latest_waypoints.header.stamp = stamp
         self.coverage_waypoints_pub.publish(self.latest_waypoints)
+
+        self.latest_current_batch.header.stamp = stamp
+        self.coverage_current_batch_pub.publish(self.latest_current_batch)
 
         if self.publish_waypoint_markers:
             for marker in self.latest_markers.markers:
@@ -172,6 +365,469 @@ class CoverageExecutorNode(Node):
             self.coverage_waypoint_markers_pub.publish(self.latest_markers)
 
         self.coverage_waypoint_stats_pub.publish(self.latest_stats_msg)
+        self.latest_status_msg.data = self.execution_status
+        self.coverage_execution_status_pub.publish(self.latest_status_msg)
+
+    def _store_execution_waypoints(self, waypoints):
+        checksum = self._path_checksum(waypoints)
+        if checksum == self.latest_waypoints_checksum:
+            return
+
+        if self.execution_goal_in_flight:
+            self.pending_waypoints = copy.deepcopy(waypoints)
+            self.pending_waypoints_checksum = checksum
+            self.replan_received_during_execution = True
+            self._set_execution_status('REPLAN_RECEIVED_DURING_EXECUTION')
+            return
+
+        self.latest_waypoints_checksum = checksum
+        self.latest_execution_waypoints = copy.deepcopy(waypoints)
+        self.execution_active = False
+        self.execution_batches = []
+        self.current_batch_index = 0
+        self.executed_batch_count = 0
+        self.executed_waypoints_checksum = None
+        if self.enable_nav2_execution and self.execution_state in (
+            'COMPLETED',
+            'FAILED',
+        ):
+            self.execution_state = 'WAITING_FOR_NAV2'
+
+    def _apply_pending_waypoints(self):
+        if self.pending_waypoints is None:
+            return
+
+        self.latest_execution_waypoints = copy.deepcopy(self.pending_waypoints)
+        self.latest_waypoints_checksum = self.pending_waypoints_checksum
+        self.pending_waypoints = None
+        self.pending_waypoints_checksum = None
+        self.replan_received_during_execution = False
+        self.execution_active = False
+        self.execution_batches = []
+        self.current_batch_index = 0
+        self.executed_waypoints_checksum = None
+        if self.enable_nav2_execution and self.execution_state in (
+            'COMPLETED',
+            'FAILED',
+        ):
+            self.execution_state = 'WAITING_FOR_NAV2'
+
+    def _update_execution(self):
+        if not self.enable_nav2_execution:
+            self.execution_state = 'DISABLED'
+            self._update_disabled_preview_batch()
+            self._set_execution_status('EXECUTION_DISABLED')
+            return
+
+        if self.execution_state in ('COMPLETED', 'FAILED'):
+            return
+
+        waypoint_count = len(self.latest_execution_waypoints.poses)
+        if waypoint_count == 0:
+            self.execution_state = 'WAITING_FOR_WAYPOINTS'
+            self.latest_current_batch = self._make_empty_path('map')
+            self._set_execution_status('WAITING_FOR_WAYPOINTS')
+            return
+
+        if not self._nav2_server_ready():
+            return
+
+        if self.execution_goal_in_flight:
+            return
+
+        if (
+            not self.execution_active
+            and self.latest_waypoints_checksum == self.executed_waypoints_checksum
+        ):
+            return
+
+        if not self.execution_active:
+            self.execution_batches = self._make_execution_batches(
+                self.latest_execution_waypoints
+            )
+            self.current_batch_index = 0
+            self.execution_active = bool(self.execution_batches)
+            if not self.execution_active:
+                self.executed_waypoints_checksum = self.latest_waypoints_checksum
+                self.execution_state = 'FAILED'
+                self._set_execution_status(
+                    'EXECUTION_FAILED reason=no_valid_batches'
+                )
+                return
+            self.execution_state = 'READY'
+            self.latest_current_batch = copy.deepcopy(self.execution_batches[0])
+            self._set_execution_status(
+                'READY_TO_EXECUTE batches=%d start_index=%d'
+                % (self._allowed_batch_count(), self.selected_start_index)
+            )
+            return
+
+        if self._execution_batch_limit_reached():
+            self.executed_waypoints_checksum = self.latest_waypoints_checksum
+            self.execution_active = False
+            self.execution_state = 'COMPLETED'
+            self._set_execution_status('EXECUTION_COMPLETED')
+            return
+
+        if self.current_batch_index >= len(self.execution_batches):
+            self.executed_waypoints_checksum = self.latest_waypoints_checksum
+            self.execution_active = False
+            self.execution_state = 'COMPLETED'
+            self._set_execution_status('EXECUTION_COMPLETED')
+            return
+
+        self._send_current_batch()
+
+    def _update_disabled_preview_batch(self):
+        batch = self._make_preview_batch(self.latest_execution_waypoints)
+        self.latest_current_batch = batch
+        if batch.poses:
+            self.latest_stats_msg.data = (
+                '%s execution_preview=EXECUTION_DISABLED_PREVIEW_BATCH poses=%d'
+                % (self.latest_base_stats_text, len(batch.poses))
+            )
+        else:
+            self.latest_stats_msg.data = (
+                '%s execution_preview=EXECUTION_DISABLED_PREVIEW_BATCH poses=0'
+                % self.latest_base_stats_text
+            )
+
+    def _make_preview_batch(self, waypoints):
+        if waypoints is None or not waypoints.poses:
+            frame_id = 'map'
+            if waypoints is not None and waypoints.header.frame_id:
+                frame_id = waypoints.header.frame_id
+            return self._make_empty_path(frame_id)
+
+        batches = self._make_execution_batches(waypoints)
+        if not batches:
+            return self._make_empty_path(waypoints.header.frame_id or 'map')
+
+        preview_index = 0
+        if self.max_batches_to_execute > 0:
+            preview_index = min(preview_index, self.max_batches_to_execute - 1)
+        return copy.deepcopy(batches[preview_index])
+
+    def _nav2_server_ready(self):
+        if self.nav2_ready:
+            return True
+
+        if self.nav2_action_client.server_is_ready():
+            self.nav2_ready = True
+            self.execution_state = 'READY'
+            return True
+
+        self.execution_state = 'WAITING_FOR_NAV2'
+        self._set_execution_status('WAITING_FOR_NAV2')
+        elapsed_sec = (
+            self.get_clock().now() - self.nav2_wait_start_time
+        ).nanoseconds / 1.0e9
+        if elapsed_sec > self.wait_for_nav2_timeout_sec:
+            if not self.nav2_timeout_reported:
+                self.get_logger().warn(
+                    'Nav2 action server %s was not available after %.1f seconds'
+                    % (self.nav2_action_name, elapsed_sec)
+                )
+                self.nav2_timeout_reported = True
+            self.execution_state = 'FAILED'
+            self._set_execution_status('EXECUTION_FAILED reason=nav2_timeout')
+        return False
+
+    def _make_execution_batches(self, waypoints):
+        frame_id = waypoints.header.frame_id
+        if not frame_id:
+            self.get_logger().warn(
+                'Waypoint path frame is empty; refusing to send Nav2 goals'
+            )
+            return []
+
+        source_poses = waypoints.poses
+        start_index = self._get_start_waypoint_index(source_poses)
+        self.selected_start_index = start_index
+        source_poses = source_poses[start_index:]
+        if not source_poses:
+            return []
+
+        batches = []
+        for batch_start_index in range(
+            0,
+            len(source_poses),
+            self.max_waypoints_per_batch,
+        ):
+            batch = Path()
+            batch.header.frame_id = frame_id
+            batch.header.stamp = self.get_clock().now().to_msg()
+            batch.poses = [
+                copy.deepcopy(pose)
+                for pose in source_poses[
+                    batch_start_index:batch_start_index
+                    + self.max_waypoints_per_batch
+                ]
+            ]
+
+            if not batch.poses:
+                continue
+
+            for pose in batch.poses:
+                pose.header.frame_id = frame_id
+                pose.header.stamp = batch.header.stamp
+
+            batch.poses = self._remove_close_waypoints(
+                batch.poses,
+                preserve_last=True,
+            )
+            if not batch.poses or self._path_length(batch.poses) <= 0.0:
+                continue
+
+            self._warn_if_batch_segments_are_long(batch.poses)
+            batches.append(batch)
+
+        return batches
+
+    def _get_start_waypoint_index(self, poses):
+        if not self.start_from_nearest_waypoint or not poses:
+            return 0
+
+        try:
+            transform = self.tf_buffer.lookup_transform(
+                self.global_frame,
+                self.robot_base_frame,
+                Time(),
+                timeout=Duration(seconds=0.1),
+            )
+        except TransformException as exc:
+            self.get_logger().warn(
+                'Could not get TF %s -> %s for nearest waypoint start: %s; '
+                'using waypoint 0'
+                % (self.global_frame, self.robot_base_frame, exc),
+                throttle_duration_sec=5.0,
+            )
+            return 0
+
+        robot_x = transform.transform.translation.x
+        robot_y = transform.transform.translation.y
+        max_start_index = max(0, len(poses) - self.max_waypoints_per_batch)
+        nearest_index = 0
+        nearest_cost = None
+        for index, pose in enumerate(poses[:max_start_index + 1]):
+            dx = pose.pose.position.x - robot_x
+            dy = pose.pose.position.y - robot_y
+            cost = dx * dx + dy * dy
+            if self._is_sharp_turn_index(poses, index):
+                cost += self.min_waypoint_separation_m ** 2
+            if nearest_cost is None or cost < nearest_cost:
+                nearest_index = index
+                nearest_cost = cost
+
+        self.get_logger().info(
+            'Selected coverage waypoint start_index=%d' % nearest_index,
+            throttle_duration_sec=2.0,
+        )
+        return nearest_index
+
+    def _execution_batch_limit_reached(self):
+        return (
+            self.max_batches_to_execute > 0
+            and self.executed_batch_count >= self.max_batches_to_execute
+        )
+
+    def _allowed_batch_count(self):
+        if self.max_batches_to_execute > 0:
+            return self.max_batches_to_execute
+        return len(self.execution_batches)
+
+    def _send_current_batch(self):
+        if self.execution_goal_in_flight:
+            return
+
+        batch = self.execution_batches[self.current_batch_index]
+        batch_number = self.executed_batch_count + 1
+        total_batches = self._allowed_batch_count()
+
+        if not batch.header.frame_id:
+            self._set_execution_status(
+                'BATCH_FAILED %d/%d error=empty_frame'
+                % (batch_number, total_batches)
+            )
+            self.execution_active = False
+            self.execution_state = 'FAILED'
+            self.executed_waypoints_checksum = self.latest_waypoints_checksum
+            return
+
+        if not batch.poses:
+            self._set_execution_status(
+                'BATCH_FAILED %d/%d error=empty_batch'
+                % (batch_number, total_batches)
+            )
+            self.execution_active = False
+            self.execution_state = 'FAILED'
+            self.executed_waypoints_checksum = self.latest_waypoints_checksum
+            return
+
+        batch.poses = self._remove_close_waypoints(batch.poses, preserve_last=True)
+        for pose in batch.poses:
+            pose.header.frame_id = batch.header.frame_id or self.global_frame
+
+        if not batch.poses or self._path_length(batch.poses) <= 0.0:
+            self._set_execution_status(
+                'BATCH_FAILED %d/%d error=zero_length_batch'
+                % (batch_number, total_batches)
+            )
+            self.execution_active = False
+            self.execution_state = 'FAILED'
+            self.executed_waypoints_checksum = self.latest_waypoints_checksum
+            return
+
+        if self._batch_has_sharp_backtracking(batch.poses):
+            self.get_logger().warn(
+                'Batch %d/%d contains a sharp backtracking turn'
+                % (batch_number, total_batches),
+                throttle_duration_sec=5.0,
+            )
+
+        self._warn_if_batch_segments_are_long(batch.poses)
+        self.latest_current_batch = copy.deepcopy(batch)
+        self.coverage_current_batch_pub.publish(self.latest_current_batch)
+
+        goal_msg = NavigateThroughPoses.Goal()
+        goal_msg.poses = [copy.deepcopy(pose) for pose in batch.poses]
+        goal_msg.behavior_tree = self.behavior_tree
+
+        self.execution_goal_in_flight = True
+        self.execution_state = 'EXECUTING'
+        self.active_goal_signature = (
+            self.latest_waypoints_checksum,
+            self.current_batch_index,
+        )
+        self._set_execution_status(
+            'EXECUTING_BATCH %d/%d poses=%d start_index=%d'
+            % (
+                batch_number,
+                total_batches,
+                len(batch.poses),
+                self.selected_start_index,
+            )
+        )
+
+        send_goal_future = self.nav2_action_client.send_goal_async(
+            goal_msg,
+            feedback_callback=self._nav2_feedback_callback,
+        )
+        send_goal_future.add_done_callback(
+            lambda future: self._nav2_goal_response_callback(
+                future,
+                batch_number,
+                total_batches,
+            )
+        )
+
+    def _nav2_goal_response_callback(self, future, batch_number, total_batches):
+        try:
+            goal_handle = future.result()
+        except Exception as exc:
+            self.execution_goal_in_flight = False
+            self.execution_active = False
+            self.execution_state = 'FAILED'
+            self.executed_waypoints_checksum = self.latest_waypoints_checksum
+            self._set_execution_status(
+                'BATCH_FAILED %d/%d error=%s'
+                % (batch_number, total_batches, exc)
+            )
+            return
+
+        if not goal_handle.accepted:
+            self.execution_goal_in_flight = False
+            self.execution_active = False
+            self.execution_state = 'FAILED'
+            self.executed_waypoints_checksum = self.latest_waypoints_checksum
+            self._set_execution_status(
+                'BATCH_REJECTED %d/%d'
+                % (batch_number, total_batches)
+            )
+            return
+
+        self._set_execution_status(
+            'BATCH_ACCEPTED %d/%d' % (batch_number, total_batches)
+        )
+        result_future = goal_handle.get_result_async()
+        result_future.add_done_callback(
+            lambda future: self._nav2_result_callback(
+                future,
+                batch_number,
+                total_batches,
+            )
+        )
+
+    def _nav2_result_callback(self, future, batch_number, total_batches):
+        self.execution_goal_in_flight = False
+
+        try:
+            wrapped_result = future.result()
+        except Exception as exc:
+            self.execution_active = False
+            self.execution_state = 'FAILED'
+            self.executed_waypoints_checksum = self.latest_waypoints_checksum
+            self._set_execution_status(
+                'BATCH_FAILED %d/%d error=%s'
+                % (batch_number, total_batches, exc)
+            )
+            return
+
+        result = wrapped_result.result
+        status = wrapped_result.status
+        error_code = getattr(result, 'error_code', 0)
+        error_msg = getattr(result, 'error_msg', '')
+
+        if status == GoalStatus.STATUS_SUCCEEDED and error_code == 0:
+            self._set_execution_status(
+                'BATCH_SUCCEEDED %d/%d' % (batch_number, total_batches)
+            )
+            self.executed_batch_count += 1
+            self.current_batch_index += 1
+
+            if self.replan_received_during_execution:
+                self._apply_pending_waypoints()
+            self.execution_state = 'READY'
+            return
+
+        self.execution_active = False
+        self.execution_state = 'FAILED'
+        self.executed_waypoints_checksum = self.latest_waypoints_checksum
+        if not error_msg:
+            error_msg = 'status=%d error_code=%d' % (status, error_code)
+        self._set_execution_status(
+            'BATCH_FAILED %d/%d error=%s'
+            % (batch_number, total_batches, error_msg)
+        )
+
+    def _nav2_feedback_callback(self, feedback_msg):
+        feedback = feedback_msg.feedback
+        distance_remaining = getattr(feedback, 'distance_remaining', None)
+        poses_remaining = getattr(feedback, 'number_of_poses_remaining', None)
+        recoveries = getattr(feedback, 'number_of_recoveries', None)
+
+        fields = []
+        if distance_remaining is not None:
+            fields.append('distance_remaining=%.2f' % distance_remaining)
+        if poses_remaining is not None:
+            fields.append('poses_remaining=%d' % poses_remaining)
+        if recoveries is not None:
+            fields.append('recoveries=%d' % recoveries)
+
+        if not fields:
+            fields.append('feedback_received=true')
+
+        msg = String()
+        msg.data = ' '.join(fields)
+        self.coverage_nav2_feedback_pub.publish(msg)
+
+    def _set_execution_status(self, status):
+        if status != self.execution_status:
+            self.get_logger().info('Coverage execution status: %s' % status)
+        self.execution_status = status
+        self.latest_status_msg.data = status
+        if hasattr(self, 'coverage_execution_status_pub'):
+            self.coverage_execution_status_pub.publish(self.latest_status_msg)
 
     def generate_waypoints(self, path_msg):
         """Simplify a nav_msgs/Path into sparse waypoint poses."""
@@ -194,6 +850,7 @@ class CoverageExecutorNode(Node):
                 'turns_kept': 0,
                 'input_path_length_m': 0.0,
                 'waypoint_path_length_m': 0.0,
+                'largest_output_gap_m': 0.0,
                 'input_empty': True,
             }
             return {
@@ -209,10 +866,12 @@ class CoverageExecutorNode(Node):
             path_msg.poses[0],
             path_msg.poses[-1],
         )
+        kept_poses = self._enforce_max_waypoint_gap(kept_poses, path_msg.poses)
 
         if len(kept_poses) > self.max_waypoints:
             self.get_logger().warn(
-                'Waypoint count %d exceeds max_waypoints=%d; downsampling'
+                'Waypoint count %d exceeds max_waypoints=%d; downsampling while '
+                'preserving max gap'
                 % (len(kept_poses), self.max_waypoints),
                 throttle_duration_sec=5.0,
             )
@@ -222,6 +881,7 @@ class CoverageExecutorNode(Node):
                 path_msg.poses[0],
                 path_msg.poses[-1],
             )
+            kept_poses = self._enforce_max_waypoint_gap(kept_poses, path_msg.poses)
 
         kept_poses = self._remove_close_waypoints(
             kept_poses,
@@ -232,6 +892,7 @@ class CoverageExecutorNode(Node):
             path_msg.poses[0],
             path_msg.poses[-1],
         )
+        kept_poses = self._enforce_max_waypoint_gap(kept_poses, path_msg.poses)
 
         if not kept_poses:
             self.get_logger().warn(
@@ -248,15 +909,27 @@ class CoverageExecutorNode(Node):
             waypoint_pose.header.stamp = waypoints.header.stamp
             waypoints.poses.append(waypoint_pose)
 
+        if self.recompute_waypoint_orientations:
+            self._recompute_waypoint_orientations(waypoints.poses)
+
         self._validate_waypoints(waypoints, path_msg)
+        largest_output_gap_m = self._largest_output_gap(waypoints.poses)
+        if largest_output_gap_m > self.max_waypoint_gap_m * 1.25:
+            self.get_logger().warn(
+                'Largest waypoint gap %.2f m exceeds allowed %.2f m'
+                % (largest_output_gap_m, self.max_waypoint_gap_m),
+                throttle_duration_sec=5.0,
+            )
 
         stats = {
             'input_poses': input_pose_count,
             'waypoints': len(waypoints.poses),
             'distance_kept': keep_counts['distance'],
+            'gap_kept': keep_counts['gap'],
             'turns_kept': keep_counts['turn'],
             'input_path_length_m': self._path_length(path_msg.poses),
             'waypoint_path_length_m': self._path_length(waypoints.poses),
+            'largest_output_gap_m': largest_output_gap_m,
             'input_empty': False,
         }
         markers = self._make_waypoint_markers(waypoints)
@@ -268,33 +941,60 @@ class CoverageExecutorNode(Node):
         }
 
     def _select_waypoint_poses(self, poses):
-        kept_poses = [copy.deepcopy(poses[0])]
+        if len(poses) <= 2:
+            return [copy.deepcopy(pose) for pose in poses], {
+                'distance': 0,
+                'gap': 0,
+                'turn': 0,
+            }
+
         keep_counts = {
             'distance': 0,
+            'gap': 0,
             'turn': 0,
         }
+        candidate_indices = {0, len(poses) - 1}
+        distance_since_last_candidate = 0.0
+        last_distance_candidate_index = 0
 
-        last_kept_pose = poses[0]
         for index in range(1, len(poses) - 1):
             previous_pose = poses[index - 1]
             current_pose = poses[index]
             next_pose = poses[index + 1]
+            distance_since_last_candidate += self._pose_distance(
+                previous_pose,
+                current_pose,
+            )
 
-            distance_from_last = self._pose_distance(last_kept_pose, current_pose)
             turn_angle = self._turn_angle_deg(previous_pose, current_pose, next_pose)
-            keep_for_distance = distance_from_last >= self.waypoint_spacing_m
+            keep_for_gap = (
+                self._pose_distance(poses[last_distance_candidate_index], current_pose)
+                >= self.max_waypoint_gap_m
+            )
+            keep_for_distance = distance_since_last_candidate >= self.waypoint_spacing_m
             keep_for_turn = turn_angle >= self.min_turn_angle_deg
 
-            if keep_for_distance or keep_for_turn:
-                kept_poses.append(copy.deepcopy(current_pose))
-                last_kept_pose = current_pose
+            if keep_for_turn:
+                # Preserve the local shape around row ends and obstacle connectors.
+                candidate_indices.update((index - 1, index, index + 1))
+                keep_counts['turn'] += 1
+                last_distance_candidate_index = index
+                distance_since_last_candidate = 0.0
+                continue
+
+            if keep_for_gap or keep_for_distance:
+                candidate_indices.add(index)
+                last_distance_candidate_index = index
+                distance_since_last_candidate = 0.0
+                if keep_for_gap:
+                    keep_counts['gap'] += 1
                 if keep_for_distance:
                     keep_counts['distance'] += 1
-                if keep_for_turn:
-                    keep_counts['turn'] += 1
 
-        if len(poses) > 1:
-            kept_poses.append(copy.deepcopy(poses[-1]))
+        kept_poses = [
+            copy.deepcopy(poses[index])
+            for index in sorted(candidate_indices)
+        ]
 
         return kept_poses, keep_counts
 
@@ -357,6 +1057,73 @@ class CoverageExecutorNode(Node):
         selected.append(copy.deepcopy(poses[-1]))
         return selected
 
+    def _enforce_max_waypoint_gap(self, kept_poses, source_poses):
+        if len(kept_poses) <= 1 or not source_poses:
+            return kept_poses
+
+        repaired = [copy.deepcopy(kept_poses[0])]
+        source_start_index = self._find_pose_index(source_poses, kept_poses[0], 0)
+
+        for target_pose in kept_poses[1:]:
+            source_end_index = self._find_pose_index(
+                source_poses,
+                target_pose,
+                source_start_index,
+            )
+            if source_end_index < source_start_index:
+                source_end_index = source_start_index
+
+            for source_index in range(source_start_index + 1, source_end_index + 1):
+                source_pose = source_poses[source_index]
+                is_target = source_index == source_end_index
+                distance = self._pose_distance(repaired[-1], source_pose)
+
+                if distance > self.max_waypoint_gap_m:
+                    previous_source_pose = source_poses[source_index - 1]
+                    if (
+                        self._pose_distance(repaired[-1], previous_source_pose)
+                        > 1.0e-6
+                    ):
+                        repaired.append(copy.deepcopy(previous_source_pose))
+                        distance = self._pose_distance(repaired[-1], source_pose)
+
+                if (
+                    distance > self.max_waypoint_gap_m
+                    or is_target
+                    or distance >= self.waypoint_spacing_m
+                ):
+                    if self._pose_distance(repaired[-1], source_pose) > 1.0e-6:
+                        repaired.append(copy.deepcopy(source_pose))
+
+            source_start_index = source_end_index
+
+        return repaired
+
+    def _find_pose_index(self, poses, target_pose, start_index):
+        target_x = target_pose.pose.position.x
+        target_y = target_pose.pose.position.y
+
+        for index in range(start_index, len(poses)):
+            pose = poses[index]
+            if (
+                abs(pose.pose.position.x - target_x) < 1.0e-6
+                and abs(pose.pose.position.y - target_y) < 1.0e-6
+            ):
+                return index
+
+        best_index = start_index
+        best_distance = None
+        for index in range(start_index, len(poses)):
+            pose = poses[index]
+            dx = pose.pose.position.x - target_x
+            dy = pose.pose.position.y - target_y
+            distance = dx * dx + dy * dy
+            if best_distance is None or distance < best_distance:
+                best_distance = distance
+                best_index = index
+
+        return best_index
+
     def _validate_waypoints(self, waypoints, input_path):
         if waypoints.header.frame_id != (input_path.header.frame_id or 'map'):
             self.get_logger().warn(
@@ -386,6 +1153,21 @@ class CoverageExecutorNode(Node):
                 % (len(waypoints.poses), self.max_waypoints),
                 throttle_duration_sec=5.0,
             )
+
+    def _recompute_waypoint_orientations(self, poses):
+        if len(poses) < 2:
+            return
+
+        for index, pose in enumerate(poses):
+            if index + 1 < len(poses):
+                yaw = self._yaw_between_poses(pose, poses[index + 1])
+            else:
+                yaw = self._yaw_between_poses(poses[index - 1], pose)
+
+            pose.pose.orientation.x = 0.0
+            pose.pose.orientation.y = 0.0
+            pose.pose.orientation.z = math.sin(yaw * 0.5)
+            pose.pose.orientation.w = math.cos(yaw * 0.5)
 
     def _make_waypoint_markers(self, waypoints):
         frame_id = waypoints.header.frame_id or 'map'
@@ -462,19 +1244,25 @@ class CoverageExecutorNode(Node):
             return (
                 'input_poses=0 waypoints=0 input_empty=true '
                 'spacing=%.2fm turns_kept=0 distance_kept=0 '
+                'max_waypoint_gap_m=%.2f largest_output_gap_m=0.00 '
                 'path_length_m=0.00 waypoint_path_length_m=0.00'
-                % self.waypoint_spacing_m
+                % (self.waypoint_spacing_m, self.max_waypoint_gap_m)
             )
 
         return (
             'input_poses=%d waypoints=%d spacing=%.2fm turns_kept=%d '
-            'distance_kept=%d path_length_m=%.2f waypoint_path_length_m=%.2f'
+            'distance_kept=%d gap_kept=%d max_waypoint_gap_m=%.2f '
+            'largest_output_gap_m=%.2f path_length_m=%.2f '
+            'waypoint_path_length_m=%.2f'
             % (
                 stats['input_poses'],
                 stats['waypoints'],
                 self.waypoint_spacing_m,
                 stats['turns_kept'],
                 stats['distance_kept'],
+                stats['gap_kept'],
+                self.max_waypoint_gap_m,
+                stats['largest_output_gap_m'],
                 stats['input_path_length_m'],
                 stats['waypoint_path_length_m'],
             )
@@ -499,9 +1287,46 @@ class CoverageExecutorNode(Node):
             )
             self.min_waypoint_separation_m = 0.0
 
+        if self.max_waypoint_gap_m <= 0.0:
+            self.get_logger().warn(
+                'max_waypoint_gap_m must be positive; using waypoint_spacing_m'
+            )
+            self.max_waypoint_gap_m = self.waypoint_spacing_m
+
+        if self.max_batch_segment_length_m <= 0.0:
+            self.get_logger().warn(
+                'max_batch_segment_length_m must be positive; using '
+                'max_waypoint_gap_m'
+            )
+            self.max_batch_segment_length_m = self.max_waypoint_gap_m
+
         if self.max_waypoints < 1:
             self.get_logger().warn('max_waypoints must be at least 1; using 1')
             self.max_waypoints = 1
+
+        if self.max_waypoints_per_batch < 1:
+            self.get_logger().warn(
+                'max_waypoints_per_batch must be at least 1; using 1'
+            )
+            self.max_waypoints_per_batch = 1
+
+        if self.max_batches_to_execute < 0:
+            self.get_logger().warn(
+                'max_batches_to_execute must be 0 or positive; using 1'
+            )
+            self.max_batches_to_execute = 1
+
+        if self.max_retries_per_batch < 0:
+            self.get_logger().warn(
+                'max_retries_per_batch must not be negative; using 0'
+            )
+            self.max_retries_per_batch = 0
+
+        if self.wait_for_nav2_timeout_sec <= 0.0:
+            self.get_logger().warn(
+                'wait_for_nav2_timeout_sec must be positive; using 10.0 sec'
+            )
+            self.wait_for_nav2_timeout_sec = 10.0
 
         if self.waypoint_publish_rate_hz <= 0.0:
             self.get_logger().warn(
@@ -538,10 +1363,53 @@ class CoverageExecutorNode(Node):
             previous_pose = pose
         return length
 
+    def _largest_output_gap(self, poses):
+        largest_gap = 0.0
+        for index in range(1, len(poses)):
+            largest_gap = max(
+                largest_gap,
+                self._pose_distance(poses[index - 1], poses[index]),
+            )
+        return largest_gap
+
     def _pose_distance(self, first, second):
         dx = first.pose.position.x - second.pose.position.x
         dy = first.pose.position.y - second.pose.position.y
         return math.hypot(dx, dy)
+
+    def _yaw_between_poses(self, first, second):
+        return math.atan2(
+            second.pose.position.y - first.pose.position.y,
+            second.pose.position.x - first.pose.position.x,
+        )
+
+    def _is_sharp_turn_index(self, poses, index):
+        if index <= 0 or index >= len(poses) - 1:
+            return False
+        return (
+            self._turn_angle_deg(poses[index - 1], poses[index], poses[index + 1])
+            >= self.min_turn_angle_deg
+        )
+
+    def _batch_has_sharp_backtracking(self, poses):
+        for index in range(1, len(poses) - 1):
+            if self._turn_angle_deg(
+                poses[index - 1],
+                poses[index],
+                poses[index + 1],
+            ) >= 135.0:
+                return True
+        return False
+
+    def _warn_if_batch_segments_are_long(self, poses):
+        largest_batch_gap = self._largest_output_gap(poses)
+        if largest_batch_gap > self.max_batch_segment_length_m:
+            self.get_logger().warn(
+                'Current batch has segment gap %.2f m above '
+                'max_batch_segment_length_m=%.2f'
+                % (largest_batch_gap, self.max_batch_segment_length_m),
+                throttle_duration_sec=5.0,
+            )
 
     def _turn_angle_deg(self, previous_pose, current_pose, next_pose):
         first_heading = math.atan2(

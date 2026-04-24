@@ -36,13 +36,30 @@ coverage_executor_node:
     coverage_waypoints_topic: "/coverage_waypoints"
     coverage_waypoint_markers_topic: "/coverage_waypoint_markers"
     coverage_waypoint_stats_topic: "/coverage_waypoint_stats"
-    waypoint_spacing_m: 0.75
-    min_turn_angle_deg: 45.0
+    coverage_execution_status_topic: "/coverage_execution_status"
+    coverage_current_batch_topic: "/coverage_current_batch"
+    coverage_nav2_feedback_topic: "/coverage_nav2_feedback"
+    waypoint_spacing_m: 0.4
+    min_turn_angle_deg: 35.0
     min_waypoint_separation_m: 0.20
-    max_waypoints: 300
+    max_waypoint_gap_m: 0.45
+    max_batch_segment_length_m: 0.5
+    max_waypoints: 200
     publish_waypoint_markers: true
     waypoint_publish_rate_hz: 1.0
     enable_nav2_execution: false
+    nav2_action_name: "/navigate_through_poses"
+    max_waypoints_per_batch: 8
+    max_batches_to_execute: 1
+    wait_for_nav2_timeout_sec: 10.0
+    behavior_tree: ""
+    recompute_waypoint_orientations: true
+    start_from_nearest_waypoint: true
+    retry_failed_batch: false
+    skip_failed_batch: false
+    max_retries_per_batch: 0
+    global_frame: "map"
+    robot_base_frame: "base_link"
 
 coverage_manager_node:
   ros__parameters:
