@@ -39,25 +39,36 @@ coverage_executor_node:
     coverage_execution_status_topic: "/coverage_execution_status"
     coverage_current_batch_topic: "/coverage_current_batch"
     coverage_nav2_feedback_topic: "/coverage_nav2_feedback"
+    failed_waypoint_markers_topic: "/coverage_failed_waypoint_markers"
+    coverage_skipped_waypoints_topic: "/coverage_skipped_waypoints"
     waypoint_spacing_m: 0.4
     min_turn_angle_deg: 35.0
     min_waypoint_separation_m: 0.20
-    max_waypoint_gap_m: 0.45
-    max_batch_segment_length_m: 0.5
+    max_waypoint_gap_m: 1.2
+    max_batch_segment_length_m: 1.5
     max_waypoints: 200
     publish_waypoint_markers: true
     waypoint_publish_rate_hz: 1.0
-    enable_nav2_execution: false
+    enable_nav2_execution: true
     nav2_action_name: "/navigate_through_poses"
-    max_waypoints_per_batch: 8
-    max_batches_to_execute: 1
+    max_waypoints_per_batch: 5
+    max_batches_to_execute: 3
     wait_for_nav2_timeout_sec: 10.0
     behavior_tree: ""
     recompute_waypoint_orientations: true
     start_from_nearest_waypoint: true
     retry_failed_batch: false
-    skip_failed_batch: false
+    skip_failed_batch: true
+    continue_after_failure: true
     max_retries_per_batch: 0
+    max_failed_batches: 10
+    max_skipped_batches: 10
+    max_total_batch_attempts: 30
+    batch_timeout_sec: 20.0
+    no_progress_timeout_sec: 8.0
+    min_progress_distance_m: 0.03
+    min_batch_poses: 2
+    allow_waypoint0_fallback_without_tf: false
     global_frame: "map"
     robot_base_frame: "base_link"
 
