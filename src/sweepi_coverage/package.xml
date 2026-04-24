@@ -3,7 +3,7 @@
 <package format="3">
   <name>sweepi_coverage</name>
   <version>0.1.0</version>
-  <description>Navigation using pre-saved maps and Nav2</description>
+  <description>Coverage map tracking nodes for SweePi</description>
   <maintainer email="wedamestrigean@gmail.com">akhila-wedamestrige</maintainer>
   <license>Apache-2.0</license>
 
@@ -17,7 +17,12 @@
   <depend>sensor_msgs</depend>
   <depend>action_msgs</depend>
   <depend>nav2_msgs</depend>
+  <depend>tf2_ros</depend>
   <depend>visualization_msgs</depend>
+
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

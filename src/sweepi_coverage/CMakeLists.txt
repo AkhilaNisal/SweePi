@@ -9,7 +9,9 @@ endif()
 # ROS 2 build dependencies
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)
+find_package(nav_msgs REQUIRED)
 find_package(rclpy REQUIRED)
+find_package(tf2_ros REQUIRED)
 
 # Install Python package
 ament_python_install_package(sweepi_coverage)
@@ -20,10 +22,20 @@ install(
   DESTINATION share/${PROJECT_NAME}/launch
 )
 
-# Install all config files (e.g., nav2_params.yaml, amcl params, etc.)
+# Install all config files
 install(
   DIRECTORY config/
   DESTINATION share/${PROJECT_NAME}/config
+)
+
+# Install Python node executables
+install(
+  PROGRAMS
+    sweepi_coverage/coverage_tracker_node.py
+    sweepi_coverage/coverage_planner_node.py
+    sweepi_coverage/coverage_executor_node.py
+    sweepi_coverage/coverage_manager_node.py
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 ament_package()

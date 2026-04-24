@@ -1,0 +1,22 @@
+coverage_tracker_node:
+  ros__parameters:
+    use_sim_time: true
+    global_frame: map
+    robot_base_frame: base_link
+    robot_radius_m: 0.18
+    occupied_threshold: 50
+    coverage_update_rate_hz: 2.0
+    coverage_topic: /coverage_map
+
+
+coverage_planner_node:
+  ros__parameters:
+    use_sim_time: true
+
+coverage_executor_node:
+  ros__parameters:
+    use_sim_time: true
+
+coverage_manager_node:
+  ros__parameters:
+    use_sim_time: true
