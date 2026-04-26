@@ -8,7 +8,6 @@ coverage_tracker_node:
     coverage_update_rate_hz: 2.0
     coverage_topic: /coverage_map
 
-
 coverage_planner_node:
   ros__parameters:
     use_sim_time: true
@@ -26,10 +25,10 @@ coverage_planner_node:
     path_publish_rate_hz: 1.0
     planning_direction: "auto"
     publish_debug_mask: true
-    publish_debug_markers: true
+    publish_debug_markers: false
     replan_on_map_change: true
     republish_last_path: true
-    freeze_path_after_first_valid_plan: false
+    freeze_path_after_first_valid_plan: true
     connect_disjoint_segments: true
     connector_step_m: 0.10
     max_consecutive_pose_jump_m: 0.50
@@ -44,51 +43,40 @@ coverage_planner_node:
     max_allowed_nav_cost: 90
     treat_unknown_cost_as_blocked: true
     nav_costmap_timeout_sec: 2.0
-    wait_for_nav_costmap_before_planning: false
-    wait_for_robot_pose_before_planning: false
+    wait_for_nav_costmap_before_planning: true
+    wait_for_robot_pose_before_planning: true
 
-coverage_executor_node:
+coverage_follow_path_executor_node:
   ros__parameters:
     use_sim_time: true
     coverage_path_topic: "/coverage_path"
-    coverage_waypoints_topic: "/coverage_waypoints"
-    coverage_waypoint_markers_topic: "/coverage_waypoint_markers"
-    coverage_waypoint_stats_topic: "/coverage_waypoint_stats"
-    coverage_execution_status_topic: "/coverage_execution_status"
-    coverage_current_batch_topic: "/coverage_current_batch"
-    coverage_nav2_feedback_topic: "/coverage_nav2_feedback"
-    failed_waypoint_markers_topic: "/coverage_failed_waypoint_markers"
-    coverage_skipped_waypoints_topic: "/coverage_skipped_waypoints"
-    waypoint_spacing_m: 0.4
-    min_turn_angle_deg: 35.0
-    min_waypoint_separation_m: 0.20
-    max_waypoint_gap_m: 1.2
-    max_batch_segment_length_m: 1.5
-    max_waypoints: 200
-    publish_waypoint_markers: true
-    waypoint_publish_rate_hz: 1.0
-    enable_nav2_execution: true
-    nav2_action_name: "/navigate_through_poses"
-    max_waypoints_per_batch: 5
-    max_batches_to_execute: 3
+    active_path_topic: "/coverage_active_path"
+    execution_status_topic: "/coverage_execution_status"
+    nav2_feedback_topic: "/coverage_nav2_feedback"
+    path_markers_topic: "/coverage_path_markers"
+    follow_path_action_name: "/follow_path"
+    controller_id: "FollowPath"
+    goal_checker_id: ""
+    progress_checker_id: ""
+    auto_start: false
+    execute_once_on_first_path: false
+    min_path_poses: 2
     wait_for_nav2_timeout_sec: 10.0
-    behavior_tree: ""
-    recompute_waypoint_orientations: true
-    start_from_nearest_waypoint: true
-    retry_failed_batch: false
-    skip_failed_batch: true
-    continue_after_failure: true
-    max_retries_per_batch: 0
-    max_failed_batches: 10
-    max_skipped_batches: 10
-    max_total_batch_attempts: 30
-    batch_timeout_sec: 20.0
-    no_progress_timeout_sec: 8.0
-    min_progress_distance_m: 0.03
-    min_batch_poses: 2
-    allow_waypoint0_fallback_without_tf: false
-    global_frame: "map"
+    action_result_timeout_sec: 0.0
+    republish_active_path_hz: 1.0
+    allow_new_path_while_executing: false
     robot_base_frame: "base_link"
+    tf_lookup_timeout_sec: 1.0
+    require_robot_near_start: true
+    max_start_distance_m: 0.50
+    max_nearest_path_distance_m: 0.50
+    minimum_path_length_m: 0.10
+    max_consecutive_pose_jump_m: 0.50
+    debug_info_topic: "/coverage_debug_info"
+    debug_markers_topic: "/coverage_debug_markers"
+    auto_restart_on_failed_progress: false
+    failed_progress_restart_delay_sec: 1.0
+    max_failed_progress_restarts: 3
 
 coverage_manager_node:
   ros__parameters:

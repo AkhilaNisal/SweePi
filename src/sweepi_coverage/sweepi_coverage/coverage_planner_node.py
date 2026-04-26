@@ -8,10 +8,13 @@ import math
 import rclpy
 from geometry_msgs.msg import Point, PoseStamped
 from nav_msgs.msg import OccupancyGrid, Path
+from rclpy.duration import Duration
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
+from rclpy.time import Time
 from std_msgs.msg import Float32, String
+from tf2_ros import Buffer, TransformException, TransformListener
 from visualization_msgs.msg import Marker, MarkerArray
 
 from sweepi_coverage.coverage_utils import (
@@ -37,6 +40,7 @@ class CoveragePlannerNode(Node):
         super().__init__('coverage_planner_node')
 
         self.declare_parameter('coverage_map_topic', '/coverage_map')
+        self.declare_parameter('nav_costmap_topic', '/global_costmap/costmap')
         self.declare_parameter('coverage_path_topic', '/coverage_path')
         self.declare_parameter('planning_mask_topic', '/coverage_planning_mask')
         self.declare_parameter('coverage_percentage_topic', '/coverage_percentage')
@@ -52,9 +56,31 @@ class CoveragePlannerNode(Node):
         self.declare_parameter('publish_debug_markers', True)
         self.declare_parameter('replan_on_map_change', True)
         self.declare_parameter('republish_last_path', True)
+        self.declare_parameter('freeze_path_after_first_valid_plan', False)
+        self.declare_parameter('connect_disjoint_segments', True)
+        self.declare_parameter('connector_step_m', 0.10)
+        self.declare_parameter('max_consecutive_pose_jump_m', 0.50)
+        self.declare_parameter('connector_check_obstacles', True)
+        self.declare_parameter('connector_allow_simple_straight_line', True)
+        self.declare_parameter('optimize_segment_order', True)
+        self.declare_parameter('allow_segment_reversal', True)
+        self.declare_parameter('start_near_robot_if_tf_available', True)
+        self.declare_parameter('debug_path_continuity', True)
+        self.declare_parameter('robot_base_frame', 'base_link')
+        self.declare_parameter('tf_lookup_timeout_sec', 0.2)
+        self.declare_parameter('use_nav_costmap_for_planning', True)
+        self.declare_parameter('use_global_costmap_for_planning', True)
+        self.declare_parameter('max_allowed_nav_cost', 90)
+        self.declare_parameter('treat_unknown_cost_as_blocked', True)
+        self.declare_parameter('nav_costmap_timeout_sec', 2.0)
+        self.declare_parameter('wait_for_nav_costmap_before_planning', False)
+        self.declare_parameter('wait_for_robot_pose_before_planning', False)
 
         self.coverage_map_topic = (
             self.get_parameter('coverage_map_topic').get_parameter_value().string_value
+        )
+        self.nav_costmap_topic = (
+            self.get_parameter('nav_costmap_topic').get_parameter_value().string_value
         )
         self.coverage_path_topic = (
             self.get_parameter('coverage_path_topic').get_parameter_value().string_value
@@ -103,18 +129,112 @@ class CoveragePlannerNode(Node):
         self.republish_last_path = (
             self.get_parameter('republish_last_path').get_parameter_value().bool_value
         )
+        self.freeze_path_after_first_valid_plan = (
+            self.get_parameter('freeze_path_after_first_valid_plan')
+            .get_parameter_value()
+            .bool_value
+        )
+        self.connect_disjoint_segments = (
+            self.get_parameter('connect_disjoint_segments')
+            .get_parameter_value()
+            .bool_value
+        )
+        self.connector_step_m = (
+            self.get_parameter('connector_step_m').get_parameter_value().double_value
+        )
+        self.max_consecutive_pose_jump_m = (
+            self.get_parameter('max_consecutive_pose_jump_m')
+            .get_parameter_value()
+            .double_value
+        )
+        self.connector_check_obstacles = (
+            self.get_parameter('connector_check_obstacles')
+            .get_parameter_value()
+            .bool_value
+        )
+        self.connector_allow_simple_straight_line = (
+            self.get_parameter('connector_allow_simple_straight_line')
+            .get_parameter_value()
+            .bool_value
+        )
+        self.optimize_segment_order = (
+            self.get_parameter('optimize_segment_order').get_parameter_value().bool_value
+        )
+        self.allow_segment_reversal = (
+            self.get_parameter('allow_segment_reversal').get_parameter_value().bool_value
+        )
+        self.start_near_robot_if_tf_available = (
+            self.get_parameter('start_near_robot_if_tf_available')
+            .get_parameter_value()
+            .bool_value
+        )
+        self.debug_path_continuity = (
+            self.get_parameter('debug_path_continuity').get_parameter_value().bool_value
+        )
+        self.robot_base_frame = (
+            self.get_parameter('robot_base_frame').get_parameter_value().string_value
+        )
+        self.tf_lookup_timeout_sec = (
+            self.get_parameter('tf_lookup_timeout_sec')
+            .get_parameter_value()
+            .double_value
+        )
+        self.use_nav_costmap_for_planning = (
+            self.get_parameter('use_nav_costmap_for_planning')
+            .get_parameter_value()
+            .bool_value
+        )
+        self.use_global_costmap_for_planning = (
+            self.get_parameter('use_global_costmap_for_planning')
+            .get_parameter_value()
+            .bool_value
+        )
+        self.max_allowed_nav_cost = (
+            self.get_parameter('max_allowed_nav_cost')
+            .get_parameter_value()
+            .integer_value
+        )
+        self.treat_unknown_cost_as_blocked = (
+            self.get_parameter('treat_unknown_cost_as_blocked')
+            .get_parameter_value()
+            .bool_value
+        )
+        self.nav_costmap_timeout_sec = (
+            self.get_parameter('nav_costmap_timeout_sec')
+            .get_parameter_value()
+            .double_value
+        )
+        self.wait_for_nav_costmap_before_planning = (
+            self.get_parameter('wait_for_nav_costmap_before_planning')
+            .get_parameter_value()
+            .bool_value
+        )
+        self.wait_for_robot_pose_before_planning = (
+            self.get_parameter('wait_for_robot_pose_before_planning')
+            .get_parameter_value()
+            .bool_value
+        )
 
         self._sanitize_startup_parameters()
 
         self.coverage_map = None
         self.coverage_map_checksum = None
+        self.nav_costmap = None
+        self.nav_costmap_checksum = None
         self.plan_dirty = False
+        self.path_frozen = False
         self.latest_path = Path()
         self.latest_debug_mask = None
         self.latest_markers = MarkerArray()
         self.latest_percentage_msg = Float32()
         self.latest_stats_msg = String()
         self.latest_plan_stats = self._make_empty_stats()
+        self.connector_count = 0
+        self.connector_pose_count = 0
+        self.connector_failure_count = 0
+
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
 
         map_qos = QoSProfile(
             depth=1,
@@ -131,6 +251,12 @@ class CoveragePlannerNode(Node):
             OccupancyGrid,
             self.coverage_map_topic,
             self.coverage_map_callback,
+            map_qos,
+        )
+        self.nav_costmap_sub = self.create_subscription(
+            OccupancyGrid,
+            self.nav_costmap_topic,
+            self.nav_costmap_callback,
             map_qos,
         )
         self.coverage_path_pub = self.create_publisher(
@@ -163,15 +289,18 @@ class CoveragePlannerNode(Node):
         self.timer = self.create_timer(publish_period, self.publish_outputs)
 
         self.get_logger().info(
-            'Coverage planner started: coverage_map=%s, path=%s, mask=%s, '
-            'percentage=%s, stats=%s, direction=%s'
+            'Coverage planner started: coverage_map=%s, nav_costmap=%s, path=%s, '
+            'mask=%s, percentage=%s, stats=%s, direction=%s, '
+            'use_nav_costmap=%s'
             % (
                 self.coverage_map_topic,
+                self.nav_costmap_topic,
                 self.coverage_path_topic,
                 self.planning_mask_topic,
                 self.coverage_percentage_topic,
                 self.coverage_stats_topic,
                 self.planning_direction,
+                str(self._nav_costmap_enabled()).lower(),
             )
         )
 
@@ -190,8 +319,35 @@ class CoveragePlannerNode(Node):
         map_changed = new_checksum != self.coverage_map_checksum
 
         self.coverage_map = msg
+        if self.path_frozen:
+            return
+
         if map_changed or not self.replan_on_map_change:
             self.coverage_map_checksum = new_checksum
+            self.plan_dirty = True
+
+    def nav_costmap_callback(self, msg):
+        """Store the latest Nav2 costmap so planning avoids undrivable cells."""
+        if not self._nav_costmap_enabled():
+            return
+
+        expected_cells = msg.info.width * msg.info.height
+        if len(msg.data) != expected_cells:
+            self.get_logger().warn(
+                'Ignoring nav costmap with %d cells, expected %d'
+                % (len(msg.data), expected_cells),
+                throttle_duration_sec=5.0,
+            )
+            return
+
+        new_checksum = self._occupancy_grid_checksum(msg)
+        costmap_changed = new_checksum != self.nav_costmap_checksum
+        self.nav_costmap = msg
+        if self.path_frozen:
+            return
+
+        if costmap_changed or not self.replan_on_map_change:
+            self.nav_costmap_checksum = new_checksum
             self.plan_dirty = True
 
     def publish_outputs(self):
@@ -200,6 +356,9 @@ class CoveragePlannerNode(Node):
             return
 
         if self.plan_dirty:
+            if not self._planning_inputs_ready():
+                return
+
             plan = self.generate_plan(self.coverage_map)
             self.latest_path = plan['path']
             self.latest_debug_mask = plan['debug_mask']
@@ -209,6 +368,16 @@ class CoveragePlannerNode(Node):
             self.latest_stats_msg.data = self._format_coverage_stats(plan['stats'])
             self.plan_dirty = False
             self._log_replan_summary(plan['stats'])
+            if self._should_freeze_plan(plan):
+                self.path_frozen = True
+                self.get_logger().info(
+                    'Coverage path frozen after first valid plan: poses=%d '
+                    'path_length=%.2fm'
+                    % (
+                        plan['stats']['poses'],
+                        plan['stats']['length_m'],
+                    )
+                )
         elif not self.republish_last_path:
             return
 
@@ -245,10 +414,18 @@ class CoveragePlannerNode(Node):
             }
 
         stats.update(self._compute_coverage_counts(msg))
-        planning_mask = self._build_planning_mask(msg)
+        base_planning_mask = self._build_planning_mask(msg)
+        planning_mask, nav_stats = self._apply_nav_costmap_mask(
+            base_planning_mask,
+            msg,
+        )
         debug_mask = self._make_planning_mask_msg(msg, planning_mask)
         valid_cell_count = sum(1 for is_valid in planning_mask if is_valid)
         stats['valid_cells'] = valid_cell_count
+        stats.update(nav_stats)
+        self.connector_count = 0
+        self.connector_pose_count = 0
+        self.connector_failure_count = 0
 
         if valid_cell_count == 0:
             self.get_logger().warn(
@@ -281,11 +458,14 @@ class CoveragePlannerNode(Node):
         region_paths = []
         all_segments = []
         directions = []
+        robot_cell = self._get_robot_cell(msg.header.frame_id or 'map', msg.info)
+        stats['robot_start_used'] = robot_cell is not None
         for component in components:
             region_plan = self._generate_region_plan(
                 component,
                 planning_mask,
                 msg.info,
+                robot_cell,
             )
             if len(region_plan['cells']) >= 2:
                 region_paths.append(region_plan['cells'])
@@ -308,10 +488,27 @@ class CoveragePlannerNode(Node):
                 'stats': stats,
             }
 
-        ordered_cells = self._order_region_paths(region_paths)
+        ordered_cells = self._order_region_paths(
+            region_paths,
+            planning_mask,
+            msg.info,
+            robot_cell,
+        )
         self._fill_path_from_cells(path, ordered_cells, msg.info)
         stats['poses'] = len(path.poses)
         stats['length_m'] = self._estimate_path_length_m(path)
+        continuity = self._path_continuity_report(path)
+        stats.update(continuity)
+        stats['segments_before_ordering'] = len(all_segments)
+        stats['segments_after_ordering'] = len(all_segments)
+        stats['connector_count'] = self.connector_count
+        stats['connector_pose_count'] = self.connector_pose_count
+        stats['connector_failure_count'] = self.connector_failure_count
+        stats['follow_path_ready'] = (
+            continuity['max_consecutive_jump_m']
+            <= self.max_consecutive_pose_jump_m
+            and self.connector_failure_count == 0
+        )
 
         validation = self._validate_path(path, planning_mask, msg.info)
         stats.update(validation)
@@ -336,12 +533,81 @@ class CoveragePlannerNode(Node):
             )
 
         markers = self._make_segment_markers(all_segments, msg.info, path.header)
+        if self.debug_path_continuity:
+            self._log_path_continuity_report(stats, path)
         return {
             'path': path,
             'debug_mask': debug_mask,
             'markers': markers,
             'stats': stats,
         }
+
+    def _should_freeze_plan(self, plan):
+        if not self.freeze_path_after_first_valid_plan:
+            return False
+
+        stats = plan.get('stats', {})
+        path = plan.get('path')
+        if path is None or len(path.poses) == 0:
+            return False
+
+        if (
+            self.wait_for_nav_costmap_before_planning
+            and self._nav_costmap_enabled()
+            and not stats.get('nav_costmap_used', False)
+        ):
+            return False
+
+        if (
+            self.wait_for_robot_pose_before_planning
+            and self.start_near_robot_if_tf_available
+            and not stats.get('robot_start_used', False)
+        ):
+            return False
+
+        return (
+            stats.get('valid', False)
+            and stats.get('follow_path_ready', False)
+            and stats.get('max_consecutive_jump_m', 0.0)
+            <= self.max_consecutive_pose_jump_m
+        )
+
+    def _planning_inputs_ready(self):
+        if (
+            self.wait_for_nav_costmap_before_planning
+            and self._nav_costmap_enabled()
+        ):
+            if self.nav_costmap is None:
+                self.get_logger().info(
+                    'Waiting for %s before generating frozen coverage path'
+                    % self.nav_costmap_topic,
+                    throttle_duration_sec=2.0,
+                )
+                return False
+            if self._nav_costmap_is_stale():
+                self.get_logger().info(
+                    'Waiting for a fresh %s before generating frozen coverage path'
+                    % self.nav_costmap_topic,
+                    throttle_duration_sec=2.0,
+                )
+                return False
+
+        if (
+            self.wait_for_robot_pose_before_planning
+            and self.start_near_robot_if_tf_available
+        ):
+            robot_cell = self._get_robot_cell(
+                self.coverage_map.header.frame_id or 'map',
+                self.coverage_map.info,
+            )
+            if robot_cell is None:
+                self.get_logger().info(
+                    'Waiting for robot pose before generating frozen coverage path',
+                    throttle_duration_sec=2.0,
+                )
+                return False
+
+        return True
 
     def _sanitize_startup_parameters(self):
         if self.path_publish_rate_hz <= 0.0:
@@ -367,6 +633,41 @@ class CoveragePlannerNode(Node):
                 'min_region_area_m2 must not be negative; using 0.0 m^2'
             )
             self.min_region_area_m2 = 0.0
+
+        if self.connector_step_m <= 0.0:
+            self.get_logger().warn(
+                'connector_step_m must be positive; using 0.10 m'
+            )
+            self.connector_step_m = 0.10
+
+        if self.max_consecutive_pose_jump_m <= 0.0:
+            self.get_logger().warn(
+                'max_consecutive_pose_jump_m must be positive; using 0.50 m'
+            )
+            self.max_consecutive_pose_jump_m = 0.50
+
+        if self.tf_lookup_timeout_sec < 0.0:
+            self.get_logger().warn(
+                'tf_lookup_timeout_sec must not be negative; using 0.0 s'
+            )
+            self.tf_lookup_timeout_sec = 0.0
+
+        if self.max_allowed_nav_cost < 0:
+            self.get_logger().warn(
+                'max_allowed_nav_cost must not be negative; using 0'
+            )
+            self.max_allowed_nav_cost = 0
+        if self.max_allowed_nav_cost > 100:
+            self.get_logger().warn(
+                'max_allowed_nav_cost must not exceed 100; using 100'
+            )
+            self.max_allowed_nav_cost = 100
+
+        if self.nav_costmap_timeout_sec < 0.0:
+            self.get_logger().warn(
+                'nav_costmap_timeout_sec must not be negative; using 0.0 s'
+            )
+            self.nav_costmap_timeout_sec = 0.0
 
         if self.planning_direction not in ('horizontal', 'vertical', 'auto'):
             self.get_logger().warn(
@@ -425,6 +726,121 @@ class CoveragePlannerNode(Node):
 
         return planning_mask
 
+    def _apply_nav_costmap_mask(self, planning_mask, coverage_msg):
+        stats = {
+            'nav_costmap_used': False,
+            'nav_costmap_blocked_cells': 0,
+            'nav_costmap_unknown_cells': 0,
+            'nav_costmap_stale': False,
+            'nav_costmap_frame_mismatch': False,
+        }
+
+        if not self._nav_costmap_enabled():
+            return planning_mask, stats
+
+        if self.nav_costmap is None:
+            self.get_logger().warn(
+                'Nav costmap planning is enabled, but no %s message has arrived; '
+                'using coverage-map-only planning for now'
+                % self.nav_costmap_topic,
+                throttle_duration_sec=5.0,
+            )
+            return planning_mask, stats
+
+        if self._nav_costmap_is_stale():
+            stats['nav_costmap_stale'] = True
+            self.get_logger().warn(
+                'Nav costmap is stale; using coverage-map-only planning for now',
+                throttle_duration_sec=5.0,
+            )
+            return planning_mask, stats
+
+        coverage_frame = coverage_msg.header.frame_id or 'map'
+        costmap_frame = self.nav_costmap.header.frame_id or coverage_frame
+        if costmap_frame != coverage_frame:
+            stats['nav_costmap_frame_mismatch'] = True
+            self.get_logger().warn(
+                'Nav costmap frame "%s" does not match coverage frame "%s"; '
+                'ignoring nav costmap for coverage planning'
+                % (costmap_frame, coverage_frame),
+                throttle_duration_sec=5.0,
+            )
+            return planning_mask, stats
+
+        filtered_mask = list(planning_mask)
+        width = coverage_msg.info.width
+        height = coverage_msg.info.height
+        for y in range(height):
+            for x in range(width):
+                coverage_index = map_to_flat_index(x, y, width)
+                if not filtered_mask[coverage_index]:
+                    continue
+
+                world_x, world_y = map_to_world(x, y, coverage_msg.info)
+                try:
+                    costmap_x, costmap_y = world_to_map(
+                        world_x,
+                        world_y,
+                        self.nav_costmap.info,
+                    )
+                except ValueError:
+                    filtered_mask[coverage_index] = False
+                    stats['nav_costmap_blocked_cells'] += 1
+                    continue
+
+                if not in_bounds(
+                    costmap_x,
+                    costmap_y,
+                    self.nav_costmap.info.width,
+                    self.nav_costmap.info.height,
+                ):
+                    filtered_mask[coverage_index] = False
+                    stats['nav_costmap_blocked_cells'] += 1
+                    continue
+
+                costmap_index = map_to_flat_index(
+                    costmap_x,
+                    costmap_y,
+                    self.nav_costmap.info.width,
+                )
+                cost = self.nav_costmap.data[costmap_index]
+                if cost < 0:
+                    stats['nav_costmap_unknown_cells'] += 1
+                    if self.treat_unknown_cost_as_blocked:
+                        filtered_mask[coverage_index] = False
+                    continue
+                if cost > self.max_allowed_nav_cost:
+                    filtered_mask[coverage_index] = False
+                    stats['nav_costmap_blocked_cells'] += 1
+
+        stats['nav_costmap_used'] = True
+        if stats['nav_costmap_blocked_cells'] > 0:
+            self.get_logger().info(
+                'Nav costmap filtered %d coverage planning cells '
+                '(unknown=%d, max_allowed_nav_cost=%d)'
+                % (
+                    stats['nav_costmap_blocked_cells'],
+                    stats['nav_costmap_unknown_cells'],
+                    self.max_allowed_nav_cost,
+                ),
+                throttle_duration_sec=2.0,
+            )
+        return filtered_mask, stats
+
+    def _nav_costmap_enabled(self):
+        return self.use_nav_costmap_for_planning or self.use_global_costmap_for_planning
+
+    def _nav_costmap_is_stale(self):
+        if self.nav_costmap_timeout_sec <= 0.0:
+            return False
+
+        stamp = Time.from_msg(self.nav_costmap.header.stamp)
+        if stamp.nanoseconds == 0:
+            return False
+
+        age_sec = (self.get_clock().now() - stamp).nanoseconds / 1.0e9
+        return age_sec > self.nav_costmap_timeout_sec
+
     def _make_planning_mask_msg(self, source_msg, planning_mask):
         debug_msg = OccupancyGrid()
         debug_msg.header.frame_id = 'map'
@@ -480,7 +896,7 @@ class CoveragePlannerNode(Node):
 
         return components
 
-    def _generate_region_plan(self, component, planning_mask, map_info):
+    def _generate_region_plan(self, component, planning_mask, map_info, robot_cell):
         direction, segments = self._select_region_segments(component, map_info)
         if not segments:
             return {
@@ -493,6 +909,7 @@ class CoveragePlannerNode(Node):
             segments,
             planning_mask,
             map_info,
+            robot_cell,
         )
         return {
             'direction': direction,
@@ -705,45 +1122,40 @@ class CoveragePlannerNode(Node):
         else:
             segments.append(((fixed_value, start_value), (fixed_value, end_value)))
 
-    def _order_segments_nearest_neighbor(self, segments, planning_mask, map_info):
+    def _order_segments_nearest_neighbor(
+        self,
+        segments,
+        planning_mask,
+        map_info,
+        robot_cell=None,
+    ):
         remaining_segments = list(segments)
         ordered_cells = []
         current_cell = None
 
         while remaining_segments:
             if current_cell is None:
-                start, end = remaining_segments.pop(0)
+                start_index, reverse_start = self._select_initial_segment(
+                    remaining_segments,
+                    robot_cell,
+                )
+                start, end = remaining_segments.pop(start_index)
+                if reverse_start:
+                    start, end = end, start
             else:
-                best_index = 0
-                best_reverse = False
-                best_distance = None
-
-                for index, (candidate_start, candidate_end) in enumerate(
-                    remaining_segments
-                ):
-                    start_distance = self._cell_distance_squared(
-                        current_cell,
-                        candidate_start,
-                    )
-                    end_distance = self._cell_distance_squared(
-                        current_cell,
-                        candidate_end,
-                    )
-
-                    if best_distance is None or start_distance < best_distance:
-                        best_index = index
-                        best_reverse = False
-                        best_distance = start_distance
-                    if end_distance < best_distance:
-                        best_index = index
-                        best_reverse = True
-                        best_distance = end_distance
-
+                best_index, best_reverse = self._select_next_segment(
+                    remaining_segments,
+                    current_cell,
+                )
                 start, end = remaining_segments.pop(best_index)
                 if best_reverse:
                     start, end = end, start
 
-            if current_cell is not None and current_cell != start:
+            if (
+                not self.connect_disjoint_segments
+                and current_cell is not None
+                and current_cell != start
+            ):
                 connector = self._find_grid_path(
                     current_cell,
                     start,
@@ -756,53 +1168,258 @@ class CoveragePlannerNode(Node):
                 else:
                     self._append_cell_without_duplicate(ordered_cells, start)
             else:
-                self._append_cell_without_duplicate(ordered_cells, start)
+                self._connect_or_append_cell(
+                    ordered_cells,
+                    start,
+                    planning_mask,
+                    map_info,
+                    'segment',
+                )
 
-            self._append_cell_without_duplicate(ordered_cells, end)
+            segment_cells = self._cells_along_axis_segment(start, end)
+            self._extend_cells_without_duplicates(ordered_cells, segment_cells)
             current_cell = end
 
         return ordered_cells
 
-    def _order_region_paths(self, region_paths):
+    def _order_region_paths(self, region_paths, planning_mask, map_info, robot_cell=None):
         remaining_paths = [list(region_path) for region_path in region_paths]
         ordered_cells = []
         current_cell = None
 
         while remaining_paths:
             if current_cell is None:
-                path = remaining_paths.pop(0)
+                path_index, reverse_start = self._select_initial_path(
+                    remaining_paths,
+                    robot_cell,
+                )
+                path = remaining_paths.pop(path_index)
+                if reverse_start:
+                    path = list(reversed(path))
             else:
-                best_index = 0
-                best_reverse = False
-                best_distance = None
-
-                for index, candidate_path in enumerate(remaining_paths):
-                    start_distance = self._cell_distance_squared(
-                        current_cell,
-                        candidate_path[0],
-                    )
-                    end_distance = self._cell_distance_squared(
-                        current_cell,
-                        candidate_path[-1],
-                    )
-
-                    if best_distance is None or start_distance < best_distance:
-                        best_index = index
-                        best_reverse = False
-                        best_distance = start_distance
-                    if end_distance < best_distance:
-                        best_index = index
-                        best_reverse = True
-                        best_distance = end_distance
-
+                best_index, best_reverse = self._select_next_path(
+                    remaining_paths,
+                    current_cell,
+                )
                 path = remaining_paths.pop(best_index)
                 if best_reverse:
                     path = list(reversed(path))
 
+            if ordered_cells and path:
+                self._connect_or_append_cell(
+                    ordered_cells,
+                    path[0],
+                    planning_mask,
+                    map_info,
+                    'region',
+                )
             self._extend_cells_without_duplicates(ordered_cells, path)
             current_cell = ordered_cells[-1]
 
         return ordered_cells
+
+    def _select_initial_segment(self, segments, robot_cell=None):
+        if (
+            self.start_near_robot_if_tf_available
+            and robot_cell is not None
+            and self.optimize_segment_order
+        ):
+            return self._select_segment_closest_to_cell(segments, robot_cell)
+        return 0, False
+
+    def _select_next_segment(self, segments, current_cell):
+        if not self.optimize_segment_order:
+            return 0, False
+        return self._select_segment_closest_to_cell(segments, current_cell)
+
+    def _select_segment_closest_to_cell(self, segments, target_cell):
+        best_index = 0
+        best_reverse = False
+        best_distance = None
+
+        for index, (candidate_start, candidate_end) in enumerate(segments):
+            start_distance = self._cell_distance_squared(target_cell, candidate_start)
+            end_distance = self._cell_distance_squared(target_cell, candidate_end)
+
+            if best_distance is None or start_distance < best_distance:
+                best_index = index
+                best_reverse = False
+                best_distance = start_distance
+            if self.allow_segment_reversal and end_distance < best_distance:
+                best_index = index
+                best_reverse = True
+                best_distance = end_distance
+
+        return best_index, best_reverse
+
+    def _select_initial_path(self, paths, robot_cell=None):
+        if (
+            self.start_near_robot_if_tf_available
+            and robot_cell is not None
+            and self.optimize_segment_order
+        ):
+            return self._select_path_closest_to_cell(paths, robot_cell)
+        return 0, False
+
+    def _select_next_path(self, paths, current_cell):
+        if not self.optimize_segment_order:
+            return 0, False
+        return self._select_path_closest_to_cell(paths, current_cell)
+
+    def _select_path_closest_to_cell(self, paths, target_cell):
+        best_index = 0
+        best_reverse = False
+        best_distance = None
+
+        for index, candidate_path in enumerate(paths):
+            start_distance = self._cell_distance_squared(target_cell, candidate_path[0])
+            end_distance = self._cell_distance_squared(target_cell, candidate_path[-1])
+
+            if best_distance is None or start_distance < best_distance:
+                best_index = index
+                best_reverse = False
+                best_distance = start_distance
+            if self.allow_segment_reversal and end_distance < best_distance:
+                best_index = index
+                best_reverse = True
+                best_distance = end_distance
+
+        return best_index, best_reverse
+
+    def _cells_along_axis_segment(self, start, end):
+        dx = self._sign(end[0] - start[0])
+        dy = self._sign(end[1] - start[1])
+        cells = [start]
+        current = start
+
+        while current != end:
+            current = (current[0] + dx, current[1] + dy)
+            cells.append(current)
+
+        return cells
+
+    def _connect_or_append_cell(
+        self,
+        ordered_cells,
+        target_cell,
+        planning_mask,
+        map_info,
+        connector_label,
+    ):
+        if not ordered_cells:
+            self._append_cell_without_duplicate(ordered_cells, target_cell)
+            return
+
+        current_cell = ordered_cells[-1]
+        if current_cell == target_cell:
+            return
+
+        distance_m = self._cell_distance(current_cell, target_cell) * map_info.resolution
+        if distance_m <= self.max_consecutive_pose_jump_m:
+            self._append_cell_without_duplicate(ordered_cells, target_cell)
+            return
+
+        connector = self._make_connector_cells(
+            current_cell,
+            target_cell,
+            planning_mask,
+            map_info,
+            connector_label,
+        )
+        if connector:
+            self.connector_count += 1
+            self.connector_pose_count += max(0, len(connector) - 1)
+            self._extend_cells_without_duplicates(ordered_cells, connector[1:])
+            return
+
+        self.connector_failure_count += 1
+        self.get_logger().warn(
+            'No valid %s connector from %s to %s; publishing remaining '
+            'discontinuity distance=%.2fm'
+            % (connector_label, current_cell, target_cell, distance_m),
+            throttle_duration_sec=5.0,
+        )
+        self._append_cell_without_duplicate(ordered_cells, target_cell)
+
+    def _make_connector_cells(
+        self,
+        start,
+        goal,
+        planning_mask,
+        map_info,
+        connector_label,
+    ):
+        if self.connector_allow_simple_straight_line:
+            straight_connector = self._make_straight_connector_cells(
+                start,
+                goal,
+                map_info,
+            )
+            blocked_cell = self._first_blocked_connector_cell(
+                straight_connector,
+                planning_mask,
+                map_info,
+            )
+            if not self.connector_check_obstacles or blocked_cell is None:
+                if blocked_cell is not None:
+                    self.get_logger().warn(
+                        'Using unchecked %s straight connector through blocked '
+                        'cell %s because connector_check_obstacles=false'
+                        % (connector_label, blocked_cell),
+                        throttle_duration_sec=5.0,
+                    )
+                return straight_connector
+
+            self.get_logger().warn(
+                '%s straight connector from %s to %s is blocked at cell %s; '
+                'trying grid connector'
+                % (connector_label, start, goal, blocked_cell),
+                throttle_duration_sec=5.0,
+            )
+
+        grid_connector = self._find_grid_path(
+            start,
+            goal,
+            planning_mask,
+            map_info.width,
+            map_info.height,
+        )
+        if grid_connector:
+            return grid_connector
+
+        return []
+
+    def _make_straight_connector_cells(self, start, goal, map_info):
+        start_x, start_y = map_to_world(start[0], start[1], map_info)
+        goal_x, goal_y = map_to_world(goal[0], goal[1], map_info)
+        distance = math.hypot(goal_x - start_x, goal_y - start_y)
+        steps = max(1, int(math.ceil(distance / self.connector_step_m)))
+        cells = []
+
+        for step in range(steps + 1):
+            ratio = step / steps
+            world_x = start_x + ratio * (goal_x - start_x)
+            world_y = start_y + ratio * (goal_y - start_y)
+            try:
+                cell = world_to_map(world_x, world_y, map_info)
+            except ValueError:
+                continue
+            self._append_cell_without_duplicate(cells, cell)
+
+        if not cells or cells[0] != start:
+            cells.insert(0, start)
+        if cells[-1] != goal:
+            cells.append(goal)
+        return cells
+
+    def _first_blocked_connector_cell(self, connector, planning_mask, map_info):
+        for cell in connector:
+            if not in_bounds(cell[0], cell[1], map_info.width, map_info.height):
+                return cell
+            index = map_to_flat_index(cell[0], cell[1], map_info.width)
+            if not planning_mask[index]:
+                return cell
+        return None
 
     def _estimate_segment_order_cost(self, segments, resolution):
         remaining_segments = list(segments)
@@ -829,7 +1446,7 @@ class CoveragePlannerNode(Node):
                         best_index = index
                         best_reverse = False
                         best_distance = start_distance
-                    if end_distance < best_distance:
+                    if self.allow_segment_reversal and end_distance < best_distance:
                         best_index = index
                         best_reverse = True
                         best_distance = end_distance
@@ -937,6 +1554,42 @@ class CoveragePlannerNode(Node):
             'valid': outside_map_poses == 0 and blocked_poses == 0,
         }
 
+    def _get_robot_cell(self, frame_id, map_info):
+        if not self.start_near_robot_if_tf_available:
+            return None
+
+        try:
+            transform = self.tf_buffer.lookup_transform(
+                frame_id or 'map',
+                self.robot_base_frame,
+                Time(),
+                timeout=Duration(seconds=self.tf_lookup_timeout_sec),
+            )
+        except TransformException as exc:
+            self.get_logger().warn(
+                'Could not use robot pose for coverage path start ordering: %s'
+                % exc,
+                throttle_duration_sec=5.0,
+            )
+            return None
+
+        robot_x = transform.transform.translation.x
+        robot_y = transform.transform.translation.y
+
+        try:
+            cell = world_to_map(robot_x, robot_y, map_info)
+        except ValueError as exc:
+            self.get_logger().warn(
+                'Robot pose is outside map for coverage path start ordering: %s'
+                % exc,
+                throttle_duration_sec=5.0,
+            )
+            return None
+
+        if not in_bounds(cell[0], cell[1], map_info.width, map_info.height):
+            return None
+        return cell
+
     def _fill_path_from_cells(self, path, cells, map_info):
         for index, cell in enumerate(cells):
             if index + 1 < len(cells):
@@ -1013,8 +1666,22 @@ class CoveragePlannerNode(Node):
             'direction': 'none',
             'regions': 0,
             'segments': 0,
+            'segments_before_ordering': 0,
+            'segments_after_ordering': 0,
+            'connector_count': 0,
+            'connector_pose_count': 0,
+            'connector_failure_count': 0,
             'poses': 0,
             'length_m': 0.0,
+            'max_consecutive_jump_m': 0.0,
+            'max_jump_index': -1,
+            'follow_path_ready': True,
+            'nav_costmap_used': False,
+            'nav_costmap_blocked_cells': 0,
+            'nav_costmap_unknown_cells': 0,
+            'nav_costmap_stale': False,
+            'nav_costmap_frame_mismatch': False,
+            'robot_start_used': False,
             'valid_cells': 0,
             'coverable': 0,
             'covered': 0,
@@ -1039,6 +1706,43 @@ class CoveragePlannerNode(Node):
             )
         )
 
+    def _log_path_continuity_report(self, stats, path):
+        first_pose = 'unavailable'
+        last_pose = 'unavailable'
+        if path.poses:
+            first_pose = self._format_pose_for_log(path.poses[0].pose)
+            last_pose = self._format_pose_for_log(path.poses[-1].pose)
+
+        self.get_logger().info(
+            'Coverage path continuity report: '
+            'segments_before_ordering=%d segments_after_ordering=%d '
+            'connector_count=%d connector_pose_count=%d total_poses=%d '
+            'path_length_m=%.2f max_consecutive_jump_m=%.3f max_jump_index=%d '
+            'first_pose=%s last_pose=%s follow_path_ready=%s robot_start_used=%s '
+            'nav_costmap_used=%s nav_blocked_cells=%d'
+            % (
+                stats['segments_before_ordering'],
+                stats['segments_after_ordering'],
+                stats['connector_count'],
+                stats['connector_pose_count'],
+                stats['poses'],
+                stats['length_m'],
+                stats['max_consecutive_jump_m'],
+                stats['max_jump_index'],
+                first_pose,
+                last_pose,
+                str(stats['follow_path_ready']).lower(),
+                str(stats.get('robot_start_used', False)).lower(),
+                str(stats.get('nav_costmap_used', False)).lower(),
+                stats.get('nav_costmap_blocked_cells', 0),
+            )
+        )
+
+        if stats['max_consecutive_jump_m'] > self.max_consecutive_pose_jump_m:
+            self.get_logger().warn(
+                'Published /coverage_path is not continuous enough for FollowPath.'
+            )
+
     def _log_replan_summary(self, stats):
         self.get_logger().info(
             'Coverage replan: percentage=%.1f%%, uncovered=%d, segments=%d, '
@@ -1055,7 +1759,9 @@ class CoveragePlannerNode(Node):
     def _format_coverage_stats(self, stats):
         return (
             'covered=%d uncovered=%d total=%d percentage=%.1f '
-            'path_length_m=%.2f segments=%d poses=%d'
+            'path_length_m=%.2f segments=%d poses=%d max_jump_m=%.3f '
+            'follow_path_ready=%s robot_start_used=%s nav_costmap_used=%s '
+            'nav_blocked_cells=%d'
             % (
                 stats['covered'],
                 stats['uncovered'],
@@ -1064,6 +1770,11 @@ class CoveragePlannerNode(Node):
                 stats['length_m'],
                 stats['segments'],
                 stats['poses'],
+                stats.get('max_consecutive_jump_m', 0.0),
+                str(stats.get('follow_path_ready', True)).lower(),
+                str(stats.get('robot_start_used', False)).lower(),
+                str(stats.get('nav_costmap_used', False)).lower(),
+                stats.get('nav_costmap_blocked_cells', 0),
             )
         )
 
@@ -1090,8 +1801,12 @@ class CoveragePlannerNode(Node):
         }
 
     def _coverage_map_checksum(self, msg):
+        return self._occupancy_grid_checksum(msg)
+
+    def _occupancy_grid_checksum(self, msg):
         origin = msg.info.origin
         return hash((
+            msg.header.frame_id,
             msg.info.width,
             msg.info.height,
             msg.info.resolution,
@@ -1116,6 +1831,30 @@ class CoveragePlannerNode(Node):
             length += math.hypot(current.x - previous.x, current.y - previous.y)
             previous = current
         return length
+
+    def _path_continuity_report(self, path):
+        max_jump = 0.0
+        max_jump_index = -1
+
+        for index in range(1, len(path.poses)):
+            previous = path.poses[index - 1].pose.position
+            current = path.poses[index].pose.position
+            jump = math.hypot(current.x - previous.x, current.y - previous.y)
+            if jump > max_jump:
+                max_jump = jump
+                max_jump_index = index - 1
+
+        return {
+            'max_consecutive_jump_m': max_jump,
+            'max_jump_index': max_jump_index,
+        }
+
+    def _format_pose_for_log(self, pose):
+        return 'x=%.3f y=%.3f yaw=%.2f' % (
+            pose.position.x,
+            pose.position.y,
+            self._yaw_from_quaternion(pose.orientation),
+        )
 
     def _summarize_directions(self, directions):
         if not directions:
@@ -1163,6 +1902,22 @@ class CoveragePlannerNode(Node):
 
     def _manhattan_distance(self, first, second):
         return abs(first[0] - second[0]) + abs(first[1] - second[1])
+
+    def _sign(self, value):
+        if value > 0:
+            return 1
+        if value < 0:
+            return -1
+        return 0
+
+    def _yaw_from_quaternion(self, quaternion):
+        siny_cosp = 2.0 * (
+            quaternion.w * quaternion.z + quaternion.x * quaternion.y
+        )
+        cosy_cosp = 1.0 - 2.0 * (
+            quaternion.y * quaternion.y + quaternion.z * quaternion.z
+        )
+        return math.atan2(siny_cosp, cosy_cosp)
 
     def _quaternion_from_yaw(self, yaw):
         quaternion = PoseStamped().pose.orientation
