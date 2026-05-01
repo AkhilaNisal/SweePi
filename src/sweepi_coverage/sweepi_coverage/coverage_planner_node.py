@@ -57,6 +57,8 @@ class CoveragePlannerNode(Node):
         self.declare_parameter('replan_on_map_change', True)
         self.declare_parameter('republish_last_path', True)
         self.declare_parameter('freeze_path_after_first_valid_plan', False)
+        self.declare_parameter('robot_radius_m', 0.20)
+        self.declare_parameter('coverage_safety_margin_m', 0.10)
         self.declare_parameter('connect_disjoint_segments', True)
         self.declare_parameter('connector_step_m', 0.10)
         self.declare_parameter('max_consecutive_pose_jump_m', 0.50)
@@ -133,6 +135,14 @@ class CoveragePlannerNode(Node):
             self.get_parameter('freeze_path_after_first_valid_plan')
             .get_parameter_value()
             .bool_value
+        )
+        self.robot_radius_m = (
+            self.get_parameter('robot_radius_m').get_parameter_value().double_value
+        )
+        self.coverage_safety_margin_m = (
+            self.get_parameter('coverage_safety_margin_m')
+            .get_parameter_value()
+            .double_value
         )
         self.connect_disjoint_segments = (
             self.get_parameter('connect_disjoint_segments')
@@ -221,6 +231,7 @@ class CoveragePlannerNode(Node):
         self.coverage_map_checksum = None
         self.nav_costmap = None
         self.nav_costmap_checksum = None
+        self.nav_costmap_received_once = False
         self.plan_dirty = False
         self.path_frozen = False
         self.latest_path = Path()
@@ -246,6 +257,11 @@ class CoveragePlannerNode(Node):
             durability=DurabilityPolicy.TRANSIENT_LOCAL,
             reliability=ReliabilityPolicy.RELIABLE,
         )
+        nav_costmap_qos = QoSProfile(
+            depth=10,
+            durability=DurabilityPolicy.VOLATILE,
+            reliability=ReliabilityPolicy.RELIABLE,
+        )
 
         self.coverage_map_sub = self.create_subscription(
             OccupancyGrid,
@@ -257,7 +273,7 @@ class CoveragePlannerNode(Node):
             OccupancyGrid,
             self.nav_costmap_topic,
             self.nav_costmap_callback,
-            map_qos,
+            nav_costmap_qos,
         )
         self.coverage_path_pub = self.create_publisher(
             Path,
@@ -291,7 +307,8 @@ class CoveragePlannerNode(Node):
         self.get_logger().info(
             'Coverage planner started: coverage_map=%s, nav_costmap=%s, path=%s, '
             'mask=%s, percentage=%s, stats=%s, direction=%s, '
-            'use_nav_costmap=%s'
+            'use_nav_costmap=%s, robot_radius=%.2fm, safety_margin=%.2fm, '
+            'inflation_radius=%.2fm'
             % (
                 self.coverage_map_topic,
                 self.nav_costmap_topic,
@@ -301,6 +318,9 @@ class CoveragePlannerNode(Node):
                 self.coverage_stats_topic,
                 self.planning_direction,
                 str(self._nav_costmap_enabled()).lower(),
+                self.robot_radius_m,
+                self.coverage_safety_margin_m,
+                self.inflation_radius_m,
             )
         )
 
@@ -343,6 +363,22 @@ class CoveragePlannerNode(Node):
         new_checksum = self._occupancy_grid_checksum(msg)
         costmap_changed = new_checksum != self.nav_costmap_checksum
         self.nav_costmap = msg
+        if not self.nav_costmap_received_once:
+            self.nav_costmap_received_once = True
+            self.get_logger().info(
+                'Global costmap received for coverage planning: topic=%s frame=%s '
+                'size=%dx%d resolution=%.3f max_allowed_nav_cost=%d '
+                'unknown_blocked=%s'
+                % (
+                    self.nav_costmap_topic,
+                    msg.header.frame_id or 'map',
+                    msg.info.width,
+                    msg.info.height,
+                    msg.info.resolution,
+                    self.max_allowed_nav_cost,
+                    str(self.treat_unknown_cost_as_blocked).lower(),
+                )
+            )
         if self.path_frozen:
             return
 
@@ -628,6 +664,18 @@ class CoveragePlannerNode(Node):
             )
             self.inflation_radius_m = 0.0
 
+        if self.robot_radius_m <= 0.0:
+            self.get_logger().warn(
+                'robot_radius_m must be positive; using real SweePi radius 0.20 m'
+            )
+            self.robot_radius_m = 0.20
+
+        if self.coverage_safety_margin_m < 0.0:
+            self.get_logger().warn(
+                'coverage_safety_margin_m must not be negative; using 0.10 m'
+            )
+            self.coverage_safety_margin_m = 0.10
+
         if self.min_region_area_m2 < 0.0:
             self.get_logger().warn(
                 'min_region_area_m2 must not be negative; using 0.0 m^2'
@@ -731,6 +779,7 @@ class CoveragePlannerNode(Node):
             'nav_costmap_used': False,
             'nav_costmap_blocked_cells': 0,
             'nav_costmap_unknown_cells': 0,
+            'nav_costmap_filtered_cells': 0,
             'nav_costmap_stale': False,
             'nav_costmap_frame_mismatch': False,
         }
@@ -786,6 +835,7 @@ class CoveragePlannerNode(Node):
                 except ValueError:
                     filtered_mask[coverage_index] = False
                     stats['nav_costmap_blocked_cells'] += 1
+                    stats['nav_costmap_filtered_cells'] += 1
                     continue
 
                 if not in_bounds(
@@ -796,6 +846,7 @@ class CoveragePlannerNode(Node):
                 ):
                     filtered_mask[coverage_index] = False
                     stats['nav_costmap_blocked_cells'] += 1
+                    stats['nav_costmap_filtered_cells'] += 1
                     continue
 
                 costmap_index = map_to_flat_index(
@@ -808,23 +859,27 @@ class CoveragePlannerNode(Node):
                     stats['nav_costmap_unknown_cells'] += 1
                     if self.treat_unknown_cost_as_blocked:
                         filtered_mask[coverage_index] = False
+                        stats['nav_costmap_filtered_cells'] += 1
                     continue
                 if cost > self.max_allowed_nav_cost:
                     filtered_mask[coverage_index] = False
                     stats['nav_costmap_blocked_cells'] += 1
+                    stats['nav_costmap_filtered_cells'] += 1
 
         stats['nav_costmap_used'] = True
-        if stats['nav_costmap_blocked_cells'] > 0:
-            self.get_logger().info(
-                'Nav costmap filtered %d coverage planning cells '
-                '(unknown=%d, max_allowed_nav_cost=%d)'
-                % (
-                    stats['nav_costmap_blocked_cells'],
-                    stats['nav_costmap_unknown_cells'],
-                    self.max_allowed_nav_cost,
-                ),
-                throttle_duration_sec=2.0,
-            )
+        self.get_logger().info(
+            'Nav costmap filtered %d coverage planning cells '
+            '(blocked_by_cost=%d, unknown=%d, unknown_blocked=%s, '
+            'max_allowed_nav_cost=%d)'
+            % (
+                stats['nav_costmap_filtered_cells'],
+                stats['nav_costmap_blocked_cells'],
+                stats['nav_costmap_unknown_cells'],
+                str(self.treat_unknown_cost_as_blocked).lower(),
+                self.max_allowed_nav_cost,
+            ),
+            throttle_duration_sec=2.0,
+        )
         return filtered_mask, stats
 
     def _nav_costmap_enabled(self):
@@ -1679,6 +1734,7 @@ class CoveragePlannerNode(Node):
             'nav_costmap_used': False,
             'nav_costmap_blocked_cells': 0,
             'nav_costmap_unknown_cells': 0,
+            'nav_costmap_filtered_cells': 0,
             'nav_costmap_stale': False,
             'nav_costmap_frame_mismatch': False,
             'robot_start_used': False,
@@ -1719,7 +1775,7 @@ class CoveragePlannerNode(Node):
             'connector_count=%d connector_pose_count=%d total_poses=%d '
             'path_length_m=%.2f max_consecutive_jump_m=%.3f max_jump_index=%d '
             'first_pose=%s last_pose=%s follow_path_ready=%s robot_start_used=%s '
-            'nav_costmap_used=%s nav_blocked_cells=%d'
+            'nav_costmap_used=%s nav_blocked_cells=%d nav_filtered_cells=%d'
             % (
                 stats['segments_before_ordering'],
                 stats['segments_after_ordering'],
@@ -1735,6 +1791,7 @@ class CoveragePlannerNode(Node):
                 str(stats.get('robot_start_used', False)).lower(),
                 str(stats.get('nav_costmap_used', False)).lower(),
                 stats.get('nav_costmap_blocked_cells', 0),
+                stats.get('nav_costmap_filtered_cells', 0),
             )
         )
 
@@ -1761,7 +1818,7 @@ class CoveragePlannerNode(Node):
             'covered=%d uncovered=%d total=%d percentage=%.1f '
             'path_length_m=%.2f segments=%d poses=%d max_jump_m=%.3f '
             'follow_path_ready=%s robot_start_used=%s nav_costmap_used=%s '
-            'nav_blocked_cells=%d'
+            'nav_blocked_cells=%d nav_filtered_cells=%d'
             % (
                 stats['covered'],
                 stats['uncovered'],
@@ -1775,6 +1832,7 @@ class CoveragePlannerNode(Node):
                 str(stats.get('robot_start_used', False)).lower(),
                 str(stats.get('nav_costmap_used', False)).lower(),
                 stats.get('nav_costmap_blocked_cells', 0),
+                stats.get('nav_costmap_filtered_cells', 0),
             )
         )
 

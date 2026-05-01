@@ -3,7 +3,7 @@ coverage_tracker_node:
     use_sim_time: true
     global_frame: map
     robot_base_frame: base_link
-    robot_radius_m: 0.18
+    robot_radius_m: 0.20
     occupied_threshold: 50
     coverage_update_rate_hz: 2.0
     coverage_topic: /coverage_map
@@ -19,17 +19,19 @@ coverage_planner_node:
     coverage_percentage_topic: "/coverage_percentage"
     coverage_stats_topic: "/coverage_stats"
     coverage_cell_value: 50
+    robot_radius_m: 0.20
+    coverage_safety_margin_m: 0.10
     coverage_spacing_m: 0.25
     min_segment_length_m: 0.30
-    inflation_radius_m: 0.28
+    inflation_radius_m: 0.30
     min_region_area_m2: 0.20
     path_publish_rate_hz: 1.0
     planning_direction: "auto"
     publish_debug_mask: true
     publish_debug_markers: true
-    replan_on_map_change: true
+    replan_on_map_change: false
     republish_last_path: true
-    freeze_path_after_first_valid_plan: false
+    freeze_path_after_first_valid_plan: true
     connect_disjoint_segments: true
     connector_step_m: 0.10
     max_consecutive_pose_jump_m: 0.50
@@ -41,11 +43,11 @@ coverage_planner_node:
     debug_path_continuity: true
     use_nav_costmap_for_planning: true
     use_global_costmap_for_planning: true
-    max_allowed_nav_cost: 90
+    max_allowed_nav_cost: 99
     treat_unknown_cost_as_blocked: true
     nav_costmap_timeout_sec: 2.0
-    wait_for_nav_costmap_before_planning: false
-    wait_for_robot_pose_before_planning: false
+    wait_for_nav_costmap_before_planning: true
+    wait_for_robot_pose_before_planning: true
 
 coverage_executor_node:
   ros__parameters:

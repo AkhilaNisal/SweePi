@@ -44,12 +44,12 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'require_robot_near_start',
-            default_value='true',
+            default_value='false',
             description='Require robot to be near the first coverage path pose',
         ),
         DeclareLaunchArgument(
             'max_start_distance_m',
-            default_value='0.50',
+            default_value='0.75',
             description='Maximum allowed robot distance to first path pose',
         ),
         Node(

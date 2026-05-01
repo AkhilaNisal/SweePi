@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Execute the published coverage path directly with Nav2 FollowPath."""
+"""Execute one frozen coverage path with Nav2 FollowPath."""
 
 import copy
 import math
@@ -7,9 +7,9 @@ import time
 
 import rclpy
 from action_msgs.msg import GoalStatus
-from geometry_msgs.msg import Point
-from nav2_msgs.action import FollowPath
-from nav_msgs.msg import Path
+from geometry_msgs.msg import Point, PoseStamped
+from nav2_msgs.action import FollowPath, SmoothPath
+from nav_msgs.msg import OccupancyGrid, Path
 from rclpy.action import ActionClient
 from rclpy.duration import Duration
 from rclpy.exceptions import ParameterAlreadyDeclaredException
@@ -22,21 +22,21 @@ from std_srvs.srv import Trigger
 from tf2_ros import Buffer, TransformException, TransformListener
 from visualization_msgs.msg import Marker, MarkerArray
 
+from sweepi_coverage.coverage_utils import in_bounds, map_to_flat_index, world_to_map
+
 
 class CoverageFollowPathExecutorNode(Node):
-    """Send the latest coverage Path to Nav2 without waypoint conversion."""
+    """Freeze, optionally smooth, validate, and execute a coverage Path."""
 
     STATUS_IDLE = 'IDLE'
     STATUS_WAITING_FOR_PATH = 'WAITING_FOR_PATH'
+    STATUS_VALIDATING = 'VALIDATING'
+    STATUS_SMOOTHING = 'SMOOTHING'
     STATUS_WAITING_FOR_NAV2 = 'WAITING_FOR_NAV2'
     STATUS_EXECUTING = 'EXECUTING'
     STATUS_SUCCEEDED = 'SUCCEEDED'
     STATUS_FAILED = 'FAILED'
     STATUS_CANCELED = 'CANCELED'
-    STATUS_TF_ERROR = 'TF_ERROR'
-    STATUS_INVALID_PATH_LOCAL = 'INVALID_PATH_LOCAL'
-    STATUS_START_TOO_FAR = 'START_TOO_FAR'
-    STATUS_ROBOT_TOO_FAR_FROM_PATH = 'ROBOT_TOO_FAR_FROM_PATH'
 
     FOLLOW_PATH_ERROR_CODES = {
         0: 'NONE',
@@ -47,148 +47,63 @@ class CoverageFollowPathExecutorNode(Node):
         104: 'PATIENCE_EXCEEDED',
         105: 'FAILED_TO_MAKE_PROGRESS',
         106: 'NO_VALID_CONTROL',
+        107: 'CONTROLLER_TIMED_OUT',
+    }
+
+    SMOOTH_PATH_ERROR_CODES = {
+        0: 'NONE',
+        500: 'UNKNOWN',
+        501: 'INVALID_SMOOTHER',
+        502: 'TIMEOUT',
+        503: 'SMOOTHED_PATH_IN_COLLISION',
+        504: 'FAILED_TO_SMOOTH_PATH',
+        505: 'INVALID_PATH',
     }
 
     def __init__(self):
         super().__init__('coverage_follow_path_executor_node')
 
-        self._declare_parameter_if_needed('use_sim_time', True)
-        self._declare_parameter_if_needed('coverage_path_topic', '/coverage_path')
-        self._declare_parameter_if_needed('active_path_topic', '/coverage_active_path')
-        self._declare_parameter_if_needed(
-            'execution_status_topic',
-            '/coverage_execution_status',
-        )
-        self._declare_parameter_if_needed(
-            'nav2_feedback_topic',
-            '/coverage_nav2_feedback',
-        )
-        self._declare_parameter_if_needed(
-            'path_markers_topic',
-            '/coverage_path_markers',
-        )
-        self._declare_parameter_if_needed('follow_path_action_name', '/follow_path')
-        self._declare_parameter_if_needed('controller_id', 'FollowPath')
-        self._declare_parameter_if_needed('goal_checker_id', '')
-        self._declare_parameter_if_needed('progress_checker_id', '')
-        self._declare_parameter_if_needed('auto_start', False)
-        self._declare_parameter_if_needed('execute_once_on_first_path', False)
-        self._declare_parameter_if_needed('min_path_poses', 2)
-        self._declare_parameter_if_needed('wait_for_nav2_timeout_sec', 10.0)
-        self._declare_parameter_if_needed('action_result_timeout_sec', 0.0)
-        self._declare_parameter_if_needed('republish_active_path_hz', 1.0)
-        self._declare_parameter_if_needed('allow_new_path_while_executing', False)
-        self._declare_parameter_if_needed('robot_base_frame', 'base_link')
-        self._declare_parameter_if_needed('tf_lookup_timeout_sec', 1.0)
-        self._declare_parameter_if_needed('require_robot_near_start', True)
-        self._declare_parameter_if_needed('max_start_distance_m', 0.50)
-        self._declare_parameter_if_needed('max_nearest_path_distance_m', 0.50)
-        self._declare_parameter_if_needed('minimum_path_length_m', 0.10)
-        self._declare_parameter_if_needed('max_consecutive_pose_jump_m', 1.00)
-        self._declare_parameter_if_needed('debug_info_topic', '/coverage_debug_info')
-        self._declare_parameter_if_needed(
-            'debug_markers_topic',
-            '/coverage_debug_markers',
-        )
-        self._declare_parameter_if_needed('auto_restart_on_failed_progress', False)
-        self._declare_parameter_if_needed('failed_progress_restart_delay_sec', 1.0)
-        self._declare_parameter_if_needed('max_failed_progress_restarts', 3)
-
-        self.coverage_path_topic = self._string_param('coverage_path_topic')
-        self.active_path_topic = self._string_param('active_path_topic')
-        self.execution_status_topic = self._string_param('execution_status_topic')
-        self.nav2_feedback_topic = self._string_param('nav2_feedback_topic')
-        self.path_markers_topic = self._string_param('path_markers_topic')
-        self.follow_path_action_name = self._string_param('follow_path_action_name')
-        self.controller_id = self._string_param('controller_id')
-        self.goal_checker_id = self._string_param('goal_checker_id')
-        self.progress_checker_id = self._string_param('progress_checker_id')
-        self.auto_start = self._bool_param('auto_start')
-        self.execute_once_on_first_path = self._bool_param(
-            'execute_once_on_first_path'
-        )
-        self.min_path_poses = max(1, self._int_param('min_path_poses'))
-        self.wait_for_nav2_timeout_sec = max(
-            0.0,
-            self._double_param('wait_for_nav2_timeout_sec'),
-        )
-        self.action_result_timeout_sec = max(
-            0.0,
-            self._double_param('action_result_timeout_sec'),
-        )
-        self.republish_active_path_hz = max(
-            0.1,
-            self._double_param('republish_active_path_hz'),
-        )
-        self.allow_new_path_while_executing = self._bool_param(
-            'allow_new_path_while_executing'
-        )
-        self.robot_base_frame = self._string_param('robot_base_frame')
-        self.tf_lookup_timeout_sec = max(
-            0.0,
-            self._double_param('tf_lookup_timeout_sec'),
-        )
-        self.require_robot_near_start = self._bool_param('require_robot_near_start')
-        self.max_start_distance_m = max(
-            0.0,
-            self._double_param('max_start_distance_m'),
-        )
-        self.max_nearest_path_distance_m = max(
-            0.0,
-            self._double_param('max_nearest_path_distance_m'),
-        )
-        self.minimum_path_length_m = max(
-            0.0,
-            self._double_param('minimum_path_length_m'),
-        )
-        self.max_consecutive_pose_jump_m = max(
-            0.0,
-            self._double_param('max_consecutive_pose_jump_m'),
-        )
-        self.debug_info_topic = self._string_param('debug_info_topic')
-        self.debug_markers_topic = self._string_param('debug_markers_topic')
-        self.auto_restart_on_failed_progress = self._bool_param(
-            'auto_restart_on_failed_progress'
-        )
-        self.failed_progress_restart_delay_sec = max(
-            0.0,
-            self._double_param('failed_progress_restart_delay_sec'),
-        )
-        self.max_failed_progress_restarts = max(
-            0,
-            self._int_param('max_failed_progress_restarts'),
-        )
+        self._declare_parameters()
+        self._load_parameters()
 
         qos = QoSProfile(
             depth=1,
             durability=DurabilityPolicy.TRANSIENT_LOCAL,
             reliability=ReliabilityPolicy.RELIABLE,
         )
+        costmap_qos = QoSProfile(
+            depth=10,
+            durability=DurabilityPolicy.VOLATILE,
+            reliability=ReliabilityPolicy.RELIABLE,
+        )
 
-        self.latest_path = None
-        self.latest_path_checksum = None
-        self.latest_path_error = 'No coverage path received yet'
+        self.cached_raw_path = None
+        self.coverage_path_frozen = False
         self.active_path = None
-        self.pending_start_path = None
-        self.pending_start_monotonic = None
-        self.pending_start_not_before_monotonic = 0.0
-        self.pending_restart_path = None
-        self.active_path_checksum = None
+        self.smoothed_path = None
+        self.latest_path_error = 'No coverage path received yet'
+        self.latest_status_msg = String()
+        self.execution_status = self.STATUS_WAITING_FOR_PATH
+        self.latest_feedback_text = ''
+        self.latest_debug_info = ''
+        self.selected_start_index = 0
+        self.latest_validation_report = self._make_empty_report()
+        self.nav_costmap = None
+        self.nav_costmap_received = False
+        self.nav_costmap_stamp_monotonic = 0.0
+        self.rounded_turn_sections = []
+        self.blocked_debug_points = []
         self.current_goal_handle = None
+        self.current_smoothing_goal_handle = None
         self.goal_in_flight = False
+        self.smoothing_in_flight = False
         self.cancel_requested = False
-        self.cancel_reason = ''
-        self.cancel_future_in_flight = False
-        self.executed_once_on_first_path = False
-        self.last_auto_started_checksum = None
         self.execution_start_monotonic = None
         self.last_distance_to_goal = None
-        self.last_feedback_text = ''
-        self.failed_progress_restart_count = 0
-        self.execution_status = self.STATUS_WAITING_FOR_PATH
-        self.latest_status_msg = String()
-        self.latest_status_msg.data = self.execution_status
-        self.latest_validation_report = self._make_empty_validation_report()
+        self.pending_follow_path = None
+        self.pending_start_report = None
+        self.pending_custom_smoothed_length = 0.0
+        self.pending_smoothing_start_monotonic = None
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
@@ -198,11 +113,29 @@ class CoverageFollowPathExecutorNode(Node):
             FollowPath,
             self.follow_path_action_name,
         )
+        self.smoother_client = ActionClient(
+            self,
+            SmoothPath,
+            self.smoother_action_name,
+        )
 
         self.coverage_path_sub = self.create_subscription(
             Path,
             self.coverage_path_topic,
             self.coverage_path_callback,
+            qos,
+        )
+        self.nav_costmap_sub = self.create_subscription(
+            OccupancyGrid,
+            self.costmap_topic,
+            self.nav_costmap_callback,
+            costmap_qos,
+        )
+
+        self.raw_path_pub = self.create_publisher(Path, self.raw_path_topic, qos)
+        self.smoothed_path_pub = self.create_publisher(
+            Path,
+            self.smoothed_path_topic,
             qos,
         )
         self.active_path_pub = self.create_publisher(Path, self.active_path_topic, qos)
@@ -216,11 +149,6 @@ class CoverageFollowPathExecutorNode(Node):
             self.nav2_feedback_topic,
             qos,
         )
-        self.path_markers_pub = self.create_publisher(
-            MarkerArray,
-            self.path_markers_topic,
-            qos,
-        )
         self.debug_info_pub = self.create_publisher(
             String,
             self.debug_info_topic,
@@ -229,6 +157,11 @@ class CoverageFollowPathExecutorNode(Node):
         self.debug_markers_pub = self.create_publisher(
             MarkerArray,
             self.debug_markers_topic,
+            qos,
+        )
+        self.path_markers_pub = self.create_publisher(
+            MarkerArray,
+            self.path_markers_topic,
             qos,
         )
 
@@ -247,245 +180,578 @@ class CoverageFollowPathExecutorNode(Node):
             '/validate_coverage_follow_path',
             self.validate_service_callback,
         )
+        self.reset_service = self.create_service(
+            Trigger,
+            '/reset_coverage_follow_path',
+            self.reset_service_callback,
+        )
 
-        publish_period = 1.0 / self.republish_active_path_hz
+        publish_period = 1.0 / max(0.1, self.republish_active_path_hz)
         self.timer = self.create_timer(publish_period, self.timer_callback)
 
         self._set_status(self.STATUS_WAITING_FOR_PATH)
         self.get_logger().info(
-            'Coverage FollowPath executor started: path=%s, active_path=%s, '
-            'markers=%s, debug_info=%s, debug_markers=%s, status=%s, '
-            'feedback=%s, action=%s, controller_id=%s, robot_base_frame=%s'
+            'Coverage FollowPath executor started: action=%s controller_id=%s '
+            'smoother_action=%s smoother_id=%s path=%s raw=%s smoothed=%s '
+            'active=%s costmap=%s. This mode uses FollowPath, not '
+            'NavigateThroughPoses.'
             % (
-                self.coverage_path_topic,
-                self.active_path_topic,
-                self.path_markers_topic,
-                self.debug_info_topic,
-                self.debug_markers_topic,
-                self.execution_status_topic,
-                self.nav2_feedback_topic,
                 self.follow_path_action_name,
                 self.controller_id,
-                self.robot_base_frame,
+                self.smoother_action_name,
+                self.smoother_id,
+                self.coverage_path_topic,
+                self.raw_path_topic,
+                self.smoothed_path_topic,
+                self.active_path_topic,
+                self.costmap_topic,
             )
         )
+
+    def _declare_parameters(self):
+        defaults = {
+            'use_sim_time': True,
+            'coverage_path_topic': '/coverage_path',
+            'raw_path_topic': '/coverage_path_raw',
+            'smoothed_path_topic': '/coverage_smoothed_path',
+            'active_path_topic': '/coverage_active_path',
+            'execution_status_topic': '/coverage_execution_status',
+            'nav2_feedback_topic': '/coverage_nav2_feedback',
+            'debug_info_topic': '/coverage_debug_info',
+            'debug_markers_topic': '/coverage_debug_markers',
+            'path_markers_topic': '/coverage_path_markers',
+            'follow_path_action_name': '/follow_path',
+            'controller_id': 'FollowPath',
+            'goal_checker_id': '',
+            'progress_checker_id': '',
+            'global_frame': 'map',
+            'robot_base_frame': 'base_link',
+            'costmap_topic': '/global_costmap/costmap',
+            'enable_costmap_validation': True,
+            'require_costmap_for_validation': True,
+            'max_allowed_nav_cost': 90,
+            'treat_unknown_cost_as_blocked': True,
+            'freeze_path_on_start': True,
+            'ignore_path_updates_while_executing': True,
+            'require_robot_near_start': False,
+            'max_start_distance_m': 0.75,
+            'start_from_nearest_valid_pose_if_far': True,
+            'max_nearest_path_distance_m': 1.50,
+            'max_consecutive_pose_jump_m': 0.50,
+            'min_path_poses': 2,
+            'minimum_path_length_m': 0.10,
+            'tf_lookup_timeout_sec': 1.0,
+            'wait_for_nav2_timeout_sec': 10.0,
+            'republish_active_path_hz': 1.0,
+            'auto_start': False,
+            'enable_coverage_turn_smoothing': True,
+            'turn_smoothing_radius_m': 0.15,
+            'preserve_strip_lines': True,
+            'validate_turn_smoothing_against_costmap': True,
+            'enable_nav2_smoothing': True,
+            'smoother_action_name': '/smooth_path',
+            'smoother_id': 'simple_smoother',
+            'max_smoothing_duration_s': 2.0,
+            'check_smooth_path_for_collisions': True,
+            'fallback_to_raw_path_on_smoothing_failure': False,
+            'publish_raw_and_smoothed_paths': True,
+            'publish_debug_markers': True,
+        }
+        for name, value in defaults.items():
+            self._declare_parameter_if_needed(name, value)
+
+    def _load_parameters(self):
+        self.coverage_path_topic = self._string_param('coverage_path_topic')
+        self.raw_path_topic = self._string_param('raw_path_topic')
+        self.smoothed_path_topic = self._string_param('smoothed_path_topic')
+        self.active_path_topic = self._string_param('active_path_topic')
+        self.execution_status_topic = self._string_param('execution_status_topic')
+        self.nav2_feedback_topic = self._string_param('nav2_feedback_topic')
+        self.debug_info_topic = self._string_param('debug_info_topic')
+        self.debug_markers_topic = self._string_param('debug_markers_topic')
+        self.path_markers_topic = self._string_param('path_markers_topic')
+        self.follow_path_action_name = self._string_param('follow_path_action_name')
+        self.controller_id = self._string_param('controller_id')
+        self.goal_checker_id = self._string_param('goal_checker_id')
+        self.progress_checker_id = self._string_param('progress_checker_id')
+        self.global_frame = self._string_param('global_frame')
+        self.robot_base_frame = self._string_param('robot_base_frame')
+        self.costmap_topic = self._string_param('costmap_topic')
+        self.enable_costmap_validation = self._bool_param('enable_costmap_validation')
+        self.require_costmap_for_validation = self._bool_param(
+            'require_costmap_for_validation'
+        )
+        self.max_allowed_nav_cost = self._int_param('max_allowed_nav_cost')
+        self.treat_unknown_cost_as_blocked = self._bool_param(
+            'treat_unknown_cost_as_blocked'
+        )
+        self.freeze_path_on_start = self._bool_param('freeze_path_on_start')
+        self.ignore_path_updates_while_executing = self._bool_param(
+            'ignore_path_updates_while_executing'
+        )
+        self.require_robot_near_start = self._bool_param('require_robot_near_start')
+        self.max_start_distance_m = self._double_param('max_start_distance_m')
+        self.start_from_nearest_valid_pose_if_far = self._bool_param(
+            'start_from_nearest_valid_pose_if_far'
+        )
+        self.max_nearest_path_distance_m = self._double_param(
+            'max_nearest_path_distance_m'
+        )
+        self.max_consecutive_pose_jump_m = self._double_param(
+            'max_consecutive_pose_jump_m'
+        )
+        self.min_path_poses = self._int_param('min_path_poses')
+        self.minimum_path_length_m = self._double_param('minimum_path_length_m')
+        self.tf_lookup_timeout_sec = self._double_param('tf_lookup_timeout_sec')
+        self.wait_for_nav2_timeout_sec = self._double_param(
+            'wait_for_nav2_timeout_sec'
+        )
+        self.republish_active_path_hz = self._double_param('republish_active_path_hz')
+        self.auto_start = self._bool_param('auto_start')
+        self.enable_coverage_turn_smoothing = self._bool_param(
+            'enable_coverage_turn_smoothing'
+        )
+        self.turn_smoothing_radius_m = self._double_param('turn_smoothing_radius_m')
+        self.preserve_strip_lines = self._bool_param('preserve_strip_lines')
+        self.validate_turn_smoothing_against_costmap = self._bool_param(
+            'validate_turn_smoothing_against_costmap'
+        )
+        self.enable_nav2_smoothing = self._bool_param('enable_nav2_smoothing')
+        self.smoother_action_name = self._string_param('smoother_action_name')
+        self.smoother_id = self._string_param('smoother_id')
+        self.max_smoothing_duration_s = self._double_param('max_smoothing_duration_s')
+        self.check_smooth_path_for_collisions = self._bool_param(
+            'check_smooth_path_for_collisions'
+        )
+        self.fallback_to_raw_path_on_smoothing_failure = self._bool_param(
+            'fallback_to_raw_path_on_smoothing_failure'
+        )
+        self.publish_raw_and_smoothed_paths = self._bool_param(
+            'publish_raw_and_smoothed_paths'
+        )
+        self.publish_debug_markers = self._bool_param('publish_debug_markers')
+
+        self.max_allowed_nav_cost = min(100, max(0, self.max_allowed_nav_cost))
+        self.max_start_distance_m = max(0.0, self.max_start_distance_m)
+        self.max_nearest_path_distance_m = max(0.0, self.max_nearest_path_distance_m)
+        self.max_consecutive_pose_jump_m = max(0.01, self.max_consecutive_pose_jump_m)
+        self.min_path_poses = max(1, self.min_path_poses)
+        self.minimum_path_length_m = max(0.0, self.minimum_path_length_m)
+        self.tf_lookup_timeout_sec = max(0.0, self.tf_lookup_timeout_sec)
+        self.wait_for_nav2_timeout_sec = max(0.0, self.wait_for_nav2_timeout_sec)
+        self.turn_smoothing_radius_m = max(0.0, self.turn_smoothing_radius_m)
+        self.max_smoothing_duration_s = max(0.0, self.max_smoothing_duration_s)
 
     def coverage_path_callback(self, msg):
-        """Cache each valid path without changing an active FollowPath goal."""
-        validation_error = self._validate_path(msg)
-        if validation_error:
-            self.latest_path_error = validation_error
-            self.get_logger().warn(
-                'Ignoring invalid coverage path: %s' % validation_error,
-                throttle_duration_sec=5.0,
-            )
-            if self.latest_path is None and not self.goal_in_flight:
-                self._set_status(self.STATUS_WAITING_FOR_PATH)
-            return
-
-        checksum = self._path_checksum(msg)
-        is_new_path = checksum != self.latest_path_checksum
-        self.latest_path = copy.deepcopy(msg)
-        self.latest_path_checksum = checksum
-        self.latest_path_error = ''
-
-        if is_new_path:
-            self._log_path_summary(self.latest_path, 'Cached coverage path')
-            if not self.goal_in_flight and self.pending_start_path is None:
-                self._set_status(self.STATUS_IDLE)
-        elif not self.goal_in_flight and self.pending_start_path is None:
-            if self.execution_status == self.STATUS_WAITING_FOR_PATH:
-                self._set_status(self.STATUS_IDLE)
-
-        if self.goal_in_flight:
+        if self.goal_in_flight and self.ignore_path_updates_while_executing:
             self.get_logger().info(
-                'Received a new coverage path while executing; cached it for a '
-                'future explicit start request.',
+                'Ignoring /coverage_path update because active coverage path is frozen.',
                 throttle_duration_sec=5.0,
             )
             return
 
-        should_start_once = (
-            self.execute_once_on_first_path
-            and not self.executed_once_on_first_path
-        )
-        should_auto_start = (
-            self.auto_start
-            and checksum != self.last_auto_started_checksum
-        )
+        if self.cached_raw_path is not None:
+            self.get_logger().info(
+                'Ignoring /coverage_path update because the first valid coverage '
+                'path is already cached. Call /reset_coverage_follow_path to '
+                'accept a new path.',
+                throttle_duration_sec=5.0,
+            )
+            return
 
-        if should_start_once or should_auto_start:
-            if should_start_once:
-                self.executed_once_on_first_path = True
-            if should_auto_start:
-                self.last_auto_started_checksum = checksum
-            self._request_execution_from_latest('path_received')
+        report = self._validate_path_structure(msg, check_costmap=False)
+        if not report['valid']:
+            self.latest_path_error = report['reason']
+            self._publish_debug(report)
+            self.get_logger().warn(
+                'Ignoring invalid /coverage_path: %s' % report['reason'],
+                throttle_duration_sec=5.0,
+            )
+            return
+
+        self.cached_raw_path = copy.deepcopy(msg)
+        self.coverage_path_frozen = True
+        self.latest_path_error = ''
+        self._stamp_path(self.cached_raw_path)
+        self.raw_path_pub.publish(self.cached_raw_path)
+        self._set_status(self.STATUS_IDLE)
+        self._log_path_summary(self.cached_raw_path, 'Coverage path frozen')
+        self.get_logger().info(
+            'Path is frozen from the first valid /coverage_path. Later updates '
+            'will not replace the active coverage path without reset.'
+        )
+        if self.auto_start:
+            self._request_execution('auto_start')
+
+    def nav_costmap_callback(self, msg):
+        expected_cells = msg.info.width * msg.info.height
+        if len(msg.data) != expected_cells:
+            self.get_logger().warn(
+                'Ignoring global costmap with %d cells, expected %d'
+                % (len(msg.data), expected_cells),
+                throttle_duration_sec=5.0,
+            )
+            return
+
+        self.nav_costmap = msg
+        self.nav_costmap_stamp_monotonic = time.monotonic()
+        if not self.nav_costmap_received:
+            self.nav_costmap_received = True
+            self.get_logger().info(
+                'Global costmap received for FollowPath validation: topic=%s '
+                'frame=%s size=%dx%d resolution=%.3f max_allowed_nav_cost=%d '
+                'unknown_blocked=%s'
+                % (
+                    self.costmap_topic,
+                    msg.header.frame_id or self.global_frame,
+                    msg.info.width,
+                    msg.info.height,
+                    msg.info.resolution,
+                    self.max_allowed_nav_cost,
+                    str(self.treat_unknown_cost_as_blocked).lower(),
+                )
+            )
 
     def start_service_callback(self, request, response):
-        """Start FollowPath execution using the latest cached valid path."""
         del request
-
-        if self.latest_path is None:
-            self._set_status(self.STATUS_WAITING_FOR_PATH)
-            response.success = False
-            response.message = self.latest_path_error or 'No valid coverage path cached'
-            return response
-
-        if self.goal_in_flight:
-            if not self.allow_new_path_while_executing:
-                response.success = False
-                response.message = (
-                    'FollowPath is already executing; cancel first or set '
-                    'allow_new_path_while_executing=true'
-                )
-                return response
-
-            self.pending_restart_path = copy.deepcopy(self.latest_path)
-            self._request_cancel('restart_requested')
-            response.success = True
-            response.message = (
-                'Canceling active FollowPath goal; latest coverage path will start '
-                'after cancel completes'
-            )
-            return response
-
-        if self._request_execution_from_latest('service_start'):
+        if self._request_execution('service_start'):
             response.success = True
             response.message = 'Coverage FollowPath execution requested'
         else:
             response.success = False
-            response.message = self._format_validation_response(
-                self.latest_validation_report
-            )
+            response.message = self.latest_path_error
         return response
 
     def cancel_service_callback(self, request, response):
-        """Cancel an active or pending FollowPath execution."""
         del request
-
-        if self.pending_start_path is not None and not self.goal_in_flight:
-            self.pending_start_path = None
-            self.pending_start_monotonic = None
-            self.pending_start_not_before_monotonic = 0.0
+        if self.smoothing_in_flight and self.current_smoothing_goal_handle is not None:
+            self.cancel_requested = True
+            self.current_smoothing_goal_handle.cancel_goal_async()
             self._set_status(self.STATUS_CANCELED)
             response.success = True
-            response.message = 'Pending coverage FollowPath execution canceled'
+            response.message = 'Cancel request sent to active SmoothPath goal'
             return response
 
-        if not self.goal_in_flight:
-            response.success = False
-            response.message = 'No active FollowPath goal to cancel'
+        if self.goal_in_flight and self.current_goal_handle is not None:
+            self.cancel_requested = True
+            self.current_goal_handle.cancel_goal_async()
+            response.success = True
+            response.message = 'Cancel request sent to active FollowPath goal'
             return response
 
-        self.pending_restart_path = None
-        self._request_cancel('service_cancel')
-        response.success = True
-        response.message = 'Cancel request sent to active FollowPath goal'
+        response.success = False
+        response.message = 'No active SmoothPath or FollowPath goal to cancel'
         return response
 
     def validate_service_callback(self, request, response):
-        """Validate the cached path without sending a FollowPath goal."""
         del request
-
-        report = self._run_preflight_validation(
-            self.latest_path,
-            publish_debug=True,
-        )
+        report = self._run_preflight_validation(self.cached_raw_path)
         response.success = report['valid']
-        response.message = self._format_validation_response(report)
+        response.message = self._format_report(report)
+        self._publish_debug(report)
         if report['valid']:
             self.get_logger().info('Coverage FollowPath validation passed')
         else:
             self.get_logger().warn(
-                'Coverage FollowPath validation failed: %s' % response.message
+                'Coverage FollowPath validation failed: %s' % report['reason']
             )
         return response
 
+    def reset_service_callback(self, request, response):
+        del request
+        if self.goal_in_flight or self.smoothing_in_flight:
+            response.success = False
+            response.message = (
+                'Coverage execution is active; call /cancel_coverage_follow_path '
+                'before reset'
+            )
+            return response
+
+        self.cached_raw_path = None
+        self.coverage_path_frozen = False
+        self.active_path = None
+        self.smoothed_path = None
+        self.latest_path_error = 'No coverage path received yet'
+        self.latest_debug_info = ''
+        self.latest_validation_report = self._make_empty_report()
+        self.rounded_turn_sections = []
+        self.blocked_debug_points = []
+        self.selected_start_index = 0
+        self._set_status(self.STATUS_WAITING_FOR_PATH)
+        self._publish_empty_paths_and_markers()
+        response.success = True
+        response.message = 'Coverage FollowPath cache reset; waiting for /coverage_path'
+        return response
+
     def timer_callback(self):
-        """Republish debug outputs and advance pending action state."""
-        self._send_pending_start_if_ready()
-        self._enforce_action_result_timeout()
-
-        if self.active_path is not None:
-            self.active_path_pub.publish(self.active_path)
-            self.path_markers_pub.publish(self._make_path_markers(self.active_path))
-        elif self.latest_path is not None:
-            self.path_markers_pub.publish(self._make_path_markers(self.latest_path))
-        else:
-            self.path_markers_pub.publish(self._make_delete_markers('map'))
-
         self.latest_status_msg.data = self.execution_status
         self.execution_status_pub.publish(self.latest_status_msg)
 
-    def _request_execution_from_latest(self, reason):
-        if self.latest_path is None:
-            self._set_status(self.STATUS_WAITING_FOR_PATH)
+        if self.publish_raw_and_smoothed_paths:
+            if self.cached_raw_path is not None:
+                self._stamp_path(self.cached_raw_path)
+                self.raw_path_pub.publish(self.cached_raw_path)
+            if self.smoothed_path is not None:
+                self._stamp_path(self.smoothed_path)
+                self.smoothed_path_pub.publish(self.smoothed_path)
+
+        if self.active_path is not None:
+            self._stamp_path(self.active_path)
+            self.active_path_pub.publish(self.active_path)
+            self.path_markers_pub.publish(self._make_path_markers(self.active_path))
+        elif self.cached_raw_path is not None:
+            self.path_markers_pub.publish(self._make_path_markers(self.cached_raw_path))
+
+    def _request_execution(self, reason):
+        if self.goal_in_flight or self.smoothing_in_flight:
+            self.latest_path_error = 'Coverage FollowPath is already active'
             return False
 
-        path = copy.deepcopy(self.latest_path)
-        report = self._run_preflight_validation(path, publish_debug=True)
-        if not report['valid']:
-            self.latest_path_error = report['reason']
-            self._set_status(report['status'])
+        if self.cached_raw_path is None:
+            self._set_status(self.STATUS_WAITING_FOR_PATH)
+            self.latest_path_error = self.latest_path_error or 'No coverage path cached'
+            return False
+
+        self._set_status(self.STATUS_VALIDATING)
+        raw_report = self._run_preflight_validation(self.cached_raw_path)
+        self._publish_debug(raw_report)
+        if not raw_report['valid']:
+            self.latest_path_error = raw_report['reason']
+            self._set_status(self.STATUS_FAILED)
             self.get_logger().warn(
                 'Cannot start FollowPath execution: %s'
-                % self._format_validation_response(report)
+                % self._format_report(raw_report)
             )
             return False
 
-        self.pending_start_path = path
-        self.pending_start_monotonic = time.monotonic()
-        self.pending_start_not_before_monotonic = 0.0
-        self._set_status(self.STATUS_WAITING_FOR_NAV2)
-        self.get_logger().info(
-            'FollowPath execution requested (%s): action=%s'
-            % (reason, self.follow_path_action_name)
+        start_path, start_report = self._select_start_path(
+            self.cached_raw_path,
+            raw_report,
         )
-        self._log_path_summary(path, 'Pending FollowPath path')
+        if start_path is None:
+            self.latest_path_error = start_report['reason']
+            self._publish_debug(start_report)
+            self._set_status(self.STATUS_FAILED)
+            self.get_logger().warn(
+                'Cannot start FollowPath execution: %s'
+                % self._format_report(start_report)
+            )
+            return False
+
+        self.pending_start_report = start_report
+        working_path = start_path
+        custom_smoothed_length = self._path_length(working_path)
+        raw_length = self._path_length(self.cached_raw_path)
+
+        if self.enable_coverage_turn_smoothing:
+            self._set_status(self.STATUS_SMOOTHING)
+            working_path = self._smooth_coverage_turns(working_path)
+            custom_smoothed_length = self._path_length(working_path)
+            custom_report = self._run_preflight_validation(
+                working_path,
+                check_costmap=self.validate_turn_smoothing_against_costmap,
+            )
+            if not custom_report['valid']:
+                self.latest_path_error = (
+                    'custom turn smoothing produced invalid path: %s'
+                    % custom_report['reason']
+                )
+                self._publish_debug(custom_report)
+                self._set_status(self.STATUS_FAILED)
+                self.get_logger().warn(self.latest_path_error)
+                return False
+
+        self.smoothed_path = copy.deepcopy(working_path)
+        self.smoothed_path_pub.publish(self.smoothed_path)
+
+        if self.enable_nav2_smoothing:
+            self.pending_follow_path = copy.deepcopy(working_path)
+            self.pending_custom_smoothed_length = custom_smoothed_length
+            self.get_logger().info(
+                'Requesting Nav2 SmoothPath before FollowPath: action=%s '
+                'smoother_id=%s poses=%d raw_length=%.2fm custom_length=%.2fm'
+                % (
+                    self.smoother_action_name,
+                    self.smoother_id,
+                    len(working_path.poses),
+                    raw_length,
+                    custom_smoothed_length,
+                )
+            )
+            if not self._send_smooth_path_goal(working_path):
+                return False
+            self.latest_path_error = ''
+            return True
+
+        final_report = self._run_preflight_validation(
+            working_path,
+            check_costmap=self.check_smooth_path_for_collisions,
+        )
+        if not final_report['valid']:
+            self.latest_path_error = final_report['reason']
+            self._publish_debug(final_report)
+            self._set_status(self.STATUS_FAILED)
+            return False
+
+        self.get_logger().info(
+            'Smoothing result: raw path length=%.2fm custom-smoothed path '
+            'length=%.2fm Nav2-smoothed path length=not_used collision_check=%s'
+            % (
+                raw_length,
+                custom_smoothed_length,
+                str(final_report.get('costmap_valid', True)).lower(),
+            )
+        )
+        self._send_follow_path_goal(working_path, reason)
         return True
 
-    def _send_pending_start_if_ready(self):
-        if self.pending_start_path is None or self.goal_in_flight:
+    def _send_smooth_path_goal(self, path):
+        self._set_status(self.STATUS_SMOOTHING)
+        if not self.smoother_client.wait_for_server(
+            timeout_sec=self.wait_for_nav2_timeout_sec
+        ):
+            return self._handle_smoothing_failure(
+                'SmoothPath action server %s is not available'
+                % self.smoother_action_name
+            )
+
+        goal_msg = SmoothPath.Goal()
+        goal_msg.path = copy.deepcopy(path)
+        goal_msg.smoother_id = self.smoother_id
+        goal_msg.max_smoothing_duration = Duration(
+            seconds=self.max_smoothing_duration_s
+        ).to_msg()
+        goal_msg.check_for_collisions = self.check_smooth_path_for_collisions
+
+        self.smoothing_in_flight = True
+        self.cancel_requested = False
+        self.current_smoothing_goal_handle = None
+        self.pending_smoothing_start_monotonic = time.monotonic()
+
+        send_goal_future = self.smoother_client.send_goal_async(goal_msg)
+        send_goal_future.add_done_callback(self._smooth_goal_response_callback)
+        return True
+
+    def _smooth_goal_response_callback(self, future):
+        try:
+            goal_handle = future.result()
+        except Exception as exc:
+            self._handle_smoothing_failure('SmoothPath goal response failed: %s' % exc)
             return
 
-        if time.monotonic() < self.pending_start_not_before_monotonic:
+        if not goal_handle.accepted:
+            self._handle_smoothing_failure('SmoothPath goal was rejected by Nav2')
             return
 
-        if not self.follow_path_client.server_is_ready():
-            self._set_status(self.STATUS_WAITING_FOR_NAV2)
-            elapsed = time.monotonic() - self.pending_start_monotonic
-            if (
-                self.wait_for_nav2_timeout_sec > 0.0
-                and elapsed > self.wait_for_nav2_timeout_sec
-            ):
-                self.get_logger().warn(
-                    'FollowPath action server %s was not available after %.1f seconds'
-                    % (self.follow_path_action_name, elapsed)
-                )
-                self.pending_start_path = None
-                self.pending_start_monotonic = None
-                self.pending_start_not_before_monotonic = 0.0
-                self._set_status(self.STATUS_FAILED)
+        self.current_smoothing_goal_handle = goal_handle
+        self.get_logger().info('SmoothPath goal accepted by Nav2')
+        result_future = goal_handle.get_result_async()
+        result_future.add_done_callback(self._smooth_result_callback)
+
+    def _smooth_result_callback(self, future):
+        self.smoothing_in_flight = False
+        self.current_smoothing_goal_handle = None
+
+        try:
+            wrapped_result = future.result()
+        except Exception as exc:
+            self._handle_smoothing_failure('SmoothPath result failed: %s' % exc)
             return
 
-        path = self.pending_start_path
-        self.pending_start_path = None
-        self.pending_start_monotonic = None
-        self.pending_start_not_before_monotonic = 0.0
+        result = wrapped_result.result
+        status = wrapped_result.status
+        error_code = getattr(result, 'error_code', 0)
+        error_label = self.SMOOTH_PATH_ERROR_CODES.get(error_code, 'UNRECOGNIZED')
+        error_msg = getattr(result, 'error_msg', '')
+        smoothed = getattr(result, 'path', Path())
+        duration = 0.0
+        if self.pending_smoothing_start_monotonic is not None:
+            duration = time.monotonic() - self.pending_smoothing_start_monotonic
 
-        report = self._run_preflight_validation(path, publish_debug=True)
-        if not report['valid']:
-            self.latest_path_error = report['reason']
-            self._set_status(report['status'])
-            self.get_logger().warn(
-                'FollowPath preflight failed before send: %s'
-                % self._format_validation_response(report)
+        if (
+            status != GoalStatus.STATUS_SUCCEEDED
+            or error_code != 0
+            or len(smoothed.poses) == 0
+        ):
+            self._handle_smoothing_failure(
+                'SmoothPath failed: status=%d error_code=%d %s error_msg=%s'
+                % (status, error_code, error_label, error_msg)
             )
             return
 
-        self._send_follow_path_goal(path)
+        if not smoothed.header.frame_id:
+            smoothed.header.frame_id = self.global_frame
+        self._stamp_path(smoothed)
 
-    def _send_follow_path_goal(self, path):
+        report = self._run_preflight_validation(
+            smoothed,
+            check_costmap=self.check_smooth_path_for_collisions,
+        )
+        self._publish_debug(report)
+        if not report['valid']:
+            self._handle_smoothing_failure(
+                'Nav2-smoothed path failed validation: %s' % report['reason']
+            )
+            return
+
+        self.smoothed_path = copy.deepcopy(smoothed)
+        self.smoothed_path_pub.publish(self.smoothed_path)
+        self.get_logger().info(
+            'Smoothing result: raw path length=%.2fm custom-smoothed path '
+            'length=%.2fm Nav2-smoothed path length=%.2fm smoothing_duration=%.2fs '
+            'collision_check=%s'
+            % (
+                self._path_length(self.cached_raw_path),
+                self.pending_custom_smoothed_length,
+                self._path_length(smoothed),
+                duration,
+                str(report.get('costmap_valid', True)).lower(),
+            )
+        )
+        self._send_follow_path_goal(smoothed, 'smooth_path_done')
+
+    def _handle_smoothing_failure(self, reason):
+        self.smoothing_in_flight = False
+        self.current_smoothing_goal_handle = None
+        self.get_logger().warn(reason)
+        if self.fallback_to_raw_path_on_smoothing_failure and self.pending_follow_path:
+            self.get_logger().warn(
+                'Falling back to custom/raw coverage path after smoothing failure'
+            )
+            self._send_follow_path_goal(self.pending_follow_path, 'smoothing_fallback')
+            return True
+
+        self.latest_path_error = reason
+        self._publish_debug_info('status=FAILED reason=%s' % reason)
+        self._set_status(self.STATUS_FAILED)
+        return False
+
+    def _send_follow_path_goal(self, path, reason):
+        self._set_status(self.STATUS_WAITING_FOR_NAV2)
+        if not self.follow_path_client.wait_for_server(
+            timeout_sec=self.wait_for_nav2_timeout_sec
+        ):
+            self.latest_path_error = (
+                'FollowPath action server %s is not available'
+                % self.follow_path_action_name
+            )
+            self.get_logger().warn(self.latest_path_error)
+            self._set_status(self.STATUS_FAILED)
+            return False
+
+        report = self._run_preflight_validation(
+            path,
+            check_costmap=self.check_smooth_path_for_collisions,
+        )
+        self._publish_debug(report)
+        if not report['valid']:
+            self.latest_path_error = report['reason']
+            self.get_logger().warn(
+                'Final FollowPath validation failed: %s' % self._format_report(report)
+            )
+            self._set_status(self.STATUS_FAILED)
+            return False
+
         goal_msg = FollowPath.Goal()
         goal_msg.path = copy.deepcopy(path)
         goal_msg.controller_id = self.controller_id
@@ -493,34 +759,26 @@ class CoverageFollowPathExecutorNode(Node):
         goal_msg.progress_checker_id = self.progress_checker_id
 
         self.active_path = copy.deepcopy(path)
-        self.active_path_checksum = self._path_checksum(path)
-        self.current_goal_handle = None
+        self._stamp_path(self.active_path)
+        self.active_path_pub.publish(self.active_path)
+        self.path_markers_pub.publish(self._make_path_markers(self.active_path))
+        self.coverage_path_frozen = self.freeze_path_on_start or self.coverage_path_frozen
         self.goal_in_flight = True
+        self.current_goal_handle = None
         self.cancel_requested = False
-        self.cancel_reason = ''
-        self.cancel_future_in_flight = False
         self.execution_start_monotonic = time.monotonic()
         self.last_distance_to_goal = None
-        self.last_feedback_text = ''
-
+        self.latest_feedback_text = ''
+        self.latest_path_error = ''
         self._set_status(self.STATUS_EXECUTING)
-        self._log_path_summary(path, 'Sending FollowPath goal')
-        self.get_logger().info(
-            'FollowPath goal details: action_server=%s controller_id=%s '
-            'goal_checker_id=%s progress_checker_id=%s'
-            % (
-                self.follow_path_action_name,
-                self.controller_id,
-                self.goal_checker_id,
-                self.progress_checker_id,
-            )
-        )
 
+        self._log_follow_path_send(path, report, reason)
         send_goal_future = self.follow_path_client.send_goal_async(
             goal_msg,
             feedback_callback=self._follow_path_feedback_callback,
         )
         send_goal_future.add_done_callback(self._goal_response_callback)
+        return True
 
     def _goal_response_callback(self, future):
         try:
@@ -537,10 +795,6 @@ class CoverageFollowPathExecutorNode(Node):
 
         self.current_goal_handle = goal_handle
         self.get_logger().info('FollowPath goal accepted by Nav2')
-
-        if self.cancel_requested:
-            self._send_cancel_request()
-
         result_future = goal_handle.get_result_async()
         result_future.add_done_callback(self._result_callback)
 
@@ -555,339 +809,520 @@ class CoverageFollowPathExecutorNode(Node):
         result = wrapped_result.result
         status = wrapped_result.status
         error_code = getattr(result, 'error_code', 0)
-        error_label = self._follow_path_error_label(error_code)
+        error_label = self.FOLLOW_PATH_ERROR_CODES.get(error_code, 'UNRECOGNIZED')
         error_msg = getattr(result, 'error_msg', '')
-        if not error_msg:
-            error_msg = 'status=%d error_code=%s %s' % (
-                status,
-                error_code,
-                error_label,
-            )
 
         self.get_logger().info(
-            'FollowPath result: status=%d error_code=%s %s error_msg=%s'
+            'FollowPath result: status=%d error_code=%d %s error_msg=%s'
             % (status, error_code, error_label, error_msg)
         )
 
-        if self.pending_restart_path is not None:
-            restart_path = self.pending_restart_path
-            self.pending_restart_path = None
-            self.goal_in_flight = False
-            self.current_goal_handle = None
-            self.cancel_requested = False
-            self.cancel_future_in_flight = False
-            self.pending_start_path = copy.deepcopy(restart_path)
-            self.pending_start_monotonic = time.monotonic()
-            self._set_status(self.STATUS_WAITING_FOR_NAV2)
-            return
-
-        if self.cancel_reason == 'action_result_timeout':
-            self._finish_execution(self.STATUS_FAILED)
-            return
-
         if status == GoalStatus.STATUS_SUCCEEDED and error_code == 0:
             self._finish_execution(self.STATUS_SUCCEEDED)
-        elif status == GoalStatus.STATUS_CANCELED or self.cancel_requested:
+            return
+
+        if status == GoalStatus.STATUS_CANCELED or self.cancel_requested:
             self._finish_execution(self.STATUS_CANCELED)
-        else:
-            self.get_logger().warn(
-                'FollowPath failed with error_code=%s %s error_msg=%s'
-                % (error_code, error_label, error_msg)
+            return
+
+        if error_code == 105:
+            debug = (
+                'FollowPath failed with FAILED_TO_MAKE_PROGRESS. Likely causes: '
+                'progress checker too strict, local costmap collision checking, '
+                'sharp turn, robot not near the selected start pose, or cmd_vel '
+                'blocked. last_feedback="%s"'
+                % self.latest_feedback_text
             )
-            if error_code == 103:
-                self.get_logger().warn(
-                    'FollowPath INVALID_PATH likely causes: robot too far from '
-                    'path start; path frame mismatch; TF unavailable; malformed '
-                    'path; path crosses obstacle or invalid costmap area; '
-                    'controller cannot prune/transform the path.'
-                )
-            if error_code == 105 and self._queue_replanned_path_after_failed_progress():
-                return
-            self._finish_execution(self.STATUS_FAILED)
+            self.get_logger().warn(debug)
+            self._publish_debug_info(debug)
+        else:
+            self._publish_debug_info(
+                'FollowPath failed: status=%d error_code=%d %s error_msg=%s'
+                % (status, error_code, error_label, error_msg)
+            )
+        self._finish_execution(self.STATUS_FAILED)
 
     def _follow_path_feedback_callback(self, feedback_msg):
         feedback = feedback_msg.feedback
-        fields = self._feedback_fields(feedback)
-
+        fields = []
         distance_to_goal = getattr(feedback, 'distance_to_goal', None)
+        speed = getattr(feedback, 'speed', None)
         if distance_to_goal is not None and math.isfinite(distance_to_goal):
             self.last_distance_to_goal = float(distance_to_goal)
-
+            fields.append('distance_to_goal=%.3f' % distance_to_goal)
+        if speed is not None and math.isfinite(speed):
+            fields.append('speed=%.3f' % speed)
+        if self.execution_start_monotonic is not None:
+            fields.append(
+                'elapsed=%.1f' % (time.monotonic() - self.execution_start_monotonic)
+            )
         if not fields:
             fields.append('feedback_received=true')
-        if self.execution_start_monotonic is not None:
-            elapsed = time.monotonic() - self.execution_start_monotonic
-            fields.append('elapsed=%.1f' % elapsed)
-
         msg = String()
         msg.data = ' '.join(fields)
-        self.last_feedback_text = msg.data
+        self.latest_feedback_text = msg.data
         self.nav2_feedback_pub.publish(msg)
-
-    def _request_cancel(self, reason):
-        self.cancel_requested = True
-        self.cancel_reason = reason
-        self.get_logger().info('Canceling FollowPath goal: reason=%s' % reason)
-        self._send_cancel_request()
-
-    def _send_cancel_request(self):
-        if self.current_goal_handle is None or self.cancel_future_in_flight:
-            return
-
-        try:
-            cancel_future = self.current_goal_handle.cancel_goal_async()
-        except Exception as exc:
-            self.get_logger().warn('Failed to send FollowPath cancel request: %s' % exc)
-            self._finish_execution(self.STATUS_FAILED)
-            return
-
-        self.cancel_future_in_flight = True
-        cancel_future.add_done_callback(self._cancel_done_callback)
-
-    def _cancel_done_callback(self, future):
-        self.cancel_future_in_flight = False
-        try:
-            cancel_response = future.result()
-        except Exception as exc:
-            self.get_logger().warn('FollowPath cancel response failed: %s' % exc)
-            return
-
-        canceling = len(getattr(cancel_response, 'goals_canceling', []))
-        self.get_logger().info(
-            'FollowPath cancel response received: goals_canceling=%d' % canceling
-        )
-
-    def _enforce_action_result_timeout(self):
-        if (
-            not self.goal_in_flight
-            or self.action_result_timeout_sec <= 0.0
-            or self.execution_start_monotonic is None
-            or self.cancel_requested
-        ):
-            return
-
-        elapsed = time.monotonic() - self.execution_start_monotonic
-        if elapsed <= self.action_result_timeout_sec:
-            return
-
-        self.get_logger().warn(
-            'FollowPath action result timeout after %.1f seconds; canceling goal'
-            % elapsed
-        )
-        self._request_cancel('action_result_timeout')
 
     def _finish_execution(self, status):
         self.goal_in_flight = False
         self.current_goal_handle = None
         self.cancel_requested = False
-        self.cancel_reason = ''
-        self.cancel_future_in_flight = False
         self.execution_start_monotonic = None
-        if status == self.STATUS_SUCCEEDED:
-            self.failed_progress_restart_count = 0
         self._set_status(status)
 
-    def _queue_replanned_path_after_failed_progress(self):
-        if not self.auto_restart_on_failed_progress:
-            return False
-        if self.failed_progress_restart_count >= self.max_failed_progress_restarts:
-            self.get_logger().warn(
-                'Not restarting after FAILED_TO_MAKE_PROGRESS: restart limit %d reached'
-                % self.max_failed_progress_restarts
-            )
-            return False
-        if self.latest_path is None:
-            return False
-        if self.latest_path_checksum == self.active_path_checksum:
-            self.get_logger().warn(
-                'Not restarting after FAILED_TO_MAKE_PROGRESS: no newer replanned '
-                'coverage path is available'
-            )
-            return False
-
-        self.failed_progress_restart_count += 1
-        self.goal_in_flight = False
-        self.current_goal_handle = None
-        self.cancel_requested = False
-        self.cancel_reason = ''
-        self.cancel_future_in_flight = False
-        self.execution_start_monotonic = None
-        self.pending_start_path = copy.deepcopy(self.latest_path)
-        self.pending_start_monotonic = time.monotonic()
-        self.pending_start_not_before_monotonic = (
-            time.monotonic() + self.failed_progress_restart_delay_sec
-        )
-        self._set_status(self.STATUS_WAITING_FOR_NAV2)
-        self.get_logger().warn(
-            'FAILED_TO_MAKE_PROGRESS: queued newer replanned coverage path '
-            'restart attempt %d/%d after %.1fs'
-            % (
-                self.failed_progress_restart_count,
-                self.max_failed_progress_restarts,
-                self.failed_progress_restart_delay_sec,
-            )
-        )
-        return True
-
-    def _run_preflight_validation(self, path_msg, publish_debug=False):
-        report = self._make_empty_validation_report()
-
-        if path_msg is None:
-            report['status'] = self.STATUS_WAITING_FOR_PATH
-            report['reason'] = 'no_cached_path'
-            self._publish_validation_debug(report, publish_debug)
+    def _run_preflight_validation(self, path, check_costmap=True):
+        report = self._validate_path_structure(path, check_costmap=check_costmap)
+        if not report['valid']:
             return report
 
-        report['pose_count'] = len(path_msg.poses)
-        report['frame_id'] = path_msg.header.frame_id.strip()
-
-        local_error = self._validate_path(path_msg)
-        if local_error:
-            report['status'] = self.STATUS_INVALID_PATH_LOCAL
-            report['reason'] = local_error
-            self._fill_path_debug_fields(report, path_msg)
-            self._publish_validation_debug(report, publish_debug)
-            return report
-
-        self._fill_path_debug_fields(report, path_msg)
-
-        path_length = self._path_length(path_msg)
-        max_jump, max_jump_index = self._max_consecutive_pose_jump_info(path_msg)
-        report['path_length'] = path_length
-        report['max_consecutive_pose_jump'] = max_jump
-        report['max_jump_index'] = max_jump_index
-        self._fill_jump_debug_fields(report, path_msg)
-
-        if path_length <= self.minimum_path_length_m:
-            report['status'] = self.STATUS_INVALID_PATH_LOCAL
-            report['reason'] = (
-                'path_length=%.3f is not greater than minimum_path_length_m=%.3f'
-                % (path_length, self.minimum_path_length_m)
-            )
-            self._publish_validation_debug(report, publish_debug)
-            return report
-
-        if max_jump > self.max_consecutive_pose_jump_m:
-            report['status'] = self.STATUS_INVALID_PATH_LOCAL
-            report['reason'] = (
-                'max_consecutive_pose_jump=%.3f exceeds limit=%.3f at index=%d'
-                % (max_jump, self.max_consecutive_pose_jump_m, max_jump_index)
-            )
-            self.get_logger().warn(
-                'Coverage path jump diagnostic: %s'
-                % self._format_jump_debug(report)
-            )
-            self._publish_validation_debug(report, publish_debug)
-            return report
-
-        robot_pose = self._lookup_robot_pose(path_msg.header.frame_id)
+        robot_pose = self._lookup_robot_pose(self.global_frame)
         if robot_pose is None:
-            report['status'] = self.STATUS_TF_ERROR
+            report['valid'] = False
+            report['status'] = self.STATUS_FAILED
             report['reason'] = (
-                'could not lookup TF %s -> %s'
-                % (path_msg.header.frame_id, self.robot_base_frame)
+                'TF %s -> %s unavailable'
+                % (self.global_frame, self.robot_base_frame)
             )
-            self._publish_validation_debug(report, publish_debug)
             return report
 
-        report['robot_pose'] = robot_pose
-        first_pose = path_msg.poses[0].pose
-        distance_to_first = self._point_distance_2d(
+        first_pose = path.poses[0].pose
+        nearest_index, nearest_distance = self._nearest_path_pose(
+            path,
+            robot_pose['x'],
+            robot_pose['y'],
+        )
+        distance_to_first = self._distance_2d(
             robot_pose['x'],
             robot_pose['y'],
             first_pose.position.x,
             first_pose.position.y,
         )
-        nearest_index, nearest_distance = self._nearest_path_pose(
-            path_msg,
-            robot_pose['x'],
-            robot_pose['y'],
-        )
 
+        report['robot_pose'] = robot_pose
         report['distance_to_first'] = distance_to_first
         report['nearest_index'] = nearest_index
         report['distance_to_nearest'] = nearest_distance
-        if nearest_index >= 0:
-            report['nearest_pose'] = self._pose_debug_dict(
-                path_msg.poses[nearest_index].pose
-            )
+        report['nearest_pose'] = self._pose_debug_dict(path.poses[nearest_index].pose)
 
-        if (
-            self.require_robot_near_start
-            and distance_to_first > self.max_start_distance_m
-        ):
-            report['status'] = self.STATUS_START_TOO_FAR
-            report['reason'] = (
-                'distance_to_first=%.3f exceeds max_start_distance_m=%.3f'
-                % (distance_to_first, self.max_start_distance_m)
-            )
-            self._publish_validation_debug(report, publish_debug)
-            return report
-
-        if nearest_distance > self.max_nearest_path_distance_m:
-            report['status'] = self.STATUS_ROBOT_TOO_FAR_FROM_PATH
-            report['reason'] = (
-                'distance_to_nearest=%.3f exceeds max_nearest_path_distance_m=%.3f'
-                % (nearest_distance, self.max_nearest_path_distance_m)
-            )
-            self._publish_validation_debug(report, publish_debug)
-            return report
+        if distance_to_first > self.max_start_distance_m:
+            if not self.start_from_nearest_valid_pose_if_far:
+                report['valid'] = False
+                report['status'] = self.STATUS_FAILED
+                report['reason'] = (
+                    'first pose is %.3fm from robot, exceeds %.3fm, and '
+                    'start_from_nearest_valid_pose_if_far=false'
+                    % (distance_to_first, self.max_start_distance_m)
+                )
+                return report
+            if self.require_robot_near_start:
+                report['valid'] = False
+                report['status'] = self.STATUS_FAILED
+                report['reason'] = (
+                    'first pose is %.3fm from robot, exceeds %.3fm, and '
+                    'require_robot_near_start=true'
+                    % (distance_to_first, self.max_start_distance_m)
+                )
+                return report
+            if nearest_distance > self.max_nearest_path_distance_m:
+                report['valid'] = False
+                report['status'] = self.STATUS_FAILED
+                report['reason'] = (
+                    'nearest path pose is %.3fm from robot, exceeds %.3fm'
+                    % (nearest_distance, self.max_nearest_path_distance_m)
+                )
+                return report
 
         report['valid'] = True
         report['status'] = 'VALID'
         report['reason'] = 'ok'
-        self._publish_validation_debug(report, publish_debug)
         return report
 
-    def _make_empty_validation_report(self):
+    def _validate_path_structure(self, path, check_costmap=True):
+        report = self._make_empty_report()
+        if path is None:
+            report['reason'] = 'no_cached_path'
+            return report
+
+        report['frame_id'] = path.header.frame_id.strip()
+        report['pose_count'] = len(path.poses)
+        if report['pose_count'] == 0:
+            report['reason'] = 'path is empty'
+            return report
+        if report['pose_count'] < self.min_path_poses:
+            report['reason'] = (
+                'pose_count=%d is below min_path_poses=%d'
+                % (report['pose_count'], self.min_path_poses)
+            )
+            return report
+        if report['frame_id'] != self.global_frame:
+            report['reason'] = (
+                'path frame_id "%s" is not "%s"'
+                % (report['frame_id'], self.global_frame)
+            )
+            return report
+
+        for index, pose_stamped in enumerate(path.poses):
+            pose = pose_stamped.pose
+            position = pose.position
+            orientation = pose.orientation
+            if not all(
+                math.isfinite(value)
+                for value in (position.x, position.y, position.z)
+            ):
+                report['reason'] = 'pose[%d] has non-finite position' % index
+                return report
+            if not all(
+                math.isfinite(value)
+                for value in (
+                    orientation.x,
+                    orientation.y,
+                    orientation.z,
+                    orientation.w,
+                )
+            ):
+                report['reason'] = 'pose[%d] has non-finite orientation' % index
+                return report
+            norm = math.sqrt(
+                orientation.x * orientation.x
+                + orientation.y * orientation.y
+                + orientation.z * orientation.z
+                + orientation.w * orientation.w
+            )
+            if norm < 1.0e-3:
+                report['reason'] = 'pose[%d] has invalid quaternion norm' % index
+                return report
+
+        report['first_pose'] = self._pose_debug_dict(path.poses[0].pose)
+        report['last_pose'] = self._pose_debug_dict(path.poses[-1].pose)
+        report['path_length'] = self._path_length(path)
+        report['segment_count'] = max(0, len(path.poses) - 1)
+        report['max_jump'], report['max_jump_index'] = self._max_jump(path)
+        if report['max_jump_index'] >= 0:
+            report['max_jump_start_pose'] = self._pose_debug_dict(
+                path.poses[report['max_jump_index']].pose
+            )
+            report['max_jump_end_pose'] = self._pose_debug_dict(
+                path.poses[report['max_jump_index'] + 1].pose
+            )
+
+        if report['path_length'] <= self.minimum_path_length_m:
+            report['reason'] = (
+                'path_length=%.3f is not greater than minimum_path_length_m=%.3f'
+                % (report['path_length'], self.minimum_path_length_m)
+            )
+            return report
+
+        if report['max_jump'] > self.max_consecutive_pose_jump_m:
+            report['reason'] = (
+                'max_consecutive_pose_jump=%.3f exceeds %.3f at index=%d'
+                % (
+                    report['max_jump'],
+                    self.max_consecutive_pose_jump_m,
+                    report['max_jump_index'],
+                )
+            )
+            return report
+
+        if check_costmap and self.enable_costmap_validation:
+            cost_report = self._validate_path_against_costmap(path)
+            report.update(cost_report)
+            if not cost_report['costmap_valid']:
+                report['reason'] = cost_report['costmap_reason']
+                return report
+
+        report['valid'] = True
+        report['status'] = 'VALID'
+        report['reason'] = 'ok'
+        return report
+
+    def _validate_path_against_costmap(self, path):
+        self.blocked_debug_points = []
+        report = {
+            'costmap_used': False,
+            'costmap_valid': True,
+            'costmap_reason': 'ok',
+            'blocked_pose_count': 0,
+            'unknown_pose_count': 0,
+            'max_observed_cost': 0,
+        }
+        if self.nav_costmap is None:
+            report['costmap_valid'] = not self.require_costmap_for_validation
+            report['costmap_reason'] = 'global costmap has not been received'
+            return report
+
+        costmap_frame = self.nav_costmap.header.frame_id or self.global_frame
+        if costmap_frame != self.global_frame:
+            report['costmap_valid'] = False
+            report['costmap_reason'] = (
+                'costmap frame "%s" does not match path frame "%s"'
+                % (costmap_frame, self.global_frame)
+            )
+            return report
+
+        report['costmap_used'] = True
+        sample_step = max(0.01, self.nav_costmap.info.resolution * 0.5)
+        blocked_count = 0
+        unknown_count = 0
+        max_cost = 0
+
+        for index in range(len(path.poses)):
+            pose = path.poses[index].pose
+            cost_info = self._costmap_value_at(pose.position.x, pose.position.y)
+            if cost_info['unknown']:
+                unknown_count += 1
+            max_cost = max(max_cost, cost_info['cost'])
+            if cost_info['blocked']:
+                blocked_count += 1
+                self._append_blocked_debug_point(pose.position)
+
+            if index == 0:
+                continue
+
+            previous = path.poses[index - 1].pose.position
+            current = pose.position
+            distance = self._distance_2d(previous.x, previous.y, current.x, current.y)
+            steps = max(1, int(math.ceil(distance / sample_step)))
+            for step in range(1, steps):
+                ratio = step / steps
+                x = previous.x + ratio * (current.x - previous.x)
+                y = previous.y + ratio * (current.y - previous.y)
+                cost_info = self._costmap_value_at(x, y)
+                if cost_info['unknown']:
+                    unknown_count += 1
+                max_cost = max(max_cost, cost_info['cost'])
+                if cost_info['blocked']:
+                    blocked_count += 1
+                    point = Point()
+                    point.x = x
+                    point.y = y
+                    point.z = 0.0
+                    self._append_blocked_debug_point(point)
+
+        report['blocked_pose_count'] = blocked_count
+        report['unknown_pose_count'] = unknown_count
+        report['max_observed_cost'] = max_cost
+        if blocked_count > 0:
+            report['costmap_valid'] = False
+            report['costmap_reason'] = (
+                'path has %d blocked costmap samples, unknown_samples=%d, '
+                'max_observed_cost=%d, max_allowed_nav_cost=%d'
+                % (
+                    blocked_count,
+                    unknown_count,
+                    max_cost,
+                    self.max_allowed_nav_cost,
+                )
+            )
+        return report
+
+    def _costmap_value_at(self, x, y):
+        try:
+            map_x, map_y = world_to_map(x, y, self.nav_costmap.info)
+        except ValueError:
+            return {'cost': 100, 'unknown': False, 'blocked': True}
+
+        if not in_bounds(
+            map_x,
+            map_y,
+            self.nav_costmap.info.width,
+            self.nav_costmap.info.height,
+        ):
+            return {'cost': 100, 'unknown': False, 'blocked': True}
+
+        index = map_to_flat_index(map_x, map_y, self.nav_costmap.info.width)
+        cost = self.nav_costmap.data[index]
+        if cost < 0:
+            return {
+                'cost': 100,
+                'unknown': True,
+                'blocked': self.treat_unknown_cost_as_blocked,
+            }
         return {
-            'valid': False,
-            'status': self.STATUS_WAITING_FOR_PATH,
-            'reason': 'not_run',
-            'frame_id': '',
-            'pose_count': 0,
-            'robot_pose': None,
-            'first_pose': None,
-            'last_pose': None,
-            'nearest_pose': None,
-            'nearest_index': -1,
-            'distance_to_first': float('nan'),
-            'distance_to_nearest': float('nan'),
-            'path_length': 0.0,
-            'max_consecutive_pose_jump': 0.0,
-            'max_jump_index': -1,
-            'max_jump_start_pose': None,
-            'max_jump_end_pose': None,
+            'cost': cost,
+            'unknown': False,
+            'blocked': cost > self.max_allowed_nav_cost,
         }
 
-    def _fill_path_debug_fields(self, report, path_msg):
-        if not path_msg.poses:
-            return
+    def _append_blocked_debug_point(self, point):
+        if len(self.blocked_debug_points) < 50:
+            self.blocked_debug_points.append(copy.deepcopy(point))
 
-        report['first_pose'] = self._pose_debug_dict(path_msg.poses[0].pose)
-        report['last_pose'] = self._pose_debug_dict(path_msg.poses[-1].pose)
-        report['path_length'] = self._path_length(path_msg)
-        max_jump, max_jump_index = self._max_consecutive_pose_jump_info(path_msg)
-        report['max_consecutive_pose_jump'] = max_jump
-        report['max_jump_index'] = max_jump_index
-        self._fill_jump_debug_fields(report, path_msg)
+    def _select_start_path(self, path, report):
+        distance_to_first = report['distance_to_first']
+        nearest_index = report['nearest_index']
+        nearest_distance = report['distance_to_nearest']
+        start_report = copy.deepcopy(report)
+        start_report['start_index'] = 0
+        start_report['robot_start_used'] = True
 
-    def _fill_jump_debug_fields(self, report, path_msg):
-        index = report['max_jump_index']
-        if index < 0 or index + 1 >= len(path_msg.poses):
-            return
+        if distance_to_first <= self.max_start_distance_m:
+            self.selected_start_index = 0
+            return copy.deepcopy(path), start_report
 
-        report['max_jump_start_pose'] = self._pose_debug_dict(
-            path_msg.poses[index].pose
+        if not self.start_from_nearest_valid_pose_if_far:
+            start_report['valid'] = False
+            start_report['reason'] = (
+                'first active pose is too far from robot: %.3fm > %.3fm'
+                % (distance_to_first, self.max_start_distance_m)
+            )
+            return None, start_report
+
+        if nearest_index < 0 or nearest_distance > self.max_nearest_path_distance_m:
+            start_report['valid'] = False
+            start_report['reason'] = (
+                'nearest frozen path pose is too far: %.3fm > %.3fm'
+                % (nearest_distance, self.max_nearest_path_distance_m)
+            )
+            return None, start_report
+
+        trimmed = self._trim_path(path, nearest_index)
+        self.selected_start_index = nearest_index
+        start_report['start_index'] = nearest_index
+        start_report['first_pose'] = self._pose_debug_dict(trimmed.poses[0].pose)
+        start_report['distance_to_first'] = nearest_distance
+        self.get_logger().info(
+            'Robot is %.2fm from frozen path[0]; selected nearest valid start '
+            'index=%d distance=%.2fm without reordering the path.'
+            % (distance_to_first, nearest_index, nearest_distance)
         )
-        report['max_jump_end_pose'] = self._pose_debug_dict(
-            path_msg.poses[index + 1].pose
+        return trimmed, start_report
+
+    def _smooth_coverage_turns(self, path):
+        self.rounded_turn_sections = []
+        if len(path.poses) < 3 or self.turn_smoothing_radius_m <= 0.0:
+            return copy.deepcopy(path)
+
+        output = Path()
+        output.header = copy.deepcopy(path.header)
+        output.poses.append(copy.deepcopy(path.poses[0]))
+
+        for index in range(1, len(path.poses) - 1):
+            prev_pose = path.poses[index - 1].pose
+            current_pose = path.poses[index].pose
+            next_pose = path.poses[index + 1].pose
+            heading_in = math.atan2(
+                current_pose.position.y - prev_pose.position.y,
+                current_pose.position.x - prev_pose.position.x,
+            )
+            heading_out = math.atan2(
+                next_pose.position.y - current_pose.position.y,
+                next_pose.position.x - current_pose.position.x,
+            )
+            turn_angle = abs(self._normalize_angle(heading_out - heading_in))
+            if turn_angle < math.radians(120.0):
+                self._append_pose_without_duplicate(output, path.poses[index])
+                continue
+
+            rounded = self._make_rounded_turn(path.header, prev_pose, current_pose, next_pose)
+            if not rounded:
+                self._append_pose_without_duplicate(output, path.poses[index])
+                self.get_logger().warn(
+                    'Keeping original sharp turn at index=%d; rounded turn was invalid'
+                    % index,
+                    throttle_duration_sec=5.0,
+                )
+                continue
+
+            for pose_stamped in rounded:
+                self._append_pose_without_duplicate(output, pose_stamped)
+            self.rounded_turn_sections.append(rounded)
+
+        self._append_pose_without_duplicate(output, path.poses[-1])
+        self._recompute_orientations(output)
+        self.get_logger().info(
+            'Coverage turn smoothing completed: rounded_turns=%d poses_before=%d '
+            'poses_after=%d preserve_strip_lines=%s'
+            % (
+                len(self.rounded_turn_sections),
+                len(path.poses),
+                len(output.poses),
+                str(self.preserve_strip_lines).lower(),
+            )
+        )
+        return output
+
+    def _make_rounded_turn(self, header, prev_pose, current_pose, next_pose):
+        prev = prev_pose.position
+        current = current_pose.position
+        next_point = next_pose.position
+        in_len = self._distance_2d(prev.x, prev.y, current.x, current.y)
+        out_len = self._distance_2d(current.x, current.y, next_point.x, next_point.y)
+        if in_len <= 1.0e-6 or out_len <= 1.0e-6:
+            return []
+
+        in_unit = ((current.x - prev.x) / in_len, (current.y - prev.y) / in_len)
+        out_unit = (
+            (next_point.x - current.x) / out_len,
+            (next_point.y - current.y) / out_len,
         )
 
-    def _lookup_robot_pose(self, path_frame):
+        for scale in (1.0, 0.5, 0.25):
+            radius = min(self.turn_smoothing_radius_m * scale, in_len * 0.45, out_len * 0.45)
+            if radius <= 0.01:
+                continue
+
+            start_x = current.x - in_unit[0] * radius
+            start_y = current.y - in_unit[1] * radius
+            end_x = current.x + out_unit[0] * radius
+            end_y = current.y + out_unit[1] * radius
+            if self._distance_2d(start_x, start_y, end_x, end_y) <= 0.01:
+                continue
+
+            rounded = []
+            point_count = 7
+            for step in range(point_count):
+                t = step / (point_count - 1)
+                one_minus = 1.0 - t
+                x = (
+                    one_minus * one_minus * start_x
+                    + 2.0 * one_minus * t * current.x
+                    + t * t * end_x
+                )
+                y = (
+                    one_minus * one_minus * start_y
+                    + 2.0 * one_minus * t * current.y
+                    + t * t * end_y
+                )
+                pose = PoseStamped()
+                pose.header = copy.deepcopy(header)
+                pose.pose.position.x = x
+                pose.pose.position.y = y
+                pose.pose.position.z = 0.0
+                pose.pose.orientation.w = 1.0
+                rounded.append(pose)
+
+            turn_path = Path()
+            turn_path.header = copy.deepcopy(header)
+            turn_path.poses = copy.deepcopy(rounded)
+            self._recompute_orientations(turn_path)
+            if not self.validate_turn_smoothing_against_costmap:
+                return turn_path.poses
+
+            report = self._validate_path_structure(turn_path, check_costmap=True)
+            if report['valid']:
+                return turn_path.poses
+
+        return []
+
+    def _append_pose_without_duplicate(self, path, pose_stamped):
+        if path.poses:
+            last = path.poses[-1].pose.position
+            current = pose_stamped.pose.position
+            if self._distance_2d(last.x, last.y, current.x, current.y) < 1.0e-4:
+                return
+        path.poses.append(copy.deepcopy(pose_stamped))
+
+    def _trim_path(self, path, start_index):
+        trimmed = Path()
+        trimmed.header = copy.deepcopy(path.header)
+        trimmed.poses = copy.deepcopy(path.poses[start_index:])
+        self._stamp_path(trimmed)
+        return trimmed
+
+    def _lookup_robot_pose(self, frame_id):
         try:
             transform = self.tf_buffer.lookup_transform(
-                path_frame,
+                frame_id,
                 self.robot_base_frame,
                 Time(),
                 timeout=Duration(seconds=self.tf_lookup_timeout_sec),
@@ -895,7 +1330,7 @@ class CoverageFollowPathExecutorNode(Node):
         except TransformException as exc:
             self.get_logger().warn(
                 'Could not lookup TF %s -> %s: %s'
-                % (path_frame, self.robot_base_frame, exc),
+                % (frame_id, self.robot_base_frame, exc),
                 throttle_duration_sec=2.0,
             )
             return None
@@ -908,234 +1343,211 @@ class CoverageFollowPathExecutorNode(Node):
             'yaw': self._yaw_from_quaternion(rotation),
         }
 
-    def _publish_validation_debug(self, report, publish_debug):
+    def _make_empty_report(self):
+        return {
+            'valid': False,
+            'status': self.STATUS_WAITING_FOR_PATH,
+            'reason': 'not_run',
+            'frame_id': '',
+            'pose_count': 0,
+            'segment_count': 0,
+            'path_length': 0.0,
+            'first_pose': None,
+            'last_pose': None,
+            'robot_pose': None,
+            'nearest_pose': None,
+            'nearest_index': -1,
+            'distance_to_first': float('nan'),
+            'distance_to_nearest': float('nan'),
+            'max_jump': 0.0,
+            'max_jump_index': -1,
+            'max_jump_start_pose': None,
+            'max_jump_end_pose': None,
+            'start_index': getattr(self, 'selected_start_index', 0),
+            'robot_start_used': False,
+            'costmap_used': False,
+            'costmap_valid': True,
+            'costmap_reason': 'not_checked',
+            'blocked_pose_count': 0,
+            'unknown_pose_count': 0,
+            'max_observed_cost': 0,
+        }
+
+    def _publish_debug(self, report):
         self.latest_validation_report = report
-        if not publish_debug:
-            return
+        self._publish_debug_info(self._format_report(report))
+        if self.publish_debug_markers:
+            self.debug_markers_pub.publish(self._make_debug_markers(report))
 
-        info_msg = String()
-        info_msg.data = self._format_validation_response(report)
-        self.debug_info_pub.publish(info_msg)
-        self.debug_markers_pub.publish(self._make_debug_markers(report))
+    def _publish_debug_info(self, text):
+        self.latest_debug_info = text
+        msg = String()
+        msg.data = text
+        self.debug_info_pub.publish(msg)
 
-    def _format_validation_response(self, report):
+    def _format_report(self, report):
         return (
-            'validation=%s status=%s reason=%s robot=%s first=%s last=%s '
+            'validation=%s status=%s reason=%s frame_id=%s total_poses=%d '
+            'segments=%d path_length_m=%.3f first=%s last=%s robot=%s '
             'distance_to_first=%s nearest_index=%d distance_to_nearest=%s '
-            'path_length=%.3f max_consecutive_pose_jump=%.3f '
-            'max_jump_index=%d jump_start=%s jump_end=%s '
-            'jump_distance_m=%.3f total_poses=%d path_length_m=%.3f'
+            'start_index=%d max_consecutive_pose_jump=%.3f max_jump_index=%d '
+            'follow_path_ready=%s robot_start_used=%s nav_costmap_used=%s '
+            'nav_blocked_cells=%d nav_unknown_samples=%d max_observed_cost=%d'
             % (
                 'PASS' if report['valid'] else 'FAIL',
                 report['status'],
                 report['reason'],
-                self._format_debug_pose(report['robot_pose']),
+                report['frame_id'],
+                report['pose_count'],
+                report['segment_count'],
+                report['path_length'],
                 self._format_debug_pose(report['first_pose']),
                 self._format_debug_pose(report['last_pose']),
+                self._format_debug_pose(report['robot_pose']),
                 self._format_float(report['distance_to_first']),
                 report['nearest_index'],
                 self._format_float(report['distance_to_nearest']),
-                report['path_length'],
-                report['max_consecutive_pose_jump'],
+                report.get('start_index', 0),
+                report['max_jump'],
                 report['max_jump_index'],
-                self._format_debug_pose(report['max_jump_start_pose']),
-                self._format_debug_pose(report['max_jump_end_pose']),
-                report['max_consecutive_pose_jump'],
-                report['pose_count'],
-                report['path_length'],
-            )
-        )
-
-    def _format_jump_debug(self, report):
-        return (
-            'max_jump_index=%d pose[%d]=%s pose[%d]=%s jump_distance_m=%.3f '
-            'total_poses=%d path_length_m=%.3f'
-            % (
-                report['max_jump_index'],
-                report['max_jump_index'],
-                self._format_debug_pose(report['max_jump_start_pose']),
-                report['max_jump_index'] + 1,
-                self._format_debug_pose(report['max_jump_end_pose']),
-                report['max_consecutive_pose_jump'],
-                report['pose_count'],
-                report['path_length'],
+                str(report['valid']).lower(),
+                str(report.get('robot_start_used', False)).lower(),
+                str(report.get('costmap_used', False)).lower(),
+                report.get('blocked_pose_count', 0),
+                report.get('unknown_pose_count', 0),
+                report.get('max_observed_cost', 0),
             )
         )
 
     def _make_debug_markers(self, report):
-        frame_id = report['frame_id'] or 'map'
-        markers = self._make_debug_delete_markers(frame_id)
+        frame_id = report['frame_id'] or self.global_frame
+        markers = self._delete_all_markers(frame_id, 'coverage_debug_cleanup')
         stamp = self.get_clock().now().to_msg()
-
-        robot_pose = report['robot_pose']
-        first_pose = report['first_pose']
-        last_pose = report['last_pose']
-        nearest_pose = report['nearest_pose']
-        jump_start_pose = report['max_jump_start_pose']
-        jump_end_pose = report['max_jump_end_pose']
-
         marker_id = 1
-        if robot_pose is not None:
+
+        for namespace, pose_dict, marker_type, rgba, scale in (
+            ('coverage_debug_first_pose', report['first_pose'], Marker.SPHERE, (0.0, 0.9, 0.2, 0.95), 0.16),
+            ('coverage_debug_last_pose', report['last_pose'], Marker.CUBE, (1.0, 0.2, 0.05, 0.95), 0.16),
+            ('coverage_debug_robot_pose', report['robot_pose'], Marker.ARROW, (0.1, 0.35, 1.0, 0.95), 0.28),
+            ('coverage_debug_nearest_pose', report['nearest_pose'], Marker.SPHERE, (1.0, 0.85, 0.0, 0.95), 0.14),
+        ):
+            if pose_dict is None:
+                continue
             markers.markers.append(
-                self._make_debug_point_marker(
+                self._make_pose_dict_marker(
                     frame_id,
                     stamp,
                     marker_id,
-                    'coverage_debug_robot_pose',
-                    robot_pose,
-                    Marker.ARROW,
-                    (0.1, 0.35, 1.0, 0.95),
-                    0.28,
+                    namespace,
+                    pose_dict,
+                    marker_type,
+                    rgba,
+                    scale,
                 )
             )
             marker_id += 1
 
-        if first_pose is not None:
+        if report['max_jump_start_pose'] and report['max_jump_end_pose']:
             markers.markers.append(
-                self._make_debug_point_marker(
+                self._make_line_marker(
                     frame_id,
                     stamp,
                     marker_id,
-                    'coverage_debug_first_path_pose',
-                    first_pose,
-                    Marker.SPHERE,
-                    (0.0, 0.9, 0.2, 0.95),
-                    0.18,
-                )
-            )
-            marker_id += 1
-
-        if last_pose is not None:
-            markers.markers.append(
-                self._make_debug_point_marker(
-                    frame_id,
-                    stamp,
-                    marker_id,
-                    'coverage_debug_last_path_pose',
-                    last_pose,
-                    Marker.CUBE,
-                    (1.0, 0.15, 0.05, 0.95),
-                    0.18,
-                )
-            )
-            marker_id += 1
-
-        if nearest_pose is not None:
-            markers.markers.append(
-                self._make_debug_point_marker(
-                    frame_id,
-                    stamp,
-                    marker_id,
-                    'coverage_debug_nearest_path_pose',
-                    nearest_pose,
-                    Marker.SPHERE,
-                    (1.0, 0.85, 0.0, 0.95),
-                    0.16,
-                )
-            )
-            marker_id += 1
-
-        if robot_pose is not None and first_pose is not None:
-            markers.markers.append(
-                self._make_debug_line_marker(
-                    frame_id,
-                    stamp,
-                    marker_id,
-                    'coverage_debug_robot_to_first',
-                    robot_pose,
-                    first_pose,
-                    (0.0, 0.9, 0.2, 0.9),
-                )
-            )
-            marker_id += 1
-
-        if robot_pose is not None and nearest_pose is not None:
-            markers.markers.append(
-                self._make_debug_line_marker(
-                    frame_id,
-                    stamp,
-                    marker_id,
-                    'coverage_debug_robot_to_nearest',
-                    robot_pose,
-                    nearest_pose,
-                    (1.0, 0.85, 0.0, 0.9),
-                )
-            )
-            marker_id += 1
-
-        if jump_start_pose is not None and jump_end_pose is not None:
-            markers.markers.append(
-                self._make_debug_point_marker(
-                    frame_id,
-                    stamp,
-                    marker_id,
-                    'coverage_debug_jump_start',
-                    jump_start_pose,
-                    Marker.SPHERE,
+                    'coverage_debug_largest_jump',
+                    report['max_jump_start_pose'],
+                    report['max_jump_end_pose'],
                     (1.0, 0.0, 0.0, 0.95),
-                    0.20,
-                )
-            )
-            marker_id += 1
-            markers.markers.append(
-                self._make_debug_point_marker(
-                    frame_id,
-                    stamp,
-                    marker_id,
-                    'coverage_debug_jump_end',
-                    jump_end_pose,
-                    Marker.CUBE,
-                    (1.0, 0.0, 0.0, 0.95),
-                    0.20,
-                )
-            )
-            marker_id += 1
-            markers.markers.append(
-                self._make_debug_line_marker(
-                    frame_id,
-                    stamp,
-                    marker_id,
-                    'coverage_debug_jump_line',
-                    jump_start_pose,
-                    jump_end_pose,
-                    (1.0, 0.0, 0.0, 0.95),
+                    0.04,
                 )
             )
             marker_id += 1
 
-            jump_label = Marker()
-            jump_label.header.frame_id = frame_id
-            jump_label.header.stamp = stamp
-            jump_label.ns = 'coverage_debug_jump_text'
-            jump_label.id = marker_id
-            jump_label.type = Marker.TEXT_VIEW_FACING
-            jump_label.action = Marker.ADD
-            jump_label.pose.position.x = (
-                jump_start_pose['x'] + jump_end_pose['x']
-            ) * 0.5
-            jump_label.pose.position.y = (
-                jump_start_pose['y'] + jump_end_pose['y']
-            ) * 0.5
-            jump_label.pose.position.z = 0.42
-            jump_label.pose.orientation.w = 1.0
-            jump_label.scale.z = 0.18
-            jump_label.color.r = 1.0
-            jump_label.color.g = 0.0
-            jump_label.color.b = 0.0
-            jump_label.color.a = 0.95
-            jump_label.text = 'JUMP %.2fm at index %d' % (
-                report['max_consecutive_pose_jump'],
-                report['max_jump_index'],
+        if self.active_path is not None:
+            markers.markers.append(
+                self._make_path_line_marker(
+                    self.active_path,
+                    stamp,
+                    marker_id,
+                    'coverage_debug_active_path',
+                    (0.0, 0.85, 1.0, 0.9),
+                    0.035,
+                    0.06,
+                )
             )
-            markers.markers.append(jump_label)
+            marker_id += 1
+        if self.cached_raw_path is not None:
+            markers.markers.append(
+                self._make_path_line_marker(
+                    self.cached_raw_path,
+                    stamp,
+                    marker_id,
+                    'coverage_debug_raw_path',
+                    (0.8, 0.8, 0.8, 0.65),
+                    0.02,
+                    0.03,
+                )
+            )
+            marker_id += 1
+        if self.smoothed_path is not None:
+            markers.markers.append(
+                self._make_path_line_marker(
+                    self.smoothed_path,
+                    stamp,
+                    marker_id,
+                    'coverage_debug_smoothed_path',
+                    (0.1, 1.0, 0.55, 0.8),
+                    0.025,
+                    0.05,
+                )
+            )
             marker_id += 1
 
-        label_pose = robot_pose or first_pose or last_pose
+        if self.blocked_debug_points:
+            marker = Marker()
+            marker.header.frame_id = frame_id
+            marker.header.stamp = stamp
+            marker.ns = 'coverage_debug_blocked_samples'
+            marker.id = marker_id
+            marker.type = Marker.SPHERE_LIST
+            marker.action = Marker.ADD
+            marker.pose.orientation.w = 1.0
+            marker.scale.x = 0.08
+            marker.scale.y = 0.08
+            marker.scale.z = 0.08
+            marker.color.r = 1.0
+            marker.color.g = 0.0
+            marker.color.b = 0.0
+            marker.color.a = 0.9
+            for point in self.blocked_debug_points:
+                p = copy.deepcopy(point)
+                p.z = 0.12
+                marker.points.append(p)
+            markers.markers.append(marker)
+            marker_id += 1
+
+        for section_index, section in enumerate(self.rounded_turn_sections):
+            turn_path = Path()
+            turn_path.header.frame_id = frame_id
+            turn_path.poses = section
+            markers.markers.append(
+                self._make_path_line_marker(
+                    turn_path,
+                    stamp,
+                    marker_id,
+                    'coverage_debug_rounded_turn_%d' % section_index,
+                    (1.0, 0.45, 0.0, 0.9),
+                    0.04,
+                    0.10,
+                )
+            )
+            marker_id += 1
+
+        label_pose = report['robot_pose'] or report['first_pose'] or report['last_pose']
         if label_pose is not None:
             label = Marker()
             label.header.frame_id = frame_id
             label.header.stamp = stamp
-            label.ns = 'coverage_debug_validation_text'
+            label.ns = 'coverage_debug_status_text'
             label.id = marker_id
             label.type = Marker.TEXT_VIEW_FACING
             label.action = Marker.ADD
@@ -1144,43 +1556,59 @@ class CoverageFollowPathExecutorNode(Node):
             label.pose.position.z = 0.55
             label.pose.orientation.w = 1.0
             label.scale.z = 0.18
-            if report['valid']:
-                label.color.r = 0.0
-                label.color.g = 1.0
-                label.color.b = 0.25
-            else:
-                label.color.r = 1.0
-                label.color.g = 0.2
-                label.color.b = 0.1
+            label.color.r = 0.0 if report['valid'] else 1.0
+            label.color.g = 1.0 if report['valid'] else 0.1
+            label.color.b = 0.2
             label.color.a = 0.95
-            label.text = (
-                '%s\nfirst=%s nearest=%s idx=%d\njump=%s at %d\n%s'
-                % (
-                    report['status'],
-                    self._format_float(report['distance_to_first']),
-                    self._format_float(report['distance_to_nearest']),
-                    report['nearest_index'],
-                    self._format_float(report['max_consecutive_pose_jump']),
-                    report['max_jump_index'],
-                    report['reason'],
-                )
-            )
+            label.text = '%s\n%s' % (self.execution_status, report['reason'])
             markers.markers.append(label)
 
         return markers
 
-    def _make_debug_delete_markers(self, frame_id):
-        marker = Marker()
-        marker.header.frame_id = frame_id or 'map'
-        marker.header.stamp = self.get_clock().now().to_msg()
-        marker.ns = 'coverage_debug_cleanup'
-        marker.id = 0
-        marker.action = Marker.DELETEALL
-        markers = MarkerArray()
-        markers.markers.append(marker)
+    def _make_path_markers(self, path):
+        frame_id = path.header.frame_id or self.global_frame
+        markers = self._delete_all_markers(frame_id, 'coverage_path_cleanup')
+        if not path.poses:
+            return markers
+        stamp = self.get_clock().now().to_msg()
+        markers.markers.append(
+            self._make_path_line_marker(
+                path,
+                stamp,
+                1,
+                'coverage_active_path_line',
+                (0.0, 0.85, 1.0, 0.95),
+                0.035,
+                0.05,
+            )
+        )
+        markers.markers.append(
+            self._make_pose_marker(
+                frame_id,
+                stamp,
+                2,
+                'coverage_active_first_pose',
+                path.poses[0],
+                Marker.SPHERE,
+                (0.0, 0.9, 0.2, 0.95),
+                0.16,
+            )
+        )
+        markers.markers.append(
+            self._make_pose_marker(
+                frame_id,
+                stamp,
+                3,
+                'coverage_active_last_pose',
+                path.poses[-1],
+                Marker.CUBE,
+                (1.0, 0.2, 0.05, 0.95),
+                0.16,
+            )
+        )
         return markers
 
-    def _make_debug_point_marker(
+    def _make_pose_dict_marker(
         self,
         frame_id,
         stamp,
@@ -1212,16 +1640,36 @@ class CoverageFollowPathExecutorNode(Node):
         marker.color.a = rgba[3]
         return marker
 
-    def _make_debug_line_marker(
+    def _make_pose_marker(
         self,
         frame_id,
         stamp,
         marker_id,
         namespace,
-        start_pose,
-        end_pose,
+        pose_stamped,
+        marker_type,
         rgba,
+        scale,
     ):
+        marker = Marker()
+        marker.header.frame_id = frame_id
+        marker.header.stamp = stamp
+        marker.ns = namespace
+        marker.id = marker_id
+        marker.type = marker_type
+        marker.action = Marker.ADD
+        marker.pose = copy.deepcopy(pose_stamped.pose)
+        marker.pose.position.z += 0.12
+        marker.scale.x = scale
+        marker.scale.y = scale
+        marker.scale.z = scale
+        marker.color.r = rgba[0]
+        marker.color.g = rgba[1]
+        marker.color.b = rgba[2]
+        marker.color.a = rgba[3]
+        return marker
+
+    def _make_line_marker(self, frame_id, stamp, marker_id, namespace, start, end, rgba, width):
         marker = Marker()
         marker.header.frame_id = frame_id
         marker.header.stamp = stamp
@@ -1230,22 +1678,155 @@ class CoverageFollowPathExecutorNode(Node):
         marker.type = Marker.LINE_STRIP
         marker.action = Marker.ADD
         marker.pose.orientation.w = 1.0
-        marker.scale.x = 0.025
+        marker.scale.x = width
         marker.color.r = rgba[0]
         marker.color.g = rgba[1]
         marker.color.b = rgba[2]
         marker.color.a = rgba[3]
-
-        start_point = Point()
-        start_point.x = start_pose['x']
-        start_point.y = start_pose['y']
-        start_point.z = 0.08
-        end_point = Point()
-        end_point.x = end_pose['x']
-        end_point.y = end_pose['y']
-        end_point.z = 0.08
-        marker.points = [start_point, end_point]
+        for pose_dict in (start, end):
+            point = Point()
+            point.x = pose_dict['x']
+            point.y = pose_dict['y']
+            point.z = 0.12
+            marker.points.append(point)
         return marker
+
+    def _make_path_line_marker(self, path, stamp, marker_id, namespace, rgba, width, z):
+        marker = Marker()
+        marker.header.frame_id = path.header.frame_id or self.global_frame
+        marker.header.stamp = stamp
+        marker.ns = namespace
+        marker.id = marker_id
+        marker.type = Marker.LINE_STRIP
+        marker.action = Marker.ADD
+        marker.pose.orientation.w = 1.0
+        marker.scale.x = width
+        marker.color.r = rgba[0]
+        marker.color.g = rgba[1]
+        marker.color.b = rgba[2]
+        marker.color.a = rgba[3]
+        for pose_stamped in path.poses:
+            point = Point()
+            point.x = pose_stamped.pose.position.x
+            point.y = pose_stamped.pose.position.y
+            point.z = z
+            marker.points.append(point)
+        return marker
+
+    def _delete_all_markers(self, frame_id, namespace):
+        marker = Marker()
+        marker.header.frame_id = frame_id or self.global_frame
+        marker.header.stamp = self.get_clock().now().to_msg()
+        marker.ns = namespace
+        marker.id = 0
+        marker.action = Marker.DELETEALL
+        markers = MarkerArray()
+        markers.markers.append(marker)
+        return markers
+
+    def _publish_empty_paths_and_markers(self):
+        empty = Path()
+        empty.header.frame_id = self.global_frame
+        empty.header.stamp = self.get_clock().now().to_msg()
+        self.raw_path_pub.publish(empty)
+        self.smoothed_path_pub.publish(empty)
+        self.active_path_pub.publish(empty)
+        delete_markers = self._delete_all_markers(self.global_frame, 'coverage_cleanup')
+        self.debug_markers_pub.publish(delete_markers)
+        self.path_markers_pub.publish(delete_markers)
+
+    def _log_follow_path_send(self, path, report, reason):
+        first_pose = path.poses[0].pose
+        last_pose = path.poses[-1].pose
+        robot_pose = report.get('robot_pose')
+        self.get_logger().info(
+            'Sending final frozen path to Nav2 FollowPath: reason=%s action=%s '
+            'controller_id=%s goal_checker_id=%s poses=%d path_length=%.2fm '
+            'first=%s last=%s robot=%s start_index=%d. This is FollowPath, '
+            'not NavigateThroughPoses.'
+            % (
+                reason,
+                self.follow_path_action_name,
+                self.controller_id,
+                self.goal_checker_id,
+                len(path.poses),
+                self._path_length(path),
+                self._format_pose(first_pose),
+                self._format_pose(last_pose),
+                self._format_debug_pose(robot_pose),
+                self.selected_start_index,
+            )
+        )
+
+    def _log_path_summary(self, path, prefix):
+        if path is None or not path.poses:
+            self.get_logger().info('%s: empty path' % prefix)
+            return
+        self.get_logger().info(
+            '%s: frame_id=%s poses=%d path_length=%.2fm first=%s last=%s'
+            % (
+                prefix,
+                path.header.frame_id,
+                len(path.poses),
+                self._path_length(path),
+                self._format_pose(path.poses[0].pose),
+                self._format_pose(path.poses[-1].pose),
+            )
+        )
+
+    def _nearest_path_pose(self, path, x, y):
+        nearest_index = -1
+        nearest_distance = float('inf')
+        for index, pose_stamped in enumerate(path.poses):
+            position = pose_stamped.pose.position
+            distance = self._distance_2d(x, y, position.x, position.y)
+            if distance < nearest_distance:
+                nearest_distance = distance
+                nearest_index = index
+        return nearest_index, nearest_distance
+
+    def _max_jump(self, path):
+        max_jump = 0.0
+        max_jump_index = -1
+        for index in range(1, len(path.poses)):
+            previous = path.poses[index - 1].pose.position
+            current = path.poses[index].pose.position
+            jump = self._distance_2d(previous.x, previous.y, current.x, current.y)
+            if jump > max_jump:
+                max_jump = jump
+                max_jump_index = index - 1
+        return max_jump, max_jump_index
+
+    def _path_length(self, path):
+        if path is None or len(path.poses) < 2:
+            return 0.0
+        total = 0.0
+        for index in range(1, len(path.poses)):
+            previous = path.poses[index - 1].pose.position
+            current = path.poses[index].pose.position
+            total += self._distance_2d(previous.x, previous.y, current.x, current.y)
+        return total
+
+    def _recompute_orientations(self, path):
+        for index, pose_stamped in enumerate(path.poses):
+            if index + 1 < len(path.poses):
+                current = pose_stamped.pose.position
+                next_point = path.poses[index + 1].pose.position
+                yaw = math.atan2(next_point.y - current.y, next_point.x - current.x)
+            elif index > 0:
+                previous = path.poses[index - 1].pose.position
+                current = pose_stamped.pose.position
+                yaw = math.atan2(current.y - previous.y, current.x - previous.x)
+            else:
+                yaw = 0.0
+            pose_stamped.pose.orientation = self._quaternion_from_yaw(yaw)
+
+    def _stamp_path(self, path):
+        stamp = self.get_clock().now().to_msg()
+        path.header.stamp = stamp
+        for pose_stamped in path.poses:
+            pose_stamped.header.frame_id = path.header.frame_id
+            pose_stamped.header.stamp = stamp
 
     def _pose_debug_dict(self, pose):
         return {
@@ -1263,157 +1844,27 @@ class CoverageFollowPathExecutorNode(Node):
             pose_dict['yaw'],
         )
 
+    def _format_pose(self, pose):
+        return '(x=%.3f y=%.3f yaw=%.2f)' % (
+            pose.position.x,
+            pose.position.y,
+            self._yaw_from_quaternion(pose.orientation),
+        )
+
     def _format_float(self, value):
         if value is None or not math.isfinite(value):
             return 'unavailable'
         return '%.3f' % value
 
-    def _nearest_path_pose(self, path_msg, x, y):
-        nearest_index = -1
-        nearest_distance = float('inf')
-        for index, pose_stamped in enumerate(path_msg.poses):
-            position = pose_stamped.pose.position
-            distance = self._point_distance_2d(
-                x,
-                y,
-                position.x,
-                position.y,
-            )
-            if distance < nearest_distance:
-                nearest_distance = distance
-                nearest_index = index
-        return nearest_index, nearest_distance
+    def _distance_2d(self, x1, y1, x2, y2):
+        return math.hypot(x2 - x1, y2 - y1)
 
-    def _max_consecutive_pose_jump_info(self, path_msg):
-        max_jump = 0.0
-        max_jump_index = -1
-        poses = path_msg.poses
-        for index in range(1, len(poses)):
-            previous = poses[index - 1].pose.position
-            current = poses[index].pose.position
-            jump = self._point_distance_3d(
-                previous.x,
-                previous.y,
-                previous.z,
-                current.x,
-                current.y,
-                current.z,
-            )
-            if jump > max_jump:
-                max_jump = jump
-                max_jump_index = index - 1
-        return max_jump, max_jump_index
-
-    def _point_distance_2d(self, x1, y1, x2, y2):
-        dx = x2 - x1
-        dy = y2 - y1
-        return math.sqrt(dx * dx + dy * dy)
-
-    def _point_distance_3d(self, x1, y1, z1, x2, y2, z2):
-        dx = x2 - x1
-        dy = y2 - y1
-        dz = z2 - z1
-        return math.sqrt(dx * dx + dy * dy + dz * dz)
-
-    def _follow_path_error_label(self, error_code):
-        return self.FOLLOW_PATH_ERROR_CODES.get(error_code, 'UNRECOGNIZED')
-
-    def _validate_path(self, path_msg):
-        frame_id = path_msg.header.frame_id.strip()
-        if not frame_id:
-            return 'missing header.frame_id'
-
-        pose_count = len(path_msg.poses)
-        if pose_count < self.min_path_poses:
-            return 'pose_count=%d is below min_path_poses=%d' % (
-                pose_count,
-                self.min_path_poses,
-            )
-
-        for index, pose_stamped in enumerate(path_msg.poses):
-            position = pose_stamped.pose.position
-            orientation = pose_stamped.pose.orientation
-            if not all(
-                math.isfinite(value)
-                for value in (position.x, position.y, position.z)
-            ):
-                return 'pose[%d] has NaN or infinite position' % index
-            if not all(
-                math.isfinite(value)
-                for value in (
-                    orientation.x,
-                    orientation.y,
-                    orientation.z,
-                    orientation.w,
-                )
-            ):
-                return 'pose[%d] has NaN or infinite orientation' % index
-
-            quaternion_norm = math.sqrt(
-                orientation.x * orientation.x
-                + orientation.y * orientation.y
-                + orientation.z * orientation.z
-                + orientation.w * orientation.w
-            )
-            if not math.isfinite(quaternion_norm) or quaternion_norm < 1.0e-3:
-                return 'pose[%d] has invalid quaternion norm=%.6f' % (
-                    index,
-                    quaternion_norm,
-                )
-
-        return ''
-
-    def _path_checksum(self, path_msg):
-        values = [path_msg.header.frame_id, len(path_msg.poses)]
-        for pose_stamped in path_msg.poses:
-            pose = pose_stamped.pose
-            values.extend(
-                [
-                    round(pose.position.x, 6),
-                    round(pose.position.y, 6),
-                    round(pose.position.z, 6),
-                    round(pose.orientation.x, 6),
-                    round(pose.orientation.y, 6),
-                    round(pose.orientation.z, 6),
-                    round(pose.orientation.w, 6),
-                ]
-            )
-        return tuple(values)
-
-    def _log_path_summary(self, path_msg, prefix):
-        first_pose = path_msg.poses[0].pose
-        last_pose = path_msg.poses[-1].pose
-        self.get_logger().info(
-            '%s: poses=%d frame_id=%s length=%.2fm first=%s last=%s'
-            % (
-                prefix,
-                len(path_msg.poses),
-                path_msg.header.frame_id,
-                self._path_length(path_msg),
-                self._format_pose(first_pose),
-                self._format_pose(last_pose),
-            )
-        )
-
-    def _path_length(self, path_msg):
-        total = 0.0
-        poses = path_msg.poses
-        for index in range(1, len(poses)):
-            current = poses[index].pose.position
-            previous = poses[index - 1].pose.position
-            dx = current.x - previous.x
-            dy = current.y - previous.y
-            dz = current.z - previous.z
-            total += math.sqrt(dx * dx + dy * dy + dz * dz)
-        return total
-
-    def _format_pose(self, pose):
-        yaw = self._yaw_from_quaternion(pose.orientation)
-        return '(x=%.3f y=%.3f yaw=%.2f)' % (
-            pose.position.x,
-            pose.position.y,
-            yaw,
-        )
+    def _normalize_angle(self, angle):
+        while angle > math.pi:
+            angle -= 2.0 * math.pi
+        while angle < -math.pi:
+            angle += 2.0 * math.pi
+        return angle
 
     def _yaw_from_quaternion(self, quaternion):
         siny_cosp = 2.0 * (
@@ -1424,215 +1875,11 @@ class CoverageFollowPathExecutorNode(Node):
         )
         return math.atan2(siny_cosp, cosy_cosp)
 
-    def _feedback_fields(self, feedback):
-        fields = []
-        try:
-            field_names = feedback.get_fields_and_field_types().keys()
-        except AttributeError:
-            field_names = []
-
-        for name in field_names:
-            value = getattr(feedback, name)
-            if isinstance(value, float):
-                if math.isfinite(value):
-                    fields.append('%s=%.3f' % (name, value))
-            elif isinstance(value, bool):
-                fields.append('%s=%s' % (name, str(value).lower()))
-            elif isinstance(value, int):
-                fields.append('%s=%d' % (name, value))
-            elif isinstance(value, str):
-                fields.append('%s=%s' % (name, value))
-
-        return fields
-
-    def _make_path_markers(self, path_msg):
-        frame_id = path_msg.header.frame_id or 'map'
-        markers = self._make_delete_markers(frame_id)
-        if not path_msg.poses:
-            return markers
-
-        stamp = self.get_clock().now().to_msg()
-
-        line_marker = Marker()
-        line_marker.header.frame_id = frame_id
-        line_marker.header.stamp = stamp
-        line_marker.ns = 'coverage_follow_path_line'
-        line_marker.id = 0
-        line_marker.type = Marker.LINE_STRIP
-        line_marker.action = Marker.ADD
-        line_marker.pose.orientation.w = 1.0
-        line_marker.scale.x = 0.035
-        line_marker.color.r = 0.0
-        line_marker.color.g = 0.85
-        line_marker.color.b = 1.0
-        line_marker.color.a = 0.95
-        for pose_stamped in path_msg.poses:
-            point = Point()
-            point.x = pose_stamped.pose.position.x
-            point.y = pose_stamped.pose.position.y
-            point.z = pose_stamped.pose.position.z + 0.04
-            line_marker.points.append(point)
-        markers.markers.append(line_marker)
-
-        start_marker = self._make_pose_marker(
-            frame_id,
-            stamp,
-            'coverage_follow_path_start',
-            1,
-            Marker.SPHERE,
-            path_msg.poses[0],
-            (0.0, 0.9, 0.2, 0.95),
-            0.16,
-            0.08,
-        )
-        markers.markers.append(start_marker)
-
-        end_marker = self._make_pose_marker(
-            frame_id,
-            stamp,
-            'coverage_follow_path_end',
-            2,
-            Marker.CUBE,
-            path_msg.poses[-1],
-            (1.0, 0.15, 0.05, 0.95),
-            0.16,
-            0.08,
-        )
-        markers.markers.append(end_marker)
-
-        state_point = self._estimate_current_state_point(path_msg)
-        if state_point is not None:
-            state_marker = Marker()
-            state_marker.header.frame_id = frame_id
-            state_marker.header.stamp = stamp
-            state_marker.ns = 'coverage_follow_path_state'
-            state_marker.id = 3
-            state_marker.type = Marker.SPHERE
-            state_marker.action = Marker.ADD
-            state_marker.pose.position = state_point
-            state_marker.pose.position.z += 0.12
-            state_marker.pose.orientation.w = 1.0
-            state_marker.scale.x = 0.18
-            state_marker.scale.y = 0.18
-            state_marker.scale.z = 0.18
-            state_marker.color.r = 0.1
-            state_marker.color.g = 0.25
-            state_marker.color.b = 1.0
-            state_marker.color.a = 0.95
-            markers.markers.append(state_marker)
-
-            label = Marker()
-            label.header.frame_id = frame_id
-            label.header.stamp = stamp
-            label.ns = 'coverage_follow_path_state_label'
-            label.id = 4
-            label.type = Marker.TEXT_VIEW_FACING
-            label.action = Marker.ADD
-            label.pose.position = copy.deepcopy(state_point)
-            label.pose.position.z += 0.34
-            label.pose.orientation.w = 1.0
-            label.scale.z = 0.18
-            label.color.r = 1.0
-            label.color.g = 1.0
-            label.color.b = 1.0
-            label.color.a = 0.95
-            label.text = self.execution_status
-            markers.markers.append(label)
-
-        return markers
-
-    def _make_pose_marker(
-        self,
-        frame_id,
-        stamp,
-        namespace,
-        marker_id,
-        marker_type,
-        pose_stamped,
-        rgba,
-        scale,
-        z_offset,
-    ):
-        marker = Marker()
-        marker.header.frame_id = frame_id
-        marker.header.stamp = stamp
-        marker.ns = namespace
-        marker.id = marker_id
-        marker.type = marker_type
-        marker.action = Marker.ADD
-        marker.pose = copy.deepcopy(pose_stamped.pose)
-        marker.pose.position.z += z_offset
-        marker.scale.x = scale
-        marker.scale.y = scale
-        marker.scale.z = scale
-        marker.color.r = rgba[0]
-        marker.color.g = rgba[1]
-        marker.color.b = rgba[2]
-        marker.color.a = rgba[3]
-        return marker
-
-    def _estimate_current_state_point(self, path_msg):
-        if not path_msg.poses:
-            return None
-
-        if self.execution_status == self.STATUS_SUCCEEDED:
-            return copy.deepcopy(path_msg.poses[-1].pose.position)
-
-        if (
-            self.execution_status
-            in (
-                self.STATUS_EXECUTING,
-                self.STATUS_FAILED,
-                self.STATUS_CANCELED,
-            )
-            and self.last_distance_to_goal is not None
-        ):
-            target_distance = max(
-                0.0,
-                self._path_length(path_msg) - self.last_distance_to_goal,
-            )
-            return self._point_at_path_distance(path_msg, target_distance)
-
-        return copy.deepcopy(path_msg.poses[0].pose.position)
-
-    def _point_at_path_distance(self, path_msg, target_distance):
-        poses = path_msg.poses
-        if len(poses) == 1:
-            return copy.deepcopy(poses[0].pose.position)
-
-        traversed = 0.0
-        for index in range(1, len(poses)):
-            previous = poses[index - 1].pose.position
-            current = poses[index].pose.position
-            dx = current.x - previous.x
-            dy = current.y - previous.y
-            dz = current.z - previous.z
-            segment_length = math.sqrt(dx * dx + dy * dy + dz * dz)
-            if segment_length <= 0.0:
-                continue
-
-            if traversed + segment_length >= target_distance:
-                ratio = (target_distance - traversed) / segment_length
-                point = Point()
-                point.x = previous.x + ratio * dx
-                point.y = previous.y + ratio * dy
-                point.z = previous.z + ratio * dz
-                return point
-
-            traversed += segment_length
-
-        return copy.deepcopy(poses[-1].pose.position)
-
-    def _make_delete_markers(self, frame_id):
-        marker = Marker()
-        marker.header.frame_id = frame_id or 'map'
-        marker.header.stamp = self.get_clock().now().to_msg()
-        marker.ns = 'coverage_follow_path_cleanup'
-        marker.id = 0
-        marker.action = Marker.DELETEALL
-        markers = MarkerArray()
-        markers.markers.append(marker)
-        return markers
+    def _quaternion_from_yaw(self, yaw):
+        quaternion = PoseStamped().pose.orientation
+        quaternion.z = math.sin(yaw * 0.5)
+        quaternion.w = math.cos(yaw * 0.5)
+        return quaternion
 
     def _set_status(self, status):
         if status != self.execution_status:

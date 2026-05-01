@@ -8,8 +8,13 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 def generate_launch_description():
     # === User-editable paths ===
+    pkg_sweepi_coverage = get_package_share_directory('sweepi_coverage')
     pkg_nav2_bringup = get_package_share_directory('nav2_bringup')
-    pkg_nav2_params = os.path.join(pkg_nav2_bringup, 'params', 'nav2_params.yaml')
+    pkg_nav2_params = os.path.join(
+        pkg_sweepi_coverage,
+        'config',
+        'nav2_coverage_params.yaml',
+    )
     default_map_path = '/home/akhila-wedamestrige/SweePi/maps/swepi_exploration_map_20260418_021201.yaml'
     rviz_config_path = os.path.join(pkg_nav2_bringup, 'rviz', 'nav2_default_view.rviz')  # Change as needed
 
