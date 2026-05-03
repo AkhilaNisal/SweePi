@@ -59,10 +59,16 @@ ros2 service call /cancel_coverage_follow_path std_srvs/srv/Trigger {}
 Useful topics and actions:
 
 ```bash
+ros2 topic echo /local_costmap/costmap --once
 ros2 topic echo /coverage_execution_status
+ros2 topic echo /coverage_dynamic_skip_status
+ros2 topic echo /coverage_debug_info
 ros2 topic echo /coverage_nav2_feedback
 ros2 action list | grep follow
 ros2 action info /follow_path
+ros2 service call /validate_coverage_follow_path std_srvs/srv/Trigger {}
+ros2 service call /start_coverage_follow_path std_srvs/srv/Trigger {}
+ros2 service call /cancel_coverage_follow_path std_srvs/srv/Trigger {}
 ```
 
 RViz/debug topics:
@@ -70,11 +76,14 @@ RViz/debug topics:
 ```text
 /coverage_path
 /coverage_active_path
+/coverage_smoothed_path
+/coverage_skipped_segments
 /coverage_path_markers
 /coverage_debug_markers
 /coverage_execution_status
 /coverage_nav2_feedback
 /coverage_debug_info
+/local_costmap/costmap
 ```
 
 ## FollowPath Requires Continuous `/coverage_path`
@@ -108,9 +117,8 @@ coverage_planner_node:
 ```
 
 This makes the planner cover cells that still need sweeping and are currently
-drivable according to Nav2. Unexpected objects that appear in the costmap are
-temporarily excluded instead of being marked covered, so they can be attempted
-later if they become reachable again.
+drivable according to Nav2's global/static view. The planner keeps the real robot
+size and coverage margin, so known mapped obstacles remain conservatively avoided.
 
 For FollowPath execution, the default config freezes `/coverage_path` after the
 first valid costmap-aware plan:
@@ -128,20 +136,87 @@ fallback path before `/global_costmap/costmap` or `map -> base_link` TF is ready
 Restart the coverage launch, or disable these parameters, when you intentionally
 want a newly generated coverage path.
 
-If Nav2 returns `FAILED_TO_MAKE_PROGRESS`, the FollowPath executor can optionally
-queue the newest replanned path, but this is disabled by default because it changes
-the active coverage plan:
+## Dynamic Local Obstacle Handling
 
-```yaml
-coverage_follow_path_executor_node:
-  ros__parameters:
-    auto_restart_on_failed_progress: false
-    max_failed_progress_restarts: 3
+The FollowPath executor keeps the coverage path frozen and lets normal walls be
+handled by the original `FollowPath` goal plus the Nav2 local controller. Dynamic
+skip is for local-only obstacles, such as a box, chair, person, or wall that is
+missing from the saved map, that appear in `/local_costmap/costmap` but are not
+occupied in the saved `/map`.
+
+Inflated high-cost cells are not enough to trigger a skip. With the default
+configuration, the detector requires local cost `100`; cost `99` inflation near a
+known wall is ignored. If Nav2 reports collision/progress failure, or if the
+same static-map-free `99` inscribed band persists across repeated checks, the
+executor treats it as a local-only map mismatch and tries the same validated
+bypass/rejoin flow. A temporary bypass is generated only after confirmation. The
+replacement path is validated before the old `FollowPath` goal is canceled using
+the local costmap for the temporary bypass and the saved map to reject known
+static walls. Live global costmap obstacle-layer cells that are static-map-free
+are treated as part of the confirmed dynamic object instead of automatically
+vetoing the candidate.
+
+The replacement path starts at the current robot pose, follows a temporary local
+bypass, then rejoins the original frozen coverage path from the selected rejoin
+index onward. Skipped object-covered sections are not retried and are not counted
+as cleaned. If no safe rejoin or valid bypass can be found after the confirmed
+obstacle and exhaustive local rejoin search, the active goal is canceled and
+`/coverage_execution_status` becomes
+`BLOCKED_DYNAMIC_OBJECT` instead of continuing into the object. If any section
+was skipped, the final status is `COMPLETED_WITH_SKIPS`; otherwise the task
+finishes as `SUCCEEDED`.
+
+Useful checks:
+
+```bash
+ros2 topic echo /coverage_execution_status
+ros2 topic echo /coverage_dynamic_skip_status
+ros2 topic echo /coverage_debug_info
+ros2 topic echo /local_costmap/costmap --once
+ros2 topic echo /map --once
+ros2 service call /validate_coverage_follow_path std_srvs/srv/Trigger {}
+ros2 service call /start_coverage_follow_path std_srvs/srv/Trigger {}
 ```
 
-Keep `robot_radius` at the real robot size. To move nearer to walls safely, tune
-inflation radius and cost scaling rather than shrinking the robot footprint below
-reality.
+Add these in RViz:
+
+```text
+/coverage_path
+/coverage_active_path
+/coverage_smoothed_path
+/coverage_skipped_segments
+/coverage_debug_markers
+/local_costmap/costmap
+/map
+```
+
+Test cases:
+
+1. Run without new objects:
+   - The robot should handle wall junctions normally.
+   - Dynamic skip should not trigger near known walls.
+
+2. Add a box on the coverage path:
+   - Dynamic skip should trigger after confirmation.
+   - A temporary bypass should be generated.
+   - The robot should rejoin the original coverage path.
+   - Status should return to `EXECUTING`.
+
+3. Wall/corner after a box:
+   - Dynamic skip should not trigger from inflated cost `99`.
+   - Known walls should be ignored by the dynamic detector.
+   - The robot should continue using normal `FollowPath`.
+
+4. Invalid candidate path:
+   - The candidate should be rejected before canceling the current `FollowPath`.
+   - The current goal should continue.
+   - The robot should not enter `FAILED` because of a bad candidate.
+
+Keep `robot_radius_m: 0.20`, `coverage_safety_margin_m: 0.10`, and
+`inflation_radius_m: 0.30`. The dynamic skip feature is only for unexpected local
+obstacles; it is not a reason to shrink the planner margin or make the robot
+drive closer to known walls. Nav2 local collision detection, obstacle layers, and
+inflation remain enabled.
 
 ## Nav2 Controller Guidance
 
@@ -172,7 +247,6 @@ Local costmap notes:
 
 - Keep collision checking enabled.
 - Do not reduce `robot_radius` below the real robot radius.
-- Reduce excessive inflation only if the planner already guarantees clearance.
-- For SweePi, use robot radius around `0.18-0.20 m` and safety margin around `0.04 m`.
+- For SweePi, keep robot radius at `0.20 m` and coverage safety margin at `0.10 m`.
 - The coverage path should stay at least `robot_radius + safety_margin` away from obstacle cells.
-- Inflation radius should not make valid near-object coverage strips too expensive.
+- Keep inflation radius at `0.30 m` unless there is a separate, safety-reviewed tuning change.

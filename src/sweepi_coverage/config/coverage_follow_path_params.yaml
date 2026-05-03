@@ -60,6 +60,8 @@ coverage_follow_path_executor_node:
     debug_info_topic: "/coverage_debug_info"
     debug_markers_topic: "/coverage_debug_markers"
     path_markers_topic: "/coverage_path_markers"
+    skipped_segments_topic: "/coverage_skipped_segments"
+    dynamic_skip_status_topic: "/coverage_dynamic_skip_status"
     follow_path_action_name: "/follow_path"
     controller_id: "FollowPath"
     goal_checker_id: ""
@@ -67,6 +69,7 @@ coverage_follow_path_executor_node:
     global_frame: "map"
     robot_base_frame: "base_link"
     costmap_topic: "/global_costmap/costmap"
+    robot_radius_m: 0.20
     enable_costmap_validation: true
     require_costmap_for_validation: true
     max_allowed_nav_cost: 99
@@ -96,6 +99,65 @@ coverage_follow_path_executor_node:
     fallback_to_raw_path_on_smoothing_failure: true
     publish_raw_and_smoothed_paths: true
     publish_debug_markers: true
+    enable_dynamic_obstacle_skip: true
+    local_costmap_topic: "/local_costmap/costmap"
+    static_map_topic: "/map"
+    dynamic_obstacle_cost_threshold: 100
+    dynamic_enable_local_only_inscribed_fallback: true
+    dynamic_inscribed_cost_threshold: 99
+    dynamic_obstacle_distance_threshold_m: 0.05
+    dynamic_object_clearance_m: 0.05
+    dynamic_collision_check_radius_m: 0.25
+    dynamic_connector_tracking_clearance_m: 0.12
+    dynamic_use_corridor_for_detection: true
+    dynamic_monitor_temporary_paths: true
+    dynamic_connector_allow_blocked_start: true
+    dynamic_connector_start_grace_m: 0.20
+    dynamic_refine_connector_path: true
+    dynamic_connector_refinement_iterations: 3
+    dynamic_connector_refinement_step_m: 0.04
+    dynamic_connector_refinement_influence_m: 0.45
+    dynamic_treat_unknown_as_blocked: true
+    dynamic_skip_lookahead_m: 0.60
+    dynamic_skip_padding_m: 0.05
+    dynamic_rejoin_max_search_distance_m: 1.00
+    dynamic_rejoin_min_clearance_m: 0.05
+    dynamic_max_rejoin_candidates: 20
+    dynamic_required_consecutive_detections: 2
+    dynamic_min_blocked_pose_count: 2
+    dynamic_min_blocked_path_length_m: 0.10
+    dynamic_detection_hysteresis_sec: 0.30
+    dynamic_use_static_reference_check: true
+    static_reference_padding_m: 0.05
+    static_map_occupied_threshold: 50
+    dynamic_inscribed_static_reference_padding_m: 0.05
+    dynamic_static_encroachment_tolerance_m: 0.05
+    dynamic_validate_rejoin_before_cancel: true
+    dynamic_cancel_only_if_imminent_blocked: true
+    dynamic_imminent_block_distance_m: 0.35
+    dynamic_use_nav2_planner_connector: true
+    compute_path_to_pose_action_name: "/compute_path_to_pose"
+    dynamic_planner_id: "GridBased"
+    dynamic_planner_timeout_sec: 2.0
+    dynamic_connector_start_with_robot_pose: true
+    dynamic_connector_goal_tolerance_m: 0.15
+    dynamic_skip_check_rate_hz: 5.0
+    dynamic_skip_min_remaining_poses: 2
+    dynamic_skip_max_consecutive_failures: 5
+    dynamic_skip_replan_cooldown_sec: 3.0
+    dynamic_resume_ignore_index_margin: 5
+    dynamic_progress_search_backtrack_m: 0.20
+    dynamic_progress_search_forward_m: 3.00
+    retry_skipped_segments_at_end: false
+    mark_skipped_segments_uncovered: true
+    publish_skipped_segments: true
+    dynamic_require_safe_connector: false
+    dynamic_enable_local_astar_detour: true
+    dynamic_enable_local_detour: true
+    dynamic_detour_min_lateral_offset_m: 0.10
+    dynamic_detour_max_lateral_offset_m: 0.80
+    dynamic_detour_offset_step_m: 0.05
+    dynamic_detour_sample_step_m: 0.05
 
 coverage_manager_node:
   ros__parameters:

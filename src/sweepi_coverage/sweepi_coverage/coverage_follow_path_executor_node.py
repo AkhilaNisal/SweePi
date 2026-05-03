@@ -2,13 +2,14 @@
 """Execute one frozen coverage path with Nav2 FollowPath."""
 
 import copy
+import heapq
 import math
 import time
 
 import rclpy
 from action_msgs.msg import GoalStatus
 from geometry_msgs.msg import Point, PoseStamped
-from nav2_msgs.action import FollowPath, SmoothPath
+from nav2_msgs.action import ComputePathToPose, FollowPath, SmoothPath
 from nav_msgs.msg import OccupancyGrid, Path
 from rclpy.action import ActionClient
 from rclpy.duration import Duration
@@ -34,7 +35,10 @@ class CoverageFollowPathExecutorNode(Node):
     STATUS_SMOOTHING = 'SMOOTHING'
     STATUS_WAITING_FOR_NAV2 = 'WAITING_FOR_NAV2'
     STATUS_EXECUTING = 'EXECUTING'
+    STATUS_SKIPPING_DYNAMIC_OBSTACLE = 'SKIPPING_DYNAMIC_OBSTACLE'
     STATUS_SUCCEEDED = 'SUCCEEDED'
+    STATUS_COMPLETED_WITH_SKIPS = 'COMPLETED_WITH_SKIPS'
+    STATUS_BLOCKED_DYNAMIC_OBJECT = 'BLOCKED_DYNAMIC_OBJECT'
     STATUS_FAILED = 'FAILED'
     STATUS_CANCELED = 'CANCELED'
 
@@ -76,6 +80,11 @@ class CoverageFollowPathExecutorNode(Node):
             durability=DurabilityPolicy.VOLATILE,
             reliability=ReliabilityPolicy.RELIABLE,
         )
+        static_map_qos = QoSProfile(
+            depth=1,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            reliability=ReliabilityPolicy.RELIABLE,
+        )
 
         self.cached_raw_path = None
         self.coverage_path_frozen = False
@@ -91,8 +100,46 @@ class CoverageFollowPathExecutorNode(Node):
         self.nav_costmap = None
         self.nav_costmap_received = False
         self.nav_costmap_stamp_monotonic = 0.0
+        self.local_costmap = None
+        self.local_costmap_received = False
+        self.local_costmap_stamp_monotonic = 0.0
+        self.static_map = None
+        self.static_map_received = False
+        self.static_map_stamp_monotonic = 0.0
         self.rounded_turn_sections = []
         self.blocked_debug_points = []
+        self.skipped_segments = []
+        self.dynamic_detection_candidate = None
+        self.dynamic_confirmed_marker_report = None
+        self.dynamic_ignored_static_marker_poses = []
+        self.dynamic_candidate_marker_path = None
+        self.dynamic_skip_in_progress = False
+        self.last_dynamic_skip_check_monotonic = 0.0
+        self.dynamic_skip_cancel_requested = False
+        self.dynamic_skip_cancel_goal_handle = None
+        self.dynamic_skip_pending_rejoin_path = None
+        self.dynamic_skip_pending_report = None
+        self.dynamic_skip_pending_original_rejoin_index = None
+        self.dynamic_skip_pending_active_rejoin_index = None
+        self.dynamic_skip_finish_after_cancel = False
+        self.dynamic_skip_cancel_final_status = None
+        self.dynamic_skip_counter = 0
+        self.dynamic_skip_failure_counter = 0
+        self.dynamic_skip_monitor_suppressed_until_monotonic = 0.0
+        self.dynamic_last_nearest_index = 0
+        self.dynamic_skip_pending_monitor_resume_index = None
+        self.dynamic_skip_monitor_resume_index = None
+        self.dynamic_active_path_is_temporary = False
+        self.dynamic_active_original_rejoin_index = None
+        self.dynamic_active_rejoin_path_index = None
+        self.dynamic_planner_in_flight = False
+        self.dynamic_planner_goal_handle = None
+        self.dynamic_planner_pending_context = None
+        self.dynamic_rejoin_candidates_pending = []
+        self.dynamic_connector_attempt_in_progress = False
+        self.dynamic_planner_timeout_timer = None
+        self.dynamic_planner_request_id = 0
+        self.dynamic_controller_blocked_reports_count = 0
         self.current_goal_handle = None
         self.current_smoothing_goal_handle = None
         self.goal_in_flight = False
@@ -118,6 +165,11 @@ class CoverageFollowPathExecutorNode(Node):
             SmoothPath,
             self.smoother_action_name,
         )
+        self.compute_path_to_pose_client = ActionClient(
+            self,
+            ComputePathToPose,
+            self.compute_path_to_pose_action_name,
+        )
 
         self.coverage_path_sub = self.create_subscription(
             Path,
@@ -130,6 +182,18 @@ class CoverageFollowPathExecutorNode(Node):
             self.costmap_topic,
             self.nav_costmap_callback,
             costmap_qos,
+        )
+        self.local_costmap_sub = self.create_subscription(
+            OccupancyGrid,
+            self.local_costmap_topic,
+            self.local_costmap_callback,
+            costmap_qos,
+        )
+        self.static_map_sub = self.create_subscription(
+            OccupancyGrid,
+            self.static_map_topic,
+            self.static_map_callback,
+            static_map_qos,
         )
 
         self.raw_path_pub = self.create_publisher(Path, self.raw_path_topic, qos)
@@ -164,6 +228,16 @@ class CoverageFollowPathExecutorNode(Node):
             self.path_markers_topic,
             qos,
         )
+        self.skipped_segments_pub = self.create_publisher(
+            MarkerArray,
+            self.skipped_segments_topic,
+            qos,
+        )
+        self.dynamic_skip_status_pub = self.create_publisher(
+            String,
+            self.dynamic_skip_status_topic,
+            qos,
+        )
 
         self.start_service = self.create_service(
             Trigger,
@@ -188,13 +262,21 @@ class CoverageFollowPathExecutorNode(Node):
 
         publish_period = 1.0 / max(0.1, self.republish_active_path_hz)
         self.timer = self.create_timer(publish_period, self.timer_callback)
+        self.dynamic_timer = None
+        if self.enable_dynamic_obstacle_skip:
+            dynamic_period = 1.0 / max(0.1, self.dynamic_skip_check_rate_hz)
+            self.dynamic_timer = self.create_timer(
+                dynamic_period,
+                self.dynamic_timer_callback,
+            )
 
         self._set_status(self.STATUS_WAITING_FOR_PATH)
         self.get_logger().info(
             'Coverage FollowPath executor started: action=%s controller_id=%s '
             'smoother_action=%s smoother_id=%s path=%s raw=%s smoothed=%s '
             'active=%s costmap=%s. This mode uses FollowPath, not '
-            'NavigateThroughPoses.'
+            'NavigateThroughPoses. dynamic_obstacle_skip=%s local_costmap=%s '
+            'static_map=%s'
             % (
                 self.follow_path_action_name,
                 self.controller_id,
@@ -205,6 +287,9 @@ class CoverageFollowPathExecutorNode(Node):
                 self.smoothed_path_topic,
                 self.active_path_topic,
                 self.costmap_topic,
+                str(self.enable_dynamic_obstacle_skip).lower(),
+                self.local_costmap_topic,
+                self.static_map_topic,
             )
         )
 
@@ -220,6 +305,8 @@ class CoverageFollowPathExecutorNode(Node):
             'debug_info_topic': '/coverage_debug_info',
             'debug_markers_topic': '/coverage_debug_markers',
             'path_markers_topic': '/coverage_path_markers',
+            'skipped_segments_topic': '/coverage_skipped_segments',
+            'dynamic_skip_status_topic': '/coverage_dynamic_skip_status',
             'follow_path_action_name': '/follow_path',
             'controller_id': 'FollowPath',
             'goal_checker_id': '',
@@ -227,6 +314,7 @@ class CoverageFollowPathExecutorNode(Node):
             'global_frame': 'map',
             'robot_base_frame': 'base_link',
             'costmap_topic': '/global_costmap/costmap',
+            'robot_radius_m': 0.20,
             'enable_costmap_validation': True,
             'require_costmap_for_validation': True,
             'max_allowed_nav_cost': 90,
@@ -256,6 +344,65 @@ class CoverageFollowPathExecutorNode(Node):
             'fallback_to_raw_path_on_smoothing_failure': False,
             'publish_raw_and_smoothed_paths': True,
             'publish_debug_markers': True,
+            'enable_dynamic_obstacle_skip': True,
+            'local_costmap_topic': '/local_costmap/costmap',
+            'static_map_topic': '/map',
+            'static_map_occupied_threshold': 50,
+            'dynamic_use_static_reference_check': True,
+            'static_reference_padding_m': 0.05,
+            'dynamic_enable_local_only_inscribed_fallback': True,
+            'dynamic_inscribed_cost_threshold': 99,
+            'dynamic_inscribed_static_reference_padding_m': 0.05,
+            'dynamic_obstacle_cost_threshold': 100,
+            'dynamic_obstacle_distance_threshold_m': 0.05,
+            'dynamic_treat_unknown_as_blocked': True,
+            'dynamic_object_clearance_m': 0.05,
+            'dynamic_collision_check_radius_m': 0.0,
+            'dynamic_connector_tracking_clearance_m': 0.12,
+            'dynamic_use_corridor_for_detection': True,
+            'dynamic_monitor_temporary_paths': True,
+            'dynamic_connector_allow_blocked_start': True,
+            'dynamic_connector_start_grace_m': 0.20,
+            'dynamic_refine_connector_path': True,
+            'dynamic_connector_refinement_iterations': 3,
+            'dynamic_connector_refinement_step_m': 0.04,
+            'dynamic_connector_refinement_influence_m': 0.45,
+            'dynamic_skip_lookahead_m': 0.60,
+            'dynamic_skip_padding_m': 0.05,
+            'dynamic_rejoin_min_clearance_m': 0.05,
+            'dynamic_rejoin_max_search_distance_m': 1.00,
+            'dynamic_max_rejoin_candidates': 20,
+            'dynamic_required_consecutive_detections': 2,
+            'dynamic_min_blocked_pose_count': 2,
+            'dynamic_min_blocked_path_length_m': 0.10,
+            'dynamic_detection_hysteresis_sec': 0.30,
+            'dynamic_validate_rejoin_before_cancel': True,
+            'dynamic_cancel_only_if_imminent_blocked': True,
+            'dynamic_imminent_block_distance_m': 0.35,
+            'dynamic_resume_ignore_index_margin': 5,
+            'dynamic_skip_check_rate_hz': 5.0,
+            'dynamic_skip_min_remaining_poses': 2,
+            'dynamic_skip_max_consecutive_failures': 5,
+            'dynamic_skip_replan_cooldown_sec': 3.0,
+            'dynamic_progress_search_backtrack_m': 0.20,
+            'dynamic_progress_search_forward_m': 3.00,
+            'retry_skipped_segments_at_end': False,
+            'mark_skipped_segments_uncovered': True,
+            'publish_skipped_segments': True,
+            'dynamic_use_nav2_planner_connector': True,
+            'compute_path_to_pose_action_name': '/compute_path_to_pose',
+            'dynamic_planner_id': 'GridBased',
+            'dynamic_planner_timeout_sec': 2.0,
+            'dynamic_connector_start_with_robot_pose': True,
+            'dynamic_connector_goal_tolerance_m': 0.15,
+            'dynamic_static_encroachment_tolerance_m': 0.05,
+            'dynamic_require_safe_connector': False,
+            'dynamic_enable_local_astar_detour': True,
+            'dynamic_enable_local_detour': True,
+            'dynamic_detour_min_lateral_offset_m': 0.10,
+            'dynamic_detour_max_lateral_offset_m': 0.80,
+            'dynamic_detour_offset_step_m': 0.05,
+            'dynamic_detour_sample_step_m': 0.05,
         }
         for name, value in defaults.items():
             self._declare_parameter_if_needed(name, value)
@@ -270,6 +417,10 @@ class CoverageFollowPathExecutorNode(Node):
         self.debug_info_topic = self._string_param('debug_info_topic')
         self.debug_markers_topic = self._string_param('debug_markers_topic')
         self.path_markers_topic = self._string_param('path_markers_topic')
+        self.skipped_segments_topic = self._string_param('skipped_segments_topic')
+        self.dynamic_skip_status_topic = self._string_param(
+            'dynamic_skip_status_topic'
+        )
         self.follow_path_action_name = self._string_param('follow_path_action_name')
         self.controller_id = self._string_param('controller_id')
         self.goal_checker_id = self._string_param('goal_checker_id')
@@ -277,6 +428,7 @@ class CoverageFollowPathExecutorNode(Node):
         self.global_frame = self._string_param('global_frame')
         self.robot_base_frame = self._string_param('robot_base_frame')
         self.costmap_topic = self._string_param('costmap_topic')
+        self.robot_radius_m = self._double_param('robot_radius_m')
         self.enable_costmap_validation = self._bool_param('enable_costmap_validation')
         self.require_costmap_for_validation = self._bool_param(
             'require_costmap_for_validation'
@@ -330,8 +482,224 @@ class CoverageFollowPathExecutorNode(Node):
             'publish_raw_and_smoothed_paths'
         )
         self.publish_debug_markers = self._bool_param('publish_debug_markers')
+        self.enable_dynamic_obstacle_skip = self._bool_param(
+            'enable_dynamic_obstacle_skip'
+        )
+        self.local_costmap_topic = self._string_param('local_costmap_topic')
+        self.static_map_topic = self._string_param('static_map_topic')
+        self.static_map_occupied_threshold = self._int_param(
+            'static_map_occupied_threshold'
+        )
+        self.dynamic_use_static_reference_check = self._bool_param(
+            'dynamic_use_static_reference_check'
+        )
+        self.static_reference_padding_m = self._double_param(
+            'static_reference_padding_m'
+        )
+        self.dynamic_enable_local_only_inscribed_fallback = self._bool_param(
+            'dynamic_enable_local_only_inscribed_fallback'
+        )
+        self.dynamic_inscribed_cost_threshold = self._int_param(
+            'dynamic_inscribed_cost_threshold'
+        )
+        self.dynamic_inscribed_static_reference_padding_m = self._double_param(
+            'dynamic_inscribed_static_reference_padding_m'
+        )
+        self.dynamic_obstacle_cost_threshold = self._int_param(
+            'dynamic_obstacle_cost_threshold'
+        )
+        self.dynamic_obstacle_distance_threshold_m = self._double_param(
+            'dynamic_obstacle_distance_threshold_m'
+        )
+        self.dynamic_treat_unknown_as_blocked = self._bool_param(
+            'dynamic_treat_unknown_as_blocked'
+        )
+        self.dynamic_object_clearance_m = self._double_param(
+            'dynamic_object_clearance_m'
+        )
+        self.dynamic_collision_check_radius_m = self._double_param(
+            'dynamic_collision_check_radius_m'
+        )
+        self.dynamic_connector_tracking_clearance_m = self._double_param(
+            'dynamic_connector_tracking_clearance_m'
+        )
+        self.dynamic_use_corridor_for_detection = self._bool_param(
+            'dynamic_use_corridor_for_detection'
+        )
+        self.dynamic_monitor_temporary_paths = self._bool_param(
+            'dynamic_monitor_temporary_paths'
+        )
+        self.dynamic_connector_allow_blocked_start = self._bool_param(
+            'dynamic_connector_allow_blocked_start'
+        )
+        self.dynamic_connector_start_grace_m = self._double_param(
+            'dynamic_connector_start_grace_m'
+        )
+        self.dynamic_refine_connector_path = self._bool_param(
+            'dynamic_refine_connector_path'
+        )
+        self.dynamic_connector_refinement_iterations = self._int_param(
+            'dynamic_connector_refinement_iterations'
+        )
+        self.dynamic_connector_refinement_step_m = self._double_param(
+            'dynamic_connector_refinement_step_m'
+        )
+        self.dynamic_connector_refinement_influence_m = self._double_param(
+            'dynamic_connector_refinement_influence_m'
+        )
+        self.dynamic_skip_lookahead_m = self._double_param('dynamic_skip_lookahead_m')
+        self.dynamic_skip_padding_m = self._double_param('dynamic_skip_padding_m')
+        self.dynamic_rejoin_min_clearance_m = self._double_param(
+            'dynamic_rejoin_min_clearance_m'
+        )
+        self.dynamic_rejoin_max_search_distance_m = self._double_param(
+            'dynamic_rejoin_max_search_distance_m'
+        )
+        self.dynamic_max_rejoin_candidates = self._int_param(
+            'dynamic_max_rejoin_candidates'
+        )
+        self.dynamic_required_consecutive_detections = self._int_param(
+            'dynamic_required_consecutive_detections'
+        )
+        self.dynamic_min_blocked_pose_count = self._int_param(
+            'dynamic_min_blocked_pose_count'
+        )
+        self.dynamic_min_blocked_path_length_m = self._double_param(
+            'dynamic_min_blocked_path_length_m'
+        )
+        self.dynamic_detection_hysteresis_sec = self._double_param(
+            'dynamic_detection_hysteresis_sec'
+        )
+        self.dynamic_validate_rejoin_before_cancel = self._bool_param(
+            'dynamic_validate_rejoin_before_cancel'
+        )
+        self.dynamic_cancel_only_if_imminent_blocked = self._bool_param(
+            'dynamic_cancel_only_if_imminent_blocked'
+        )
+        self.dynamic_imminent_block_distance_m = self._double_param(
+            'dynamic_imminent_block_distance_m'
+        )
+        self.dynamic_resume_ignore_index_margin = self._int_param(
+            'dynamic_resume_ignore_index_margin'
+        )
+        self.dynamic_skip_check_rate_hz = self._double_param(
+            'dynamic_skip_check_rate_hz'
+        )
+        self.dynamic_skip_min_remaining_poses = self._int_param(
+            'dynamic_skip_min_remaining_poses'
+        )
+        self.dynamic_skip_max_consecutive_failures = self._int_param(
+            'dynamic_skip_max_consecutive_failures'
+        )
+        self.dynamic_skip_replan_cooldown_sec = self._double_param(
+            'dynamic_skip_replan_cooldown_sec'
+        )
+        self.dynamic_progress_search_backtrack_m = self._double_param(
+            'dynamic_progress_search_backtrack_m'
+        )
+        self.dynamic_progress_search_forward_m = self._double_param(
+            'dynamic_progress_search_forward_m'
+        )
+        self.retry_skipped_segments_at_end = self._bool_param(
+            'retry_skipped_segments_at_end'
+        )
+        self.mark_skipped_segments_uncovered = self._bool_param(
+            'mark_skipped_segments_uncovered'
+        )
+        self.publish_skipped_segments = self._bool_param('publish_skipped_segments')
+        self.dynamic_use_nav2_planner_connector = self._bool_param(
+            'dynamic_use_nav2_planner_connector'
+        )
+        self.compute_path_to_pose_action_name = self._string_param(
+            'compute_path_to_pose_action_name'
+        )
+        self.dynamic_planner_id = self._string_param('dynamic_planner_id')
+        self.dynamic_planner_timeout_sec = self._double_param(
+            'dynamic_planner_timeout_sec'
+        )
+        self.dynamic_connector_start_with_robot_pose = self._bool_param(
+            'dynamic_connector_start_with_robot_pose'
+        )
+        self.dynamic_connector_goal_tolerance_m = self._double_param(
+            'dynamic_connector_goal_tolerance_m'
+        )
+        self.dynamic_static_encroachment_tolerance_m = self._double_param(
+            'dynamic_static_encroachment_tolerance_m'
+        )
+        self.dynamic_require_safe_connector = self._bool_param(
+            'dynamic_require_safe_connector'
+        )
+        self.dynamic_enable_local_astar_detour = self._bool_param(
+            'dynamic_enable_local_astar_detour'
+        )
+        self.dynamic_enable_local_detour = self._bool_param(
+            'dynamic_enable_local_detour'
+        )
+        self.dynamic_detour_min_lateral_offset_m = self._double_param(
+            'dynamic_detour_min_lateral_offset_m'
+        )
+        self.dynamic_detour_max_lateral_offset_m = self._double_param(
+            'dynamic_detour_max_lateral_offset_m'
+        )
+        self.dynamic_detour_offset_step_m = self._double_param(
+            'dynamic_detour_offset_step_m'
+        )
+        self.dynamic_detour_sample_step_m = self._double_param(
+            'dynamic_detour_sample_step_m'
+        )
 
         self.max_allowed_nav_cost = min(100, max(0, self.max_allowed_nav_cost))
+        self.robot_radius_m = max(0.01, self.robot_radius_m)
+        self.dynamic_obstacle_cost_threshold = min(
+            100,
+            max(0, self.dynamic_obstacle_cost_threshold),
+        )
+        self.dynamic_obstacle_distance_threshold_m = max(
+            0.0,
+            self.dynamic_obstacle_distance_threshold_m,
+        )
+        self.dynamic_object_clearance_m = max(0.0, self.dynamic_object_clearance_m)
+        if self.dynamic_collision_check_radius_m <= 0.0:
+            self.dynamic_collision_check_radius_m = (
+                self.robot_radius_m + self.dynamic_object_clearance_m
+            )
+        self.dynamic_collision_check_radius_m = max(
+            self.robot_radius_m,
+            self.dynamic_collision_check_radius_m,
+        )
+        self.dynamic_connector_tracking_clearance_m = max(
+            0.0,
+            self.dynamic_connector_tracking_clearance_m,
+        )
+        self.dynamic_connector_start_grace_m = max(
+            0.0,
+            self.dynamic_connector_start_grace_m,
+        )
+        self.dynamic_connector_refinement_iterations = max(
+            0,
+            self.dynamic_connector_refinement_iterations,
+        )
+        self.dynamic_connector_refinement_step_m = max(
+            0.0,
+            self.dynamic_connector_refinement_step_m,
+        )
+        self.dynamic_connector_refinement_influence_m = max(
+            self._get_dynamic_collision_radius_m(),
+            self.dynamic_connector_refinement_influence_m,
+        )
+        self.static_map_occupied_threshold = min(
+            100,
+            max(0, self.static_map_occupied_threshold),
+        )
+        self.static_reference_padding_m = max(0.0, self.static_reference_padding_m)
+        self.dynamic_inscribed_cost_threshold = min(
+            100,
+            max(1, self.dynamic_inscribed_cost_threshold),
+        )
+        self.dynamic_inscribed_static_reference_padding_m = max(
+            self.static_reference_padding_m,
+            self.dynamic_inscribed_static_reference_padding_m,
+        )
         self.max_start_distance_m = max(0.0, self.max_start_distance_m)
         self.max_nearest_path_distance_m = max(0.0, self.max_nearest_path_distance_m)
         self.max_consecutive_pose_jump_m = max(0.01, self.max_consecutive_pose_jump_m)
@@ -341,6 +709,90 @@ class CoverageFollowPathExecutorNode(Node):
         self.wait_for_nav2_timeout_sec = max(0.0, self.wait_for_nav2_timeout_sec)
         self.turn_smoothing_radius_m = max(0.0, self.turn_smoothing_radius_m)
         self.max_smoothing_duration_s = max(0.0, self.max_smoothing_duration_s)
+        self.dynamic_skip_lookahead_m = max(0.0, self.dynamic_skip_lookahead_m)
+        self.dynamic_skip_padding_m = max(0.0, self.dynamic_skip_padding_m)
+        self.dynamic_rejoin_min_clearance_m = max(
+            0.0,
+            self.dynamic_rejoin_min_clearance_m,
+        )
+        self.dynamic_rejoin_max_search_distance_m = max(
+            0.10,
+            self.dynamic_rejoin_max_search_distance_m,
+        )
+        self.dynamic_max_rejoin_candidates = max(1, self.dynamic_max_rejoin_candidates)
+        self.dynamic_required_consecutive_detections = max(
+            1,
+            self.dynamic_required_consecutive_detections,
+        )
+        self.dynamic_min_blocked_pose_count = max(
+            1,
+            self.dynamic_min_blocked_pose_count,
+        )
+        self.dynamic_min_blocked_path_length_m = max(
+            0.0,
+            self.dynamic_min_blocked_path_length_m,
+        )
+        self.dynamic_detection_hysteresis_sec = max(
+            0.0,
+            self.dynamic_detection_hysteresis_sec,
+        )
+        self.dynamic_imminent_block_distance_m = max(
+            0.0,
+            self.dynamic_imminent_block_distance_m,
+        )
+        self.dynamic_resume_ignore_index_margin = max(
+            0,
+            self.dynamic_resume_ignore_index_margin,
+        )
+        self.dynamic_skip_check_rate_hz = max(0.1, self.dynamic_skip_check_rate_hz)
+        self.dynamic_skip_min_remaining_poses = max(
+            1,
+            self.dynamic_skip_min_remaining_poses,
+        )
+        self.dynamic_skip_max_consecutive_failures = max(
+            1,
+            self.dynamic_skip_max_consecutive_failures,
+        )
+        self.dynamic_skip_replan_cooldown_sec = max(
+            0.0,
+            self.dynamic_skip_replan_cooldown_sec,
+        )
+        self.dynamic_progress_search_backtrack_m = max(
+            0.0,
+            self.dynamic_progress_search_backtrack_m,
+        )
+        self.dynamic_progress_search_forward_m = max(
+            self.dynamic_skip_lookahead_m,
+            self.dynamic_progress_search_forward_m,
+        )
+        self.dynamic_planner_timeout_sec = max(
+            0.1,
+            self.dynamic_planner_timeout_sec,
+        )
+        self.dynamic_connector_goal_tolerance_m = max(
+            0.0,
+            self.dynamic_connector_goal_tolerance_m,
+        )
+        self.dynamic_static_encroachment_tolerance_m = max(
+            0.0,
+            self.dynamic_static_encroachment_tolerance_m,
+        )
+        self.dynamic_detour_min_lateral_offset_m = max(
+            0.0,
+            self.dynamic_detour_min_lateral_offset_m,
+        )
+        self.dynamic_detour_max_lateral_offset_m = max(
+            self.dynamic_detour_min_lateral_offset_m,
+            self.dynamic_detour_max_lateral_offset_m,
+        )
+        self.dynamic_detour_offset_step_m = max(
+            0.01,
+            self.dynamic_detour_offset_step_m,
+        )
+        self.dynamic_detour_sample_step_m = max(
+            0.01,
+            self.dynamic_detour_sample_step_m,
+        )
 
     def coverage_path_callback(self, msg):
         if self.goal_in_flight and self.ignore_path_updates_while_executing:
@@ -412,6 +864,63 @@ class CoverageFollowPathExecutorNode(Node):
                 )
             )
 
+    def local_costmap_callback(self, msg):
+        expected_cells = msg.info.width * msg.info.height
+        if len(msg.data) != expected_cells:
+            self.get_logger().warn(
+                'Ignoring local costmap with %d cells, expected %d'
+                % (len(msg.data), expected_cells),
+                throttle_duration_sec=5.0,
+            )
+            return
+
+        self.local_costmap = msg
+        self.local_costmap_stamp_monotonic = time.monotonic()
+        if not self.local_costmap_received:
+            self.local_costmap_received = True
+            self.get_logger().info(
+                'Local costmap received for dynamic obstacle skip: topic=%s '
+                'frame=%s size=%dx%d resolution=%.3f threshold=%d '
+                'detection_radius=%.3fm unknown_blocked=%s'
+                % (
+                    self.local_costmap_topic,
+                    msg.header.frame_id or self.global_frame,
+                    msg.info.width,
+                    msg.info.height,
+                    msg.info.resolution,
+                    self.dynamic_obstacle_cost_threshold,
+                    self._get_dynamic_detection_radius_m(),
+                    str(self.dynamic_treat_unknown_as_blocked).lower(),
+                )
+            )
+
+    def static_map_callback(self, msg):
+        expected_cells = msg.info.width * msg.info.height
+        if len(msg.data) != expected_cells:
+            self.get_logger().warn(
+                'Ignoring static map with %d cells, expected %d'
+                % (len(msg.data), expected_cells),
+                throttle_duration_sec=5.0,
+            )
+            return
+
+        self.static_map = msg
+        self.static_map_stamp_monotonic = time.monotonic()
+        if not self.static_map_received:
+            self.static_map_received = True
+            self.get_logger().info(
+                'Static map received for dynamic obstacle reference: topic=%s '
+                'frame=%s size=%dx%d resolution=%.3f occupied_threshold=%d'
+                % (
+                    self.static_map_topic,
+                    msg.header.frame_id or self.global_frame,
+                    msg.info.width,
+                    msg.info.height,
+                    msg.info.resolution,
+                    self.static_map_occupied_threshold,
+                )
+            )
+
     def start_service_callback(self, request, response):
         del request
         if self._request_execution('service_start'):
@@ -476,6 +985,31 @@ class CoverageFollowPathExecutorNode(Node):
         self.latest_validation_report = self._make_empty_report()
         self.rounded_turn_sections = []
         self.blocked_debug_points = []
+        self.skipped_segments = []
+        self.dynamic_detection_candidate = None
+        self.dynamic_confirmed_marker_report = None
+        self.dynamic_ignored_static_marker_poses = []
+        self.dynamic_candidate_marker_path = None
+        self.dynamic_skip_in_progress = False
+        self.dynamic_skip_cancel_requested = False
+        self.dynamic_skip_cancel_goal_handle = None
+        self.dynamic_skip_pending_rejoin_path = None
+        self.dynamic_skip_pending_report = None
+        self.dynamic_skip_finish_after_cancel = False
+        self.dynamic_skip_cancel_final_status = None
+        self.dynamic_skip_counter = 0
+        self.dynamic_skip_failure_counter = 0
+        self.dynamic_skip_monitor_suppressed_until_monotonic = 0.0
+        self.dynamic_last_nearest_index = 0
+        self.dynamic_skip_pending_monitor_resume_index = None
+        self.dynamic_skip_monitor_resume_index = None
+        self.dynamic_active_path_is_temporary = False
+        self.dynamic_skip_pending_original_rejoin_index = None
+        self.dynamic_skip_pending_active_rejoin_index = None
+        self.dynamic_active_original_rejoin_index = None
+        self.dynamic_active_rejoin_path_index = None
+        self._clear_dynamic_planner_state()
+        self.dynamic_controller_blocked_reports_count = 0
         self.selected_start_index = 0
         self._set_status(self.STATUS_WAITING_FOR_PATH)
         self._publish_empty_paths_and_markers()
@@ -502,6 +1036,12 @@ class CoverageFollowPathExecutorNode(Node):
         elif self.cached_raw_path is not None:
             self.path_markers_pub.publish(self._make_path_markers(self.cached_raw_path))
 
+    def dynamic_timer_callback(self):
+        if not self.enable_dynamic_obstacle_skip:
+            return
+        self.last_dynamic_skip_check_monotonic = time.monotonic()
+        self._dynamic_obstacle_monitor_tick()
+
     def _request_execution(self, reason):
         if self.goal_in_flight or self.smoothing_in_flight:
             self.latest_path_error = 'Coverage FollowPath is already active'
@@ -511,6 +1051,35 @@ class CoverageFollowPathExecutorNode(Node):
             self._set_status(self.STATUS_WAITING_FOR_PATH)
             self.latest_path_error = self.latest_path_error or 'No coverage path cached'
             return False
+
+        self.skipped_segments = []
+        self.dynamic_detection_candidate = None
+        self.dynamic_confirmed_marker_report = None
+        self.dynamic_ignored_static_marker_poses = []
+        self.dynamic_candidate_marker_path = None
+        self.dynamic_skip_in_progress = False
+        self.dynamic_skip_cancel_requested = False
+        self.dynamic_skip_cancel_goal_handle = None
+        self.dynamic_skip_pending_rejoin_path = None
+        self.dynamic_skip_pending_report = None
+        self.dynamic_skip_finish_after_cancel = False
+        self.dynamic_skip_cancel_final_status = None
+        self.dynamic_skip_counter = 0
+        self.dynamic_skip_failure_counter = 0
+        self.last_dynamic_skip_check_monotonic = 0.0
+        self.dynamic_skip_monitor_suppressed_until_monotonic = 0.0
+        self.dynamic_last_nearest_index = 0
+        self.dynamic_skip_pending_monitor_resume_index = None
+        self.dynamic_skip_monitor_resume_index = None
+        self.dynamic_active_path_is_temporary = False
+        self.dynamic_skip_pending_original_rejoin_index = None
+        self.dynamic_skip_pending_active_rejoin_index = None
+        self.dynamic_active_original_rejoin_index = None
+        self.dynamic_active_rejoin_path_index = None
+        self._clear_dynamic_planner_state()
+        self.dynamic_controller_blocked_reports_count = 0
+        if self.publish_skipped_segments:
+            self._publish_skipped_segment_markers()
 
         self._set_status(self.STATUS_VALIDATING)
         raw_report = self._run_preflight_validation(self.cached_raw_path)
@@ -741,7 +1310,10 @@ class CoverageFollowPathExecutorNode(Node):
 
         report = self._run_preflight_validation(
             path,
-            check_costmap=self.check_smooth_path_for_collisions,
+            check_costmap=(
+                self.check_smooth_path_for_collisions
+                and not self._is_dynamic_rejoin_reason(reason)
+            ),
         )
         self._publish_debug(report)
         if not report['valid']:
@@ -766,10 +1338,44 @@ class CoverageFollowPathExecutorNode(Node):
         self.goal_in_flight = True
         self.current_goal_handle = None
         self.cancel_requested = False
-        self.execution_start_monotonic = time.monotonic()
+        now = time.monotonic()
+        self.execution_start_monotonic = now
         self.last_distance_to_goal = None
         self.latest_feedback_text = ''
         self.latest_path_error = ''
+        self.dynamic_last_nearest_index = 0
+        self.dynamic_controller_blocked_reports_count = 0
+        if self._is_dynamic_rejoin_reason(reason):
+            self.dynamic_active_path_is_temporary = True
+            self.dynamic_active_original_rejoin_index = (
+                self.dynamic_skip_pending_original_rejoin_index
+            )
+            self.dynamic_active_rejoin_path_index = (
+                self.dynamic_skip_pending_active_rejoin_index
+            )
+            self.dynamic_skip_pending_original_rejoin_index = None
+            self.dynamic_skip_pending_active_rejoin_index = None
+            if self.dynamic_monitor_temporary_paths:
+                self.dynamic_skip_monitor_resume_index = None
+                self.dynamic_skip_pending_monitor_resume_index = None
+                self.dynamic_skip_monitor_suppressed_until_monotonic = 0.0
+            else:
+                self.dynamic_skip_monitor_resume_index = (
+                    self.dynamic_skip_pending_monitor_resume_index
+                )
+                self.dynamic_skip_pending_monitor_resume_index = None
+                self.dynamic_skip_monitor_suppressed_until_monotonic = (
+                    now + self.dynamic_skip_replan_cooldown_sec
+                )
+        else:
+            self.dynamic_active_path_is_temporary = False
+            self.dynamic_active_original_rejoin_index = None
+            self.dynamic_active_rejoin_path_index = None
+            self.dynamic_skip_pending_original_rejoin_index = None
+            self.dynamic_skip_pending_active_rejoin_index = None
+            self.dynamic_skip_monitor_resume_index = None
+            self.dynamic_skip_pending_monitor_resume_index = None
+            self.dynamic_skip_monitor_suppressed_until_monotonic = 0.0
         self._set_status(self.STATUS_EXECUTING)
 
         self._log_follow_path_send(path, report, reason)
@@ -777,10 +1383,15 @@ class CoverageFollowPathExecutorNode(Node):
             goal_msg,
             feedback_callback=self._follow_path_feedback_callback,
         )
-        send_goal_future.add_done_callback(self._goal_response_callback)
+        send_goal_future.add_done_callback(
+            lambda future, reason=reason: self._goal_response_callback(
+                future,
+                reason,
+            )
+        )
         return True
 
-    def _goal_response_callback(self, future):
+    def _goal_response_callback(self, future, reason=''):
         try:
             goal_handle = future.result()
         except Exception as exc:
@@ -795,10 +1406,23 @@ class CoverageFollowPathExecutorNode(Node):
 
         self.current_goal_handle = goal_handle
         self.get_logger().info('FollowPath goal accepted by Nav2')
+        if self._is_dynamic_rejoin_reason(reason):
+            self._clear_dynamic_skip_temporary_state()
         result_future = goal_handle.get_result_async()
-        result_future.add_done_callback(self._result_callback)
+        result_future.add_done_callback(
+            lambda result_future, goal_handle=goal_handle: self._result_callback(
+                result_future,
+                goal_handle,
+            )
+        )
 
-    def _result_callback(self, future):
+    def _is_dynamic_rejoin_reason(self, reason):
+        return (
+            reason.startswith('dynamic_obstacle_skip_rejoin')
+            or reason.startswith('dynamic_obstacle_bypass_rejoin')
+        )
+
+    def _result_callback(self, future, goal_handle=None):
         try:
             wrapped_result = future.result()
         except Exception as exc:
@@ -817,6 +1441,50 @@ class CoverageFollowPathExecutorNode(Node):
             % (status, error_code, error_label, error_msg)
         )
 
+        dynamic_cancel_goal = (
+            goal_handle is not None
+            and goal_handle is self.dynamic_skip_cancel_goal_handle
+        )
+        if dynamic_cancel_goal:
+            self.get_logger().info(
+                '[DYNAMIC_SKIP] ignored terminal FollowPath result from '
+                'pre-skip goal'
+            )
+            self.dynamic_skip_cancel_goal_handle = None
+            return
+
+        if (
+            goal_handle is not None
+            and self.current_goal_handle is not None
+            and goal_handle is not self.current_goal_handle
+        ):
+            self.get_logger().info(
+                '[DYNAMIC_SKIP] ignored stale FollowPath result from a '
+                'previous goal'
+            )
+            return
+
+        if status == GoalStatus.STATUS_CANCELED and (
+            self.dynamic_skip_cancel_final_status
+            == self.STATUS_BLOCKED_DYNAMIC_OBJECT
+            or self.execution_status == self.STATUS_BLOCKED_DYNAMIC_OBJECT
+        ):
+            self.get_logger().info(
+                '[DYNAMIC_SKIP] ignoring cancel result because dynamic stop '
+                'status is BLOCKED_DYNAMIC_OBJECT'
+            )
+            return
+
+        if status == GoalStatus.STATUS_CANCELED and (
+            self.dynamic_skip_cancel_requested
+            or self.dynamic_skip_in_progress
+        ):
+            self.get_logger().info(
+                '[DYNAMIC_SKIP] ignored FollowPath canceled result from '
+                'dynamic skip cancel'
+            )
+            return
+
         if status == GoalStatus.STATUS_SUCCEEDED and error_code == 0:
             self._finish_execution(self.STATUS_SUCCEEDED)
             return
@@ -824,6 +1492,39 @@ class CoverageFollowPathExecutorNode(Node):
         if status == GoalStatus.STATUS_CANCELED or self.cancel_requested:
             self._finish_execution(self.STATUS_CANCELED)
             return
+
+        recoverable_error_codes = {104, 105, 106, 107}
+        if error_code in recoverable_error_codes and self.enable_dynamic_obstacle_skip:
+            self.dynamic_controller_blocked_reports_count += 1
+            self.goal_in_flight = False
+            self.current_goal_handle = None
+            report = self._detect_dynamic_blocked_interval(
+                self.active_path,
+                force_confirm=True,
+            )
+            if report and report['blocked']:
+                if self._start_dynamic_skip_after_failure(
+                    report,
+                    error_code,
+                    error_label,
+                ):
+                    return
+            text = (
+                '[DYNAMIC_SKIP] recoverable FollowPath error %d %s did not '
+                'match a confirmed local-only obstacle; reason=%s '
+                'local_lethal_count=%d local_inscribed_count=%d '
+                'dynamic_only_blocked_count=%d'
+                % (
+                    error_code,
+                    error_label,
+                    report.get('reason', 'no_detection_report') if report else 'none',
+                    report.get('local_lethal_count', 0) if report else 0,
+                    report.get('local_inscribed_count', 0) if report else 0,
+                    report.get('dynamic_only_blocked_count', 0) if report else 0,
+                )
+            )
+            self.get_logger().warn(text)
+            self._publish_dynamic_skip_status(text)
 
         if error_code == 105:
             debug = (
@@ -864,19 +1565,63 @@ class CoverageFollowPathExecutorNode(Node):
         self.nav2_feedback_pub.publish(msg)
 
     def _finish_execution(self, status):
+        final_status = status
+        if status == self.STATUS_SUCCEEDED and self.skipped_segments:
+            final_status = self.STATUS_COMPLETED_WITH_SKIPS
+
+        self._clear_dynamic_planner_state()
         self.goal_in_flight = False
         self.current_goal_handle = None
         self.cancel_requested = False
+        self.dynamic_skip_cancel_requested = False
+        self.dynamic_skip_cancel_goal_handle = None
+        self.dynamic_skip_pending_rejoin_path = None
+        self.dynamic_skip_pending_report = None
+        self.dynamic_skip_finish_after_cancel = False
+        self.dynamic_skip_cancel_final_status = None
+        self.dynamic_skip_in_progress = False
+        self.dynamic_detection_candidate = None
+        self.dynamic_candidate_marker_path = None
+        self.dynamic_skip_pending_monitor_resume_index = None
+        self.dynamic_skip_monitor_resume_index = None
+        self.dynamic_skip_monitor_suppressed_until_monotonic = 0.0
+        self.dynamic_active_path_is_temporary = False
+        self.dynamic_skip_pending_original_rejoin_index = None
+        self.dynamic_skip_pending_active_rejoin_index = None
+        self.dynamic_active_original_rejoin_index = None
+        self.dynamic_active_rejoin_path_index = None
         self.execution_start_monotonic = None
-        self._set_status(status)
+        self._set_status(final_status)
+
+        if final_status == self.STATUS_COMPLETED_WITH_SKIPS:
+            summary = self._skipped_summary_text(completed_with_skips=True)
+            self.get_logger().warn(
+                '[COVERAGE_DONE] status=COMPLETED_WITH_SKIPS skipped_segments=%d '
+                'skipped_distance_m=%.3f'
+                % (len(self.skipped_segments), self._skipped_distance_m())
+            )
+            self._publish_dynamic_skip_status(
+                '[COVERAGE_DONE] status=COMPLETED_WITH_SKIPS %s' % summary
+            )
+            self._publish_skipped_segment_markers()
+        elif final_status == self.STATUS_BLOCKED_DYNAMIC_OBJECT:
+            self._publish_dynamic_skip_status(
+                '[COVERAGE_DONE] status=BLOCKED_DYNAMIC_OBJECT %s'
+                % self._skipped_summary_text(completed_with_skips=False)
+            )
+        elif final_status == self.STATUS_SUCCEEDED:
+            self._publish_debug_info(
+                '[COVERAGE_DONE] SUCCEEDED %s'
+                % self._skipped_summary_text(completed_with_skips=False)
+            )
 
     def _run_preflight_validation(self, path, check_costmap=True):
         report = self._validate_path_structure(path, check_costmap=check_costmap)
         if not report['valid']:
             return report
 
-        robot_pose = self._lookup_robot_pose(self.global_frame)
-        if robot_pose is None:
+        robot_pose_stamped = self._lookup_robot_pose(self.global_frame)
+        if robot_pose_stamped is None:
             report['valid'] = False
             report['status'] = self.STATUS_FAILED
             report['reason'] = (
@@ -885,6 +1630,7 @@ class CoverageFollowPathExecutorNode(Node):
             )
             return report
 
+        robot_pose = self._pose_debug_dict(robot_pose_stamped.pose)
         first_pose = path.poses[0].pose
         nearest_index, nearest_distance = self._nearest_path_pose(
             path,
@@ -1319,10 +2065,4369 @@ class CoverageFollowPathExecutorNode(Node):
         self._stamp_path(trimmed)
         return trimmed
 
-    def _lookup_robot_pose(self, frame_id):
+    def _dynamic_obstacle_monitor_tick(self):
+        if self.execution_status != self.STATUS_EXECUTING:
+            return
+        if not self.goal_in_flight:
+            return
+        if self.current_goal_handle is None:
+            return
+        if self.dynamic_skip_in_progress:
+            return
+        if self.active_path is None or len(self.active_path.poses) < 2:
+            return
+        if self.local_costmap is None:
+            now = time.monotonic()
+            if now - getattr(self, 'last_dynamic_skip_waiting_log', 0.0) >= 5.0:
+                self.last_dynamic_skip_waiting_log = now
+                self._publish_dynamic_skip_status(
+                    'dynamic skip waiting for local costmap'
+                )
+            self.get_logger().info(
+                'dynamic skip waiting for local costmap',
+                throttle_duration_sec=5.0,
+            )
+            return
+
+        now = time.monotonic()
+        if now < self.dynamic_skip_monitor_suppressed_until_monotonic:
+            robot_pose = self._lookup_robot_pose(self._path_frame(self.active_path))
+            if robot_pose is not None:
+                self._find_dynamic_monitor_nearest_path_index(
+                    self.active_path,
+                    robot_pose,
+                )
+            self.get_logger().debug(
+                '[DYNAMIC_SKIP] monitor cooldown active after rejoin goal',
+                throttle_duration_sec=2.0,
+            )
+            return
+
+        report = self._detect_dynamic_blocked_interval(self.active_path)
+        if not report or not report['blocked']:
+            return
+
+        self._start_dynamic_skip(report)
+
+    def _make_sample_pose(self, frame_id, x, y):
+        pose = PoseStamped()
+        pose.header.frame_id = frame_id or self.global_frame
+        pose.header.stamp = self.get_clock().now().to_msg()
+        pose.pose.position.x = x
+        pose.pose.position.y = y
+        pose.pose.position.z = 0.0
+        pose.pose.orientation.w = 1.0
+        return pose
+
+    def _validate_dynamic_candidate_against_local_costmap(self, path):
+        report = {
+            'valid': True,
+            'reason': 'ok',
+            'local_checked_samples': 0,
+            'local_outside_samples': 0,
+            'local_blocked_samples': 0,
+            'local_unknown_samples': 0,
+            'max_observed_cost': 0,
+        }
+        if self.local_costmap is None:
+            report['valid'] = False
+            report['reason'] = 'local_costmap_unavailable'
+            return report
+
+        resolution = self.local_costmap.info.resolution
+        if resolution <= 0.0:
+            report['valid'] = False
+            report['reason'] = 'invalid_local_costmap_resolution'
+            return report
+
+        path_frame = self._path_frame(path)
+        sample_step = max(0.01, resolution * 0.5)
+        sample_number = 0
+
+        def check_sample(x, y, allow_blocked_start=False):
+            nonlocal sample_number
+            pose = self._make_sample_pose(path_frame, x, y)
+            cost_info = self._get_costmap_cost(self.local_costmap, pose)
+            max_cost = self._effective_dynamic_cost(cost_info['cost'])
+            report['max_observed_cost'] = max(
+                report['max_observed_cost'],
+                max_cost,
+            )
+
+            if not cost_info['valid']:
+                if cost_info['reason'] == 'tf_unavailable':
+                    report['valid'] = False
+                    report['reason'] = 'local_costmap_tf_unavailable'
+                    return False
+                report['local_outside_samples'] += 1
+                sample_number += 1
+                return True
+
+            if not cost_info['inside']:
+                report['local_outside_samples'] += 1
+                sample_number += 1
+                return True
+
+            report['local_checked_samples'] += 1
+            if cost_info['cost'] < 0:
+                report['local_unknown_samples'] += 1
+
+            if self._is_dynamic_cost_blocked(cost_info['cost']):
+                if allow_blocked_start and sample_number == 0:
+                    sample_number += 1
+                    return True
+                report['local_blocked_samples'] += 1
+                report['valid'] = False
+                report['reason'] = (
+                    'candidate local bypass blocked: sample=%d cost=%d '
+                    'mx=%d my=%d max_observed_cost=%d'
+                    % (
+                        sample_number,
+                        int(cost_info['cost']),
+                        cost_info['mx'],
+                        cost_info['my'],
+                        report['max_observed_cost'],
+                    )
+                )
+                return False
+
+            sample_number += 1
+            return True
+
+        for index, pose_stamped in enumerate(path.poses):
+            position = pose_stamped.pose.position
+            if not check_sample(
+                position.x,
+                position.y,
+                allow_blocked_start=(index == 0),
+            ):
+                return report
+
+            if index == 0:
+                continue
+
+            previous = path.poses[index - 1].pose.position
+            distance = self._distance_2d(
+                previous.x,
+                previous.y,
+                position.x,
+                position.y,
+            )
+            steps = max(1, int(math.ceil(distance / sample_step)))
+            for step in range(1, steps):
+                ratio = step / steps
+                x = previous.x + ratio * (position.x - previous.x)
+                y = previous.y + ratio * (position.y - previous.y)
+                if not check_sample(x, y):
+                    return report
+
+        if report['local_checked_samples'] == 0:
+            report['valid'] = False
+            report['reason'] = 'candidate had no samples inside local_costmap'
+        return report
+
+    def _validate_dynamic_candidate_against_global_static_reference(self, path):
+        report = {
+            'valid': True,
+            'reason': 'ok',
+            'global_checked_samples': 0,
+            'global_blocked_samples': 0,
+            'global_unknown_samples': 0,
+            'global_dynamic_layer_ignored_samples': 0,
+            'global_static_blocked_samples': 0,
+            'max_observed_cost': 0,
+        }
+        if self.nav_costmap is None:
+            report['valid'] = not self.require_costmap_for_validation
+            report['reason'] = 'global costmap has not been received'
+            return report
+
+        costmap_frame = self.nav_costmap.header.frame_id or self.global_frame
+        path_frame = self._path_frame(path)
+        if costmap_frame != path_frame:
+            report['valid'] = False
+            report['reason'] = (
+                'global costmap frame "%s" does not match path frame "%s"'
+                % (costmap_frame, path_frame)
+            )
+            return report
+
+        resolution = self.nav_costmap.info.resolution
+        if resolution <= 0.0:
+            report['valid'] = False
+            report['reason'] = 'invalid_global_costmap_resolution'
+            return report
+
+        sample_step = max(0.01, resolution * 0.5)
+
+        def check_sample(x, y):
+            pose = self._make_sample_pose(path_frame, x, y)
+            cost_info = self._costmap_value_at(x, y)
+            report['global_checked_samples'] += 1
+            report['max_observed_cost'] = max(
+                report['max_observed_cost'],
+                int(cost_info['cost']),
+            )
+            if cost_info['unknown']:
+                report['global_unknown_samples'] += 1
+
+            if not cost_info['blocked']:
+                return True
+
+            report['global_blocked_samples'] += 1
+            if cost_info['unknown']:
+                report['valid'] = False
+                report['reason'] = (
+                    'candidate crosses unknown global costmap sample treated '
+                    'as blocked'
+                )
+                return False
+
+            static_status = self._static_reference_status_near_pose(
+                pose,
+                self.static_reference_padding_m,
+            )
+            if static_status['known_static']:
+                report['global_static_blocked_samples'] += 1
+                report['valid'] = False
+                report['reason'] = (
+                    'candidate crosses known static obstacle: cost=%d '
+                    'static_max=%d'
+                    % (int(cost_info['cost']), static_status['max_value'])
+                )
+                return False
+
+            if static_status['free']:
+                report['global_dynamic_layer_ignored_samples'] += 1
+                return True
+
+            report['valid'] = False
+            report['reason'] = (
+                'candidate global blocked sample is not static-map-free: '
+                'cost=%d static_reason=%s'
+                % (int(cost_info['cost']), static_status['reason'])
+            )
+            return False
+
+        for index, pose_stamped in enumerate(path.poses):
+            position = pose_stamped.pose.position
+            if not check_sample(position.x, position.y):
+                return report
+
+            if index == 0:
+                continue
+
+            previous = path.poses[index - 1].pose.position
+            distance = self._distance_2d(
+                previous.x,
+                previous.y,
+                position.x,
+                position.y,
+            )
+            steps = max(1, int(math.ceil(distance / sample_step)))
+            for step in range(1, steps):
+                ratio = step / steps
+                x = previous.x + ratio * (position.x - previous.x)
+                y = previous.y + ratio * (position.y - previous.y)
+                if not check_sample(x, y):
+                    return report
+
+        if report['global_dynamic_layer_ignored_samples'] > 0:
+            report['reason'] = (
+                'ok_ignored_live_global_dynamic_samples=%d'
+                % report['global_dynamic_layer_ignored_samples']
+            )
+        return report
+
+    def _reject_dynamic_rejoin_candidate(self, report):
+        text = (
+            '[DYNAMIC_VALIDATE] candidate rejected before cancel reason=%s'
+            % report.get('reason', 'invalid_candidate')
+        )
+        self.get_logger().warn(text)
+        self._publish_dynamic_skip_status(text)
+        return False, report
+
+    def _sample_path_poses(self, path, sample_step_m, include_distance=False):
+        if path is None or not path.poses:
+            return []
+
+        samples = []
+        step_m = max(0.01, sample_step_m)
+        if include_distance:
+            samples.append((copy.deepcopy(path.poses[0]), 0.0))
+        else:
+            samples.append(copy.deepcopy(path.poses[0]))
+
+        distance_along = 0.0
+        for index in range(1, len(path.poses)):
+            previous = path.poses[index - 1].pose.position
+            pose_stamped = path.poses[index]
+            current = pose_stamped.pose.position
+            distance = self._distance_2d(
+                previous.x,
+                previous.y,
+                current.x,
+                current.y,
+            )
+            if distance <= 1.0e-6:
+                continue
+            steps = max(1, int(math.ceil(distance / step_m)))
+            for step in range(1, steps + 1):
+                ratio = step / steps
+                if step == steps:
+                    sample = copy.deepcopy(pose_stamped)
+                else:
+                    sample = PoseStamped()
+                    sample.header = copy.deepcopy(path.header)
+                    sample.pose.position.x = (
+                        previous.x + ratio * (current.x - previous.x)
+                    )
+                    sample.pose.position.y = (
+                        previous.y + ratio * (current.y - previous.y)
+                    )
+                    sample.pose.position.z = 0.0
+                    sample.pose.orientation.w = 1.0
+                sample_distance = distance_along + distance * ratio
+                if include_distance:
+                    samples.append((sample, sample_distance))
+                else:
+                    samples.append(sample)
+            distance_along += distance
+        return samples
+
+    def _get_dynamic_collision_radius_m(self):
+        return max(
+            self.robot_radius_m,
+            self.dynamic_collision_check_radius_m,
+            self.robot_radius_m + self.dynamic_object_clearance_m,
+        )
+
+    def _get_dynamic_tracking_radius_m(self):
+        return self._get_dynamic_collision_radius_m() + max(
+            0.0,
+            self.dynamic_connector_tracking_clearance_m,
+        )
+
+    def _get_dynamic_detection_radius_m(self):
+        if self.dynamic_use_corridor_for_detection:
+            return self._get_dynamic_collision_radius_m()
+        return self.dynamic_obstacle_distance_threshold_m
+
+    def _check_local_corridor_at_pose(self, pose_stamped, collision_radius_m):
+        if self.local_costmap is None:
+            return {
+                'valid': False,
+                'inside': False,
+                'blocked': False,
+                'reason': 'local_costmap_unavailable',
+                'checked_cells': 0,
+                'unknown_cells': 0,
+                'max_cost': 0,
+            }
+
+        costmap_frame = self.local_costmap.header.frame_id or self.global_frame
+        pose_in_costmap = self._transform_pose_to_frame(pose_stamped, costmap_frame)
+        if pose_in_costmap is None:
+            return {
+                'valid': False,
+                'inside': False,
+                'blocked': False,
+                'reason': 'local_costmap_tf_unavailable',
+                'checked_cells': 0,
+                'unknown_cells': 0,
+                'max_cost': 100,
+            }
+
+        position = pose_in_costmap.pose.position
+        cell = self._world_to_costmap_cell(self.local_costmap, position.x, position.y)
+        if cell is None:
+            return {
+                'valid': True,
+                'inside': False,
+                'blocked': False,
+                'reason': 'outside_local_costmap',
+                'checked_cells': 0,
+                'unknown_cells': 0,
+                'max_cost': 0,
+            }
+
+        resolution = self.local_costmap.info.resolution
+        if resolution <= 0.0:
+            return {
+                'valid': False,
+                'inside': True,
+                'blocked': False,
+                'reason': 'invalid_local_costmap_resolution',
+                'checked_cells': 0,
+                'unknown_cells': 0,
+                'max_cost': 100,
+            }
+
+        center_mx, center_my = cell
+        radius_cells = int(math.ceil(collision_radius_m / resolution))
+        include_distance_m = collision_radius_m + resolution * 0.5 + 1.0e-9
+        checked_cells = 0
+        unknown_cells = 0
+        max_cost = 0
+        for dy in range(-radius_cells, radius_cells + 1):
+            for dx in range(-radius_cells, radius_cells + 1):
+                mx = center_mx + dx
+                my = center_my + dy
+                if not in_bounds(
+                    mx,
+                    my,
+                    self.local_costmap.info.width,
+                    self.local_costmap.info.height,
+                ):
+                    continue
+
+                cell_x, cell_y = self._costmap_cell_center(
+                    self.local_costmap,
+                    mx,
+                    my,
+                )
+                if (
+                    self._distance_2d(position.x, position.y, cell_x, cell_y)
+                    > include_distance_m
+                ):
+                    continue
+
+                checked_cells += 1
+                index = map_to_flat_index(mx, my, self.local_costmap.info.width)
+                cost = int(self.local_costmap.data[index])
+                max_cost = max(max_cost, self._effective_dynamic_cost(cost))
+                if cost < 0:
+                    unknown_cells += 1
+                if self._is_local_lethal_dynamic_cell(cost):
+                    return {
+                        'valid': True,
+                        'inside': True,
+                        'blocked': True,
+                        'reason': 'local_lethal_cell_in_robot_corridor',
+                        'checked_cells': checked_cells,
+                        'unknown_cells': unknown_cells,
+                        'max_cost': max_cost,
+                    }
+
+        return {
+            'valid': True,
+            'inside': True,
+            'blocked': False,
+            'reason': 'local_corridor_clear',
+            'checked_cells': checked_cells,
+            'unknown_cells': unknown_cells,
+            'max_cost': max_cost,
+        }
+
+    def _check_static_corridor_at_pose(self, pose_stamped, radius_m):
+        if not self.dynamic_use_static_reference_check:
+            return {
+                'valid': True,
+                'blocked': False,
+                'reason': 'static_reference_disabled',
+                'checked_cells': 0,
+                'unknown_cells': 0,
+                'max_value': 0,
+            }
+        if self.static_map is None:
+            return {
+                'valid': False,
+                'blocked': False,
+                'reason': 'static_map_unavailable',
+                'checked_cells': 0,
+                'unknown_cells': 0,
+                'max_value': 0,
+            }
+
+        static_frame = self.static_map.header.frame_id or self.global_frame
+        pose_in_static = self._transform_pose_to_frame(pose_stamped, static_frame)
+        if pose_in_static is None:
+            return {
+                'valid': False,
+                'blocked': False,
+                'reason': 'static_map_tf_unavailable',
+                'checked_cells': 0,
+                'unknown_cells': 0,
+                'max_value': 0,
+            }
+
+        position = pose_in_static.pose.position
+        cell = self._world_to_costmap_cell(self.static_map, position.x, position.y)
+        if cell is None:
+            return {
+                'valid': False,
+                'blocked': False,
+                'reason': 'outside_static_map',
+                'checked_cells': 0,
+                'unknown_cells': 0,
+                'max_value': 0,
+            }
+
+        resolution = self.static_map.info.resolution
+        if resolution <= 0.0:
+            return {
+                'valid': False,
+                'blocked': False,
+                'reason': 'invalid_static_map_resolution',
+                'checked_cells': 0,
+                'unknown_cells': 0,
+                'max_value': 0,
+            }
+
+        center_mx, center_my = cell
+        radius_cells = int(math.ceil(radius_m / resolution))
+        include_distance_m = radius_m + resolution * 0.5 + 1.0e-9
+        checked_cells = 0
+        unknown_cells = 0
+        max_value = 0
+        for dy in range(-radius_cells, radius_cells + 1):
+            for dx in range(-radius_cells, radius_cells + 1):
+                mx = center_mx + dx
+                my = center_my + dy
+                if not in_bounds(
+                    mx,
+                    my,
+                    self.static_map.info.width,
+                    self.static_map.info.height,
+                ):
+                    continue
+
+                cell_x, cell_y = self._costmap_cell_center(self.static_map, mx, my)
+                if (
+                    self._distance_2d(position.x, position.y, cell_x, cell_y)
+                    > include_distance_m
+                ):
+                    continue
+
+                checked_cells += 1
+                index = map_to_flat_index(mx, my, self.static_map.info.width)
+                value = int(self.static_map.data[index])
+                if value < 0:
+                    unknown_cells += 1
+                    if self.dynamic_treat_unknown_as_blocked:
+                        return {
+                            'valid': True,
+                            'blocked': True,
+                            'reason': 'unknown_static_cell_in_robot_corridor',
+                            'checked_cells': checked_cells,
+                            'unknown_cells': unknown_cells,
+                            'max_value': max_value,
+                        }
+                    continue
+
+                max_value = max(max_value, value)
+                if value >= self.static_map_occupied_threshold:
+                    return {
+                        'valid': True,
+                        'blocked': True,
+                        'reason': 'static_occupied_cell_in_robot_corridor',
+                        'checked_cells': checked_cells,
+                        'unknown_cells': unknown_cells,
+                        'max_value': max_value,
+                    }
+
+        return {
+            'valid': True,
+            'blocked': False,
+            'reason': 'static_corridor_clear',
+            'checked_cells': checked_cells,
+            'unknown_cells': unknown_cells,
+            'max_value': max_value,
+        }
+
+    def _validate_connector_corridor(
+        self,
+        path,
+        use_local_costmap=True,
+        use_static_map=True,
+    ):
+        report = {
+            'valid': True,
+            'reason': 'ok',
+            'local_checked_samples': 0,
+            'local_outside_samples': 0,
+            'local_blocked_samples': 0,
+            'local_unknown_samples': 0,
+            'tracking_clearance_blocked_samples': 0,
+            'local_start_grace_blocked_samples': 0,
+            'tracking_start_grace_blocked_samples': 0,
+            'static_checked_samples': 0,
+            'static_blocked_samples': 0,
+            'static_unknown_samples': 0,
+            'max_observed_cost': 0,
+            'max_static_value': 0,
+            'collision_radius_m': self._get_dynamic_collision_radius_m(),
+            'tracking_radius_m': self._get_dynamic_tracking_radius_m(),
+        }
+        if path is None or len(path.poses) < 2:
+            report['valid'] = False
+            report['reason'] = 'connector_path_too_short'
+            return report
+
+        collision_radius = self._get_dynamic_collision_radius_m()
+        tracking_radius = self._get_dynamic_tracking_radius_m()
+        start_grace_m = (
+            self.dynamic_connector_start_grace_m
+            if self.dynamic_connector_allow_blocked_start
+            else 0.0
+        )
+        static_radius = max(
+            self.robot_radius_m,
+            self.robot_radius_m + self.static_reference_padding_m,
+        )
+        samples = self._sample_path_poses(
+            path,
+            max(0.01, self.dynamic_detour_sample_step_m),
+            include_distance=True,
+        )
+        for sample_index, (sample, distance_along) in enumerate(samples):
+            inside_start_grace = (
+                self.dynamic_connector_allow_blocked_start
+                and distance_along <= start_grace_m + 1.0e-6
+            )
+            if use_local_costmap:
+                local = self._check_local_corridor_at_pose(sample, collision_radius)
+                report['max_observed_cost'] = max(
+                    report['max_observed_cost'],
+                    local.get('max_cost', 0),
+                )
+                if not local['valid']:
+                    report['valid'] = False
+                    report['reason'] = local['reason']
+                    return report
+                if not local['inside']:
+                    report['local_outside_samples'] += 1
+                else:
+                    report['local_checked_samples'] += 1
+                    report['local_unknown_samples'] += local.get(
+                        'unknown_cells',
+                        0,
+                    )
+                if local['blocked']:
+                    report['local_blocked_samples'] += 1
+                    if inside_start_grace:
+                        report['local_start_grace_blocked_samples'] += 1
+                    else:
+                        report['valid'] = False
+                        report['reason'] = (
+                            '%s sample=%d distance=%.3f collision_radius=%.3f'
+                            % (
+                                local['reason'],
+                                sample_index,
+                                distance_along,
+                                collision_radius,
+                            )
+                        )
+                        return report
+
+                if tracking_radius > collision_radius + 1.0e-6:
+                    tracking = self._check_local_corridor_at_pose(
+                        sample,
+                        tracking_radius,
+                    )
+                    report['max_observed_cost'] = max(
+                        report['max_observed_cost'],
+                        tracking.get('max_cost', 0),
+                    )
+                    if not tracking['valid']:
+                        report['valid'] = False
+                        report['reason'] = tracking['reason']
+                        return report
+                    if tracking['inside'] and tracking['blocked']:
+                        report['tracking_clearance_blocked_samples'] += 1
+                        if inside_start_grace:
+                            report[
+                                'tracking_start_grace_blocked_samples'
+                            ] += 1
+
+            if use_static_map:
+                static = self._check_static_corridor_at_pose(sample, static_radius)
+                report['max_static_value'] = max(
+                    report['max_static_value'],
+                    static.get('max_value', 0),
+                )
+                if not static['valid']:
+                    report['valid'] = False
+                    report['reason'] = static['reason']
+                    return report
+                report['static_checked_samples'] += 1
+                report['static_unknown_samples'] += static.get('unknown_cells', 0)
+                if static['blocked']:
+                    report['static_blocked_samples'] += 1
+                    report['valid'] = False
+                    report['reason'] = (
+                        '%s sample=%d static_radius=%.3f'
+                        % (static['reason'], sample_index, static_radius)
+                    )
+                    return report
+
+        return report
+
+    def _validate_dynamic_rejoin_candidate(self, candidate_path, connector_path=None):
+        self._publish_dynamic_skip_status(
+            '[DYNAMIC_VALIDATE] validating candidate before cancel'
+        )
+        if not self.dynamic_validate_rejoin_before_cancel:
+            return True, {'valid': True, 'reason': 'validation_disabled'}
+
+        report = self._validate_path_structure(candidate_path, check_costmap=False)
+        self._publish_debug(report)
+        if not report['valid']:
+            return self._reject_dynamic_rejoin_candidate(report)
+
+        corridor_path = connector_path if connector_path is not None else candidate_path
+        corridor_report = self._validate_connector_corridor(
+            corridor_path,
+            use_local_costmap=True,
+            use_static_map=True,
+        )
+        report.update(
+            {
+                'dynamic_local_checked_samples': corridor_report[
+                    'local_checked_samples'
+                ],
+                'dynamic_local_blocked_samples': corridor_report[
+                    'local_blocked_samples'
+                ],
+                'dynamic_local_unknown_samples': corridor_report[
+                    'local_unknown_samples'
+                ],
+                'dynamic_local_outside_samples': corridor_report[
+                    'local_outside_samples'
+                ],
+                'dynamic_local_max_observed_cost': corridor_report[
+                    'max_observed_cost'
+                ],
+                'dynamic_tracking_clearance_blocked_samples': corridor_report[
+                    'tracking_clearance_blocked_samples'
+                ],
+                'dynamic_local_start_grace_blocked_samples': corridor_report[
+                    'local_start_grace_blocked_samples'
+                ],
+                'dynamic_tracking_start_grace_blocked_samples': corridor_report[
+                    'tracking_start_grace_blocked_samples'
+                ],
+                'dynamic_static_checked_samples': corridor_report[
+                    'static_checked_samples'
+                ],
+                'dynamic_static_blocked_samples': corridor_report[
+                    'static_blocked_samples'
+                ],
+                'dynamic_static_unknown_samples': corridor_report[
+                    'static_unknown_samples'
+                ],
+                'dynamic_collision_radius_m': corridor_report[
+                    'collision_radius_m'
+                ],
+                'dynamic_tracking_radius_m': corridor_report[
+                    'tracking_radius_m'
+                ],
+            }
+        )
+        if not corridor_report['valid']:
+            report['valid'] = False
+            report['reason'] = corridor_report['reason']
+            self._publish_debug(report)
+            return self._reject_dynamic_rejoin_candidate(report)
+
+        report['valid'] = True
+        report['status'] = 'VALID'
+        report['reason'] = 'ok'
+        self._publish_debug(report)
+        grace_count = (
+            corridor_report.get('local_start_grace_blocked_samples', 0)
+            + corridor_report.get('tracking_start_grace_blocked_samples', 0)
+        )
+        if grace_count > 0:
+            grace_text = (
+                '[DYNAMIC_VALIDATE] connector allowed blocked start grace '
+                'samples=%d grace_m=%.2f'
+                % (grace_count, self.dynamic_connector_start_grace_m)
+            )
+            self.get_logger().info(grace_text)
+            self._publish_dynamic_skip_status(grace_text)
+        text = '[DYNAMIC_VALIDATE] candidate valid before cancel'
+        self.get_logger().info(text)
+        self._publish_dynamic_skip_status(text)
+        return True, report
+
+    def _cancel_dynamic_planner_timeout_timer(self):
+        timer = self.dynamic_planner_timeout_timer
+        self.dynamic_planner_timeout_timer = None
+        if timer is not None:
+            timer.cancel()
+            try:
+                self.destroy_timer(timer)
+            except Exception:
+                pass
+
+    def _clear_dynamic_planner_state(self):
+        self._cancel_dynamic_planner_timeout_timer()
+        self.dynamic_planner_in_flight = False
+        self.dynamic_planner_goal_handle = None
+        self.dynamic_planner_pending_context = None
+        self.dynamic_rejoin_candidates_pending = []
+        self.dynamic_connector_attempt_in_progress = False
+
+    def _mark_dynamic_planner_failed_and_continue(self, reason):
+        context = self.dynamic_planner_pending_context
+        self._cancel_dynamic_planner_timeout_timer()
+        self.dynamic_planner_in_flight = False
+        self.dynamic_planner_goal_handle = None
+        self.dynamic_connector_attempt_in_progress = False
+        if context is None:
+            self.dynamic_skip_in_progress = False
+            return False
+
+        context['last_reason'] = reason
+        return self._try_dynamic_fallbacks_or_next(
+            context['report'],
+            context['original_path'],
+            context['current_rejoin_index'],
+            reason,
+        )
+
+    def _clear_dynamic_skip_temporary_state(self):
+        self._clear_dynamic_planner_state()
+        self.dynamic_skip_in_progress = False
+        self.dynamic_skip_cancel_requested = False
+        self.dynamic_skip_cancel_goal_handle = None
+        self.dynamic_skip_pending_rejoin_path = None
+        self.dynamic_skip_pending_report = None
+        self.dynamic_skip_finish_after_cancel = False
+        self.dynamic_skip_cancel_final_status = None
+        self.dynamic_skip_failure_counter = 0
+        self.dynamic_detection_candidate = None
+        self.dynamic_controller_blocked_reports_count = 0
+
+    def _dynamic_monitor_resume_index_for_rejoin(
+        self,
+        remaining_path,
+        rejoin_pose,
+    ):
+        monitor_resume_index = self._find_pose_index_in_path(
+            remaining_path,
+            rejoin_pose,
+        )
+        if monitor_resume_index is not None:
+            monitor_resume_index = min(
+                len(remaining_path.poses) - 1,
+                monitor_resume_index + self.dynamic_resume_ignore_index_margin,
+            )
+            if monitor_resume_index <= 0:
+                monitor_resume_index = None
+        return monitor_resume_index
+
+    def _find_validated_dynamic_rejoin_path(self, path, report, rejoin_index):
+        last_reason = 'no_candidate_checked'
+        while rejoin_index is not None:
+            remaining_path = self._build_dynamic_rejoin_path(
+                path,
+                report,
+                rejoin_index,
+            )
+            if remaining_path is None:
+                last_reason = 'rejoin_index=%d no_safe_temporary_detour' % (
+                    rejoin_index
+                )
+            elif len(remaining_path.poses) < self.min_path_poses:
+                return rejoin_index, remaining_path, None, 'finish_after_cancel'
+            else:
+                monitor_resume_index = self._dynamic_monitor_resume_index_for_rejoin(
+                    remaining_path,
+                    path.poses[rejoin_index],
+                )
+                self.dynamic_candidate_marker_path = copy.deepcopy(remaining_path)
+                valid_candidate, validation_report = (
+                    self._validate_dynamic_rejoin_candidate(remaining_path)
+                )
+                if valid_candidate:
+                    return rejoin_index, remaining_path, monitor_resume_index, 'valid'
+
+                last_reason = validation_report.get(
+                    'reason',
+                    'invalid_candidate',
+                )
+                text = (
+                    '[DYNAMIC_SKIP] candidate rejoin_index=%d invalid; '
+                    'trying farther rejoin: reason=%s'
+                    % (rejoin_index, last_reason)
+                )
+                self.get_logger().warn(text)
+                self._publish_dynamic_skip_status(text)
+
+            rejoin_index, rejoin_reason = self._find_rejoin_index_after_block(
+                path,
+                report['blocked_end_index'],
+                start_index=rejoin_index + 1,
+            )
+            if rejoin_index is None:
+                return None, None, None, '%s; %s' % (last_reason, rejoin_reason)
+
+        return None, None, None, last_reason
+
+    def _begin_dynamic_bypass_search(
+        self,
+        path,
+        report,
+        after_failure=False,
+        error_code=None,
+        error_label='',
+    ):
+        original_path = copy.deepcopy(path)
+        report = copy.deepcopy(report)
+
+        if report.get('blocked_end_index', -1) >= len(original_path.poses) - 1:
+            return self._handle_dynamic_blocked_to_end(
+                original_path,
+                report,
+                after_failure,
+            )
+
+        candidates = self._find_rejoin_candidates_after_block(original_path, report)
+        if not candidates:
+            return self._handle_dynamic_no_valid_bypass(
+                report,
+                'no_rejoin_candidates',
+                after_failure=after_failure,
+            )
+
+        self.dynamic_planner_pending_context = {
+            'report': report,
+            'original_path': original_path,
+            'after_failure': after_failure,
+            'error_code': error_code,
+            'error_label': error_label,
+            'last_reason': 'no_candidate_checked',
+            'current_rejoin_index': None,
+            'planner_request_id': None,
+        }
+        self.dynamic_rejoin_candidates_pending = list(candidates)
+        return self._try_next_dynamic_rejoin_candidate()
+
+    def _try_next_dynamic_rejoin_candidate(self):
+        context = self.dynamic_planner_pending_context
+        if context is None:
+            self.dynamic_skip_in_progress = False
+            return False
+
+        while self.dynamic_rejoin_candidates_pending:
+            rejoin_index = self.dynamic_rejoin_candidates_pending.pop(0)
+            context['current_rejoin_index'] = rejoin_index
+
+            if (
+                self.dynamic_use_nav2_planner_connector
+                and self._start_nav2_connector_plan(
+                    context['report'],
+                    context['original_path'],
+                    rejoin_index,
+                )
+            ):
+                return True
+
+            if self._try_dynamic_fallbacks_for_candidate(
+                context['report'],
+                context['original_path'],
+                rejoin_index,
+            ):
+                return True
+
+        return self._handle_dynamic_no_valid_bypass(
+            context['report'],
+            context.get('last_reason', 'no_valid_connector'),
+            after_failure=context.get('after_failure', False),
+        )
+
+    def _start_nav2_connector_plan(self, report, original_path, rejoin_index):
+        if self.dynamic_planner_in_flight:
+            return True
+        if not self.compute_path_to_pose_client.wait_for_server(timeout_sec=0.0):
+            text = (
+                '[DYNAMIC_CONNECTOR] Nav2 connector rejected reason='
+                'compute_path_to_pose_server_unavailable'
+            )
+            self.get_logger().warn(text)
+            self._publish_dynamic_skip_status(text)
+            return False
+
+        path_frame = self._path_frame(original_path)
+        robot_pose = self._lookup_robot_pose(path_frame)
+        if robot_pose is None:
+            text = (
+                '[DYNAMIC_CONNECTOR] Nav2 connector rejected '
+                'reason=robot_pose_unavailable'
+            )
+            self.get_logger().warn(text)
+            self._publish_dynamic_skip_status(text)
+            return False
+
+        if rejoin_index < 0 or rejoin_index >= len(original_path.poses):
+            return False
+
+        rejoin_pose = copy.deepcopy(original_path.poses[rejoin_index])
+        rejoin_pose.header.frame_id = path_frame
+        goal_msg = ComputePathToPose.Goal()
+        goal_msg.start = copy.deepcopy(robot_pose)
+        goal_msg.goal = rejoin_pose
+        goal_msg.planner_id = self.dynamic_planner_id
+        goal_msg.use_start = self.dynamic_connector_start_with_robot_pose
+
+        self.dynamic_planner_request_id += 1
+        request_id = self.dynamic_planner_request_id
+        if self.dynamic_planner_pending_context is not None:
+            self.dynamic_planner_pending_context['planner_request_id'] = request_id
+
+        text = (
+            '[DYNAMIC_CONNECTOR] requesting Nav2 ComputePathToPose connector '
+            'rejoin_index=%d'
+            % rejoin_index
+        )
+        self.get_logger().info(text)
+        self._publish_dynamic_skip_status(text)
+
+        self.dynamic_planner_in_flight = True
+        self.dynamic_connector_attempt_in_progress = True
+        self.dynamic_planner_goal_handle = None
+        self._cancel_dynamic_planner_timeout_timer()
+        self.dynamic_planner_timeout_timer = self.create_timer(
+            self.dynamic_planner_timeout_sec,
+            lambda request_id=request_id: self._dynamic_planner_timeout_callback(
+                request_id
+            ),
+        )
+
+        future = self.compute_path_to_pose_client.send_goal_async(goal_msg)
+        future.add_done_callback(
+            lambda future, request_id=request_id: (
+                self._nav2_connector_goal_response_callback(future, request_id)
+            )
+        )
+        return True
+
+    def _dynamic_planner_timeout_callback(self, request_id):
+        self._cancel_dynamic_planner_timeout_timer()
+        context = self.dynamic_planner_pending_context
+        if (
+            not self.dynamic_planner_in_flight
+            or context is None
+            or context.get('planner_request_id') != request_id
+        ):
+            return
+
+        if self.dynamic_planner_goal_handle is not None:
+            self.dynamic_planner_goal_handle.cancel_goal_async()
+
+        text = (
+            '[DYNAMIC_CONNECTOR] planner connector rejected '
+            'reason=planner_timeout_sec_%.2f'
+            % self.dynamic_planner_timeout_sec
+        )
+        self.get_logger().warn(text)
+        self._publish_dynamic_skip_status(text)
+        self._mark_dynamic_planner_failed_and_continue('planner_timeout')
+
+    def _nav2_connector_goal_response_callback(self, future, request_id):
+        context = self.dynamic_planner_pending_context
+        if (
+            not self.dynamic_planner_in_flight
+            or context is None
+            or context.get('planner_request_id') != request_id
+        ):
+            return
+
+        try:
+            goal_handle = future.result()
+        except Exception as exc:
+            reason = 'goal_response_failed:%s' % exc
+            text = '[DYNAMIC_CONNECTOR] Nav2 connector rejected reason=%s' % reason
+            self.get_logger().warn(text)
+            self._publish_dynamic_skip_status(text)
+            self._mark_dynamic_planner_failed_and_continue(reason)
+            return
+
+        if not goal_handle.accepted:
+            text = '[DYNAMIC_CONNECTOR] Nav2 connector rejected reason=goal_rejected'
+            self.get_logger().warn(text)
+            self._publish_dynamic_skip_status(text)
+            self._mark_dynamic_planner_failed_and_continue('goal_rejected')
+            return
+
+        self.dynamic_planner_goal_handle = goal_handle
+        result_future = goal_handle.get_result_async()
+        result_future.add_done_callback(
+            lambda future, request_id=request_id: (
+                self._nav2_connector_result_callback(future, request_id)
+            )
+        )
+
+    def _nav2_connector_result_callback(self, future, request_id):
+        context = self.dynamic_planner_pending_context
+        if (
+            not self.dynamic_planner_in_flight
+            or context is None
+            or context.get('planner_request_id') != request_id
+        ):
+            return
+
+        self._cancel_dynamic_planner_timeout_timer()
+        self.dynamic_planner_in_flight = False
+        self.dynamic_planner_goal_handle = None
+        self.dynamic_connector_attempt_in_progress = False
+
+        try:
+            wrapped_result = future.result()
+        except Exception as exc:
+            reason = 'result_failed:%s' % exc
+            text = '[DYNAMIC_CONNECTOR] Nav2 connector rejected reason=%s' % reason
+            self.get_logger().warn(text)
+            self._publish_dynamic_skip_status(text)
+            self._try_dynamic_fallbacks_or_next(
+                context['report'],
+                context['original_path'],
+                context['current_rejoin_index'],
+                reason,
+            )
+            return
+
+        result = wrapped_result.result
+        status = wrapped_result.status
+        error_code = getattr(result, 'error_code', 0)
+        error_msg = getattr(result, 'error_msg', '')
+        connector_path = getattr(result, 'path', Path())
+        text = (
+            '[DYNAMIC_CONNECTOR] Nav2 connector result status=%d '
+            'error_code=%d error_msg=%s'
+            % (status, error_code, error_msg)
+        )
+        self.get_logger().info(text)
+        self._publish_dynamic_skip_status(text)
+
+        if (
+            status == GoalStatus.STATUS_SUCCEEDED
+            and error_code == 0
+            and len(connector_path.poses) >= 2
+        ):
+            if not connector_path.header.frame_id:
+                connector_path.header.frame_id = self._path_frame(
+                    context['original_path']
+                )
+            self._stamp_path(connector_path)
+            text = (
+                '[DYNAMIC_CONNECTOR] Nav2 connector poses=%d length=%.3f'
+                % (len(connector_path.poses), self._path_length(connector_path))
+            )
+            self.get_logger().info(text)
+            self._publish_dynamic_skip_status(text)
+            if self._handle_dynamic_connector_path(
+                context['report'],
+                context['original_path'],
+                context['current_rejoin_index'],
+                connector_path,
+                'planner connector',
+            ):
+                return
+
+        reason = (
+            'planner_failed_status=%d_error_code=%d_poses=%d'
+            % (status, error_code, len(connector_path.poses))
+        )
+        text = '[DYNAMIC_CONNECTOR] planner connector rejected reason=%s' % reason
+        self.get_logger().warn(text)
+        self._publish_dynamic_skip_status(text)
+        self._try_dynamic_fallbacks_or_next(
+            context['report'],
+            context['original_path'],
+            context['current_rejoin_index'],
+            reason,
+        )
+
+    def _try_dynamic_fallbacks_or_next(
+        self,
+        report,
+        original_path,
+        rejoin_index,
+        reason,
+    ):
+        context = self.dynamic_planner_pending_context
+        if context is not None:
+            context['last_reason'] = reason
+
+        if self._try_dynamic_fallbacks_for_candidate(
+            report,
+            original_path,
+            rejoin_index,
+        ):
+            return True
+
+        if context is not None:
+            context['last_reason'] = (
+                'rejoin_index=%d no_valid_connector:%s'
+                % (rejoin_index, reason)
+            )
+        return self._try_next_dynamic_rejoin_candidate()
+
+    def _try_dynamic_fallbacks_for_candidate(self, report, original_path, rejoin_index):
+        path_frame = self._path_frame(original_path)
+        robot_pose = self._lookup_robot_pose(path_frame)
+        if robot_pose is None:
+            if self.dynamic_planner_pending_context is not None:
+                self.dynamic_planner_pending_context[
+                    'last_reason'
+                ] = 'robot_pose_unavailable_for_fallback'
+            return False
+
+        if self.dynamic_enable_local_astar_detour:
+            text = (
+                '[DYNAMIC_CONNECTOR] trying local A* fallback rejoin_index=%d'
+                % rejoin_index
+            )
+            self.get_logger().info(text)
+            self._publish_dynamic_skip_status(text)
+            connector = self._build_local_astar_connector_path(
+                original_path,
+                robot_pose,
+                rejoin_index,
+            )
+            if connector is not None and self._handle_dynamic_connector_path(
+                report,
+                original_path,
+                rejoin_index,
+                connector,
+                'local A* fallback',
+            ):
+                return True
+
+        if self.dynamic_enable_local_detour:
+            text = (
+                '[DYNAMIC_CONNECTOR] trying lateral fallback rejoin_index=%d'
+                % rejoin_index
+            )
+            self.get_logger().info(text)
+            self._publish_dynamic_skip_status(text)
+            connector = self._build_lateral_detour_connector_path(
+                original_path,
+                report,
+                robot_pose,
+                rejoin_index,
+            )
+            if connector is not None and self._handle_dynamic_connector_path(
+                report,
+                original_path,
+                rejoin_index,
+                connector,
+                'lateral fallback',
+            ):
+                return True
+
+        return False
+
+    def _nudge_pose_away_from_local_obstacle(self, pose_stamped):
+        if self.local_costmap is None:
+            return None, 0.0
+
+        path_frame = pose_stamped.header.frame_id or self.global_frame
+        influence_m = max(
+            self._get_dynamic_tracking_radius_m(),
+            self.dynamic_connector_refinement_influence_m,
+        )
+        obstacle_info = self._nearest_dynamic_obstacle_distance(
+            self.local_costmap,
+            pose_stamped,
+            influence_m,
+        )
+        if (
+            not obstacle_info.get('valid', False)
+            or not math.isfinite(obstacle_info.get('distance_m', float('inf')))
+            or obstacle_info.get('nearest_lethal_pose') is None
+        ):
+            return None, 0.0
+
+        obstacle_pose = self._transform_pose_to_frame(
+            obstacle_info['nearest_lethal_pose'],
+            path_frame,
+        )
+        if obstacle_pose is None:
+            return None, 0.0
+
+        pose_position = pose_stamped.pose.position
+        obstacle_position = obstacle_pose.pose.position
+        away_x = pose_position.x - obstacle_position.x
+        away_y = pose_position.y - obstacle_position.y
+        distance = math.hypot(away_x, away_y)
+        if distance <= 1.0e-6:
+            return None, 0.0
+
+        target_distance = self._get_dynamic_tracking_radius_m()
+        if distance >= target_distance:
+            return None, 0.0
+
+        shift_m = min(
+            self.dynamic_connector_refinement_step_m,
+            target_distance - distance + 0.01,
+        )
+        if shift_m <= 0.0:
+            return None, 0.0
+
+        candidate = copy.deepcopy(pose_stamped)
+        candidate.pose.position.x += (away_x / distance) * shift_m
+        candidate.pose.position.y += (away_y / distance) * shift_m
+
+        local_check = self._check_local_corridor_at_pose(
+            candidate,
+            self._get_dynamic_collision_radius_m(),
+        )
+        if (
+            not local_check['valid']
+            or (local_check['inside'] and local_check['blocked'])
+        ):
+            return None, 0.0
+
+        static_check = self._check_static_corridor_at_pose(
+            candidate,
+            max(self.robot_radius_m, self.robot_radius_m + self.static_reference_padding_m),
+        )
+        if not static_check['valid'] or static_check['blocked']:
+            return None, 0.0
+
+        return candidate, shift_m
+
+    def _refine_dynamic_connector_path(self, connector_path):
+        if (
+            not self.dynamic_refine_connector_path
+            or connector_path is None
+            or len(connector_path.poses) < 3
+            or self.dynamic_connector_refinement_iterations <= 0
+            or self.dynamic_connector_refinement_step_m <= 0.0
+        ):
+            return connector_path
+
+        refined = copy.deepcopy(connector_path)
+        moved_points = 0
+        max_shift = 0.0
+        for _ in range(self.dynamic_connector_refinement_iterations):
+            updated_poses = copy.deepcopy(refined.poses)
+            for index in range(1, len(refined.poses) - 1):
+                nudged, shift_m = self._nudge_pose_away_from_local_obstacle(
+                    refined.poses[index]
+                )
+                if nudged is None:
+                    continue
+                updated_poses[index] = nudged
+                moved_points += 1
+                max_shift = max(max_shift, shift_m)
+            refined.poses = updated_poses
+
+        if moved_points > 0:
+            self._recompute_orientations(refined)
+            self._stamp_path(refined)
+            text = (
+                '[DYNAMIC_CONNECTOR] refined connector away from local obstacle '
+                'moved_points=%d max_step=%.3f tracking_radius=%.3f'
+                % (
+                    moved_points,
+                    max_shift,
+                    self._get_dynamic_tracking_radius_m(),
+                )
+            )
+            self.get_logger().info(text)
+            self._publish_dynamic_skip_status(text)
+        return refined
+
+    def _connector_path_reaches_rejoin(self, connector_path, original_path, rejoin_index):
+        if connector_path is None or not connector_path.poses:
+            return False, 'empty_connector'
+        path_frame = self._path_frame(original_path)
+        endpoint = self._transform_pose_to_frame(
+            connector_path.poses[-1],
+            path_frame,
+        )
+        if endpoint is None:
+            return False, 'connector_endpoint_tf_unavailable'
+        rejoin_pose = original_path.poses[rejoin_index]
+        end = endpoint.pose.position
+        target = rejoin_pose.pose.position
+        distance = self._distance_2d(end.x, end.y, target.x, target.y)
+        if distance > self.dynamic_connector_goal_tolerance_m:
+            return (
+                False,
+                'connector_endpoint_%.3fm_from_rejoin_tolerance_%.3fm'
+                % (distance, self.dynamic_connector_goal_tolerance_m),
+            )
+        return True, 'ok'
+
+    def _build_dynamic_candidate_path(self, connector_path, original_path, rejoin_index):
+        if (
+            connector_path is None
+            or original_path is None
+            or rejoin_index < 0
+            or rejoin_index >= len(original_path.poses)
+        ):
+            return None
+
+        path_frame = self._path_frame(original_path)
+        candidate = Path()
+        candidate.header = copy.deepcopy(original_path.header)
+        candidate.header.frame_id = path_frame
+
+        for pose_stamped in connector_path.poses:
+            pose_in_path = self._transform_pose_to_frame(pose_stamped, path_frame)
+            if pose_in_path is None:
+                return None
+            pose_in_path.header.frame_id = path_frame
+            self._append_pose_without_duplicate(candidate, pose_in_path)
+
+        self._append_pose_without_duplicate(candidate, original_path.poses[rejoin_index])
+        for index in range(rejoin_index + 1, len(original_path.poses)):
+            self._append_pose_without_duplicate(candidate, original_path.poses[index])
+
+        if len(candidate.poses) < self.min_path_poses:
+            return None
+
+        self._recompute_orientations(candidate)
+        self._stamp_path(candidate)
+        return candidate
+
+    def _build_rejoin_validation_path(self, connector_path, original_path, rejoin_index):
+        if (
+            connector_path is None
+            or original_path is None
+            or rejoin_index < 0
+            or rejoin_index >= len(original_path.poses)
+        ):
+            return connector_path
+
+        path_frame = self._path_frame(original_path)
+        validation_path = Path()
+        validation_path.header = copy.deepcopy(original_path.header)
+        validation_path.header.frame_id = path_frame
+
+        for pose_stamped in connector_path.poses:
+            pose_in_path = self._transform_pose_to_frame(pose_stamped, path_frame)
+            if pose_in_path is None:
+                return connector_path
+            pose_in_path.header.frame_id = path_frame
+            self._append_pose_without_duplicate(validation_path, pose_in_path)
+
+        guard_distance_m = max(
+            self.dynamic_imminent_block_distance_m,
+            self._get_dynamic_collision_radius_m(),
+        )
+        guard_end_index = self._index_after_distance(
+            original_path,
+            rejoin_index,
+            guard_distance_m,
+        )
+        for index in range(rejoin_index, guard_end_index + 1):
+            self._append_pose_without_duplicate(
+                validation_path,
+                original_path.poses[index],
+            )
+
+        self._recompute_orientations(validation_path)
+        self._stamp_path(validation_path)
+        return validation_path
+
+    def _handle_dynamic_connector_path(
+        self,
+        report,
+        original_path,
+        rejoin_index,
+        connector_path,
+        source_label,
+    ):
+        if connector_path is None or len(connector_path.poses) < 2:
+            text = (
+                '[DYNAMIC_CONNECTOR] %s rejected reason=connector_path_too_short'
+                % source_label
+            )
+            self.get_logger().warn(text)
+            self._publish_dynamic_skip_status(text)
+            return False
+
+        reaches, reach_reason = self._connector_path_reaches_rejoin(
+            connector_path,
+            original_path,
+            rejoin_index,
+        )
+        if not reaches:
+            text = (
+                '[DYNAMIC_CONNECTOR] %s rejected reason=%s'
+                % (source_label, reach_reason)
+            )
+            self.get_logger().warn(text)
+            self._publish_dynamic_skip_status(text)
+            return False
+
+        connector_path = self._refine_dynamic_connector_path(connector_path)
+        reaches, reach_reason = self._connector_path_reaches_rejoin(
+            connector_path,
+            original_path,
+            rejoin_index,
+        )
+        if not reaches:
+            text = (
+                '[DYNAMIC_CONNECTOR] %s rejected after refinement reason=%s'
+                % (source_label, reach_reason)
+            )
+            self.get_logger().warn(text)
+            self._publish_dynamic_skip_status(text)
+            return False
+
+        candidate_path = self._build_dynamic_candidate_path(
+            connector_path,
+            original_path,
+            rejoin_index,
+        )
+        if candidate_path is None:
+            text = (
+                '[DYNAMIC_CONNECTOR] %s rejected reason=failed_to_build_candidate'
+                % source_label
+            )
+            self.get_logger().warn(text)
+            self._publish_dynamic_skip_status(text)
+            return False
+
+        active_rejoin_index = self._find_pose_index_in_path(
+            candidate_path,
+            original_path.poses[rejoin_index],
+            tolerance_m=max(0.05, self.dynamic_connector_goal_tolerance_m),
+        )
+        if active_rejoin_index is None:
+            active_rejoin_index = max(
+                0,
+                min(len(candidate_path.poses) - 1, len(connector_path.poses) - 1),
+            )
+
+        self.dynamic_candidate_marker_path = copy.deepcopy(candidate_path)
+        self._publish_skipped_segment_markers()
+        validation_path = self._build_rejoin_validation_path(
+            connector_path,
+            original_path,
+            rejoin_index,
+        )
+        valid_candidate, validation_report = self._validate_dynamic_rejoin_candidate(
+            candidate_path,
+            validation_path,
+        )
+        if not valid_candidate:
+            text = (
+                '[DYNAMIC_CONNECTOR] %s rejected reason=%s'
+                % (
+                    source_label,
+                    validation_report.get('reason', 'invalid_candidate'),
+                )
+            )
+            self.get_logger().warn(text)
+            self._publish_dynamic_skip_status(text)
+            return False
+
+        text = (
+            '[DYNAMIC_CONNECTOR] %s accepted poses=%d length=%.3f'
+            % (
+                source_label,
+                len(connector_path.poses),
+                self._path_length(connector_path),
+            )
+        )
+        self.get_logger().info(text)
+        self._publish_dynamic_skip_status(text)
+        return self._accept_dynamic_candidate_path(
+            report,
+            original_path,
+            rejoin_index,
+            candidate_path,
+            active_rejoin_index,
+        )
+
+    def _accept_dynamic_candidate_path(
+        self,
+        report,
+        original_path,
+        rejoin_index,
+        candidate_path,
+        active_rejoin_index,
+    ):
+        context = self.dynamic_planner_pending_context or {}
+        after_failure = context.get('after_failure', False)
+        skip_end_index = max(report['blocked_end_index'], rejoin_index - 1)
+        self._record_skipped_segment(
+            original_path,
+            report['blocked_start_index'],
+            skip_end_index,
+            rejoin_index,
+            report,
+        )
+        self._publish_skipped_segment_markers()
+
+        monitor_resume_index = self._dynamic_monitor_resume_index_for_rejoin(
+            candidate_path,
+            original_path.poses[rejoin_index],
+        )
+        self.dynamic_skip_pending_monitor_resume_index = monitor_resume_index
+        self.dynamic_skip_pending_original_rejoin_index = rejoin_index
+        self.dynamic_skip_pending_active_rejoin_index = active_rejoin_index
+        self.dynamic_skip_pending_report = report
+        self.dynamic_skip_finish_after_cancel = False
+        self.dynamic_skip_cancel_final_status = None
+        self._clear_dynamic_planner_state()
+
+        if after_failure or not self.goal_in_flight or self.current_goal_handle is None:
+            remaining_distance = self._path_length(candidate_path)
+            text = (
+                '[DYNAMIC_SKIP] sending dynamic bypass FollowPath '
+                'remaining_poses=%d remaining_distance=%.3f'
+                % (len(candidate_path.poses), remaining_distance)
+            )
+            self.get_logger().info(text)
+            self._publish_dynamic_skip_status(text)
+            self.dynamic_skip_in_progress = False
+            return self._send_follow_path_goal(
+                candidate_path,
+                'dynamic_obstacle_bypass_rejoin_after_failure',
+            )
+
+        text = '[DYNAMIC_SKIP] canceling current FollowPath to send dynamic bypass'
+        self.get_logger().info(text)
+        self._publish_dynamic_skip_status(text)
+        self.dynamic_skip_pending_rejoin_path = candidate_path
+        return self._cancel_current_goal_for_dynamic_skip()
+
+    def _handle_dynamic_blocked_to_end(self, path, report, after_failure):
+        self._clear_dynamic_planner_state()
+        self._record_skipped_segment(
+            path,
+            report['blocked_start_index'],
+            len(path.poses) - 1,
+            len(path.poses),
+            report,
+        )
+        self._publish_skipped_segment_markers()
+        self.dynamic_skip_pending_rejoin_path = None
+        self.dynamic_skip_pending_report = report
+        self.dynamic_skip_pending_monitor_resume_index = None
+        self.dynamic_skip_finish_after_cancel = True
+        if after_failure or self.current_goal_handle is None:
+            self.dynamic_skip_in_progress = False
+            self._finish_execution(self.STATUS_COMPLETED_WITH_SKIPS)
+            return True
+        return self._cancel_current_goal_for_dynamic_skip()
+
+    def _is_dynamic_obstacle_imminent(self, report):
+        nearest_index = report.get('nearest_index', -1)
+        blocked_start_index = report.get('blocked_start_index', -1)
+        if nearest_index < 0 or blocked_start_index < 0:
+            return self.dynamic_controller_blocked_reports_count > 0
+
+        path = self.active_path
+        if path is not None and path.poses:
+            distance_to_block = self._distance_along_path(
+                path,
+                nearest_index,
+                blocked_start_index,
+            )
+            if distance_to_block <= self.dynamic_imminent_block_distance_m:
+                return True
+
+        if self.dynamic_controller_blocked_reports_count > 0:
+            return True
+        return blocked_start_index <= nearest_index + 2
+
+    def _handle_dynamic_no_valid_bypass(self, report, reason, after_failure=False):
+        self._clear_dynamic_planner_state()
+        self.dynamic_skip_failure_counter += 1
+        object_imminent = self._is_dynamic_obstacle_imminent(report)
+        should_stop = (
+            object_imminent
+            or after_failure
+            or not self.dynamic_cancel_only_if_imminent_blocked
+        )
+        text = (
+            '[DYNAMIC_SKIP] no valid bypass within %.2fm; '
+            'object_imminent=%s'
+            % (
+                self.dynamic_rejoin_max_search_distance_m,
+                str(object_imminent).lower(),
+            )
+        )
+        if should_stop:
+            text = '%s; stopping as BLOCKED_DYNAMIC_OBJECT' % text
+            self.get_logger().warn(text)
+            self._publish_dynamic_skip_status(text)
+            self.latest_path_error = (
+                'confirmed dynamic obstacle blocked path and no valid bypass '
+                'within %.2fm: %s'
+                % (self.dynamic_rejoin_max_search_distance_m, reason)
+            )
+            self.dynamic_skip_pending_rejoin_path = None
+            self.dynamic_skip_pending_report = report
+            self.dynamic_skip_pending_monitor_resume_index = None
+            self.dynamic_skip_finish_after_cancel = False
+            self.dynamic_skip_cancel_final_status = (
+                self.STATUS_BLOCKED_DYNAMIC_OBJECT
+            )
+            if after_failure or self.current_goal_handle is None:
+                self.dynamic_skip_in_progress = False
+                self._finish_execution(self.STATUS_BLOCKED_DYNAMIC_OBJECT)
+                return True
+            return self._cancel_current_goal_for_dynamic_skip()
+
+        text = '%s; keeping current FollowPath and monitoring' % text
+        self.get_logger().warn(text)
+        self._publish_dynamic_skip_status(text)
+        self.latest_path_error = (
+            'dynamic obstacle confirmed but no non-imminent bypass is valid yet: %s'
+            % reason
+        )
+        self.dynamic_skip_in_progress = False
+        self._set_status(self.STATUS_EXECUTING)
+        return False
+
+    def _project_temporary_block_to_original_path(self, report):
+        if (
+            not self.dynamic_active_path_is_temporary
+            or self.cached_raw_path is None
+            or not self.cached_raw_path.poses
+            or self.dynamic_active_original_rejoin_index is None
+        ):
+            return None, None
+
+        original_path = self.cached_raw_path
+        original_rejoin_index = max(
+            0,
+            min(
+                int(self.dynamic_active_original_rejoin_index),
+                len(original_path.poses) - 1,
+            ),
+        )
+        active_rejoin_index = self.dynamic_active_rejoin_path_index
+        if active_rejoin_index is None and self.active_path is not None:
+            active_rejoin_index = self._find_pose_index_in_path(
+                self.active_path,
+                original_path.poses[original_rejoin_index],
+                tolerance_m=max(0.05, self.dynamic_connector_goal_tolerance_m),
+            )
+
+        if active_rejoin_index is None:
+            active_rejoin_index = 0
+        active_rejoin_index = max(0, int(active_rejoin_index))
+
+        def active_to_original(active_index):
+            active_index = max(0, int(active_index))
+            if active_index < active_rejoin_index:
+                return original_rejoin_index
+            mapped = original_rejoin_index + (active_index - active_rejoin_index)
+            return max(0, min(mapped, len(original_path.poses) - 1))
+
+        active_nearest = report.get('nearest_index', 0)
+        active_blocked_start = report.get('blocked_start_index', active_nearest)
+        active_blocked_end = report.get('blocked_end_index', active_blocked_start)
+        active_lookahead_end = report.get('lookahead_end_index', active_blocked_end)
+
+        projected_report = copy.deepcopy(report)
+        projected_report['active_path_nearest_index'] = active_nearest
+        projected_report['active_path_blocked_start_index'] = active_blocked_start
+        projected_report['active_path_blocked_end_index'] = active_blocked_end
+        projected_report['active_path_rejoin_index'] = active_rejoin_index
+        projected_report['original_rejoin_index'] = original_rejoin_index
+        projected_report['temporary_path_refinement'] = True
+        projected_report['nearest_index'] = active_to_original(active_nearest)
+        projected_report['blocked_start_index'] = active_to_original(
+            active_blocked_start
+        )
+        projected_report['blocked_end_index'] = active_to_original(active_blocked_end)
+        projected_report['lookahead_end_index'] = active_to_original(
+            active_lookahead_end
+        )
+
+        if active_blocked_start < active_rejoin_index:
+            projected_report['nearest_index'] = original_rejoin_index
+            projected_report['blocked_start_index'] = original_rejoin_index
+            projected_report['blocked_end_index'] = original_rejoin_index
+            projected_report['lookahead_end_index'] = min(
+                len(original_path.poses) - 1,
+                original_rejoin_index + max(1, self.dynamic_skip_min_remaining_poses),
+            )
+
+        if (
+            projected_report['blocked_end_index']
+            < projected_report['blocked_start_index']
+        ):
+            projected_report['blocked_end_index'] = projected_report[
+                'blocked_start_index'
+            ]
+
+        projected_report['blocked_path_length_m'] = self._distance_along_path(
+            original_path,
+            projected_report['blocked_start_index'],
+            projected_report['blocked_end_index'],
+        )
+        projected_report['reason'] = (
+            'temporary_path_obstacle_projected_to_original_path'
+        )
+
+        text = (
+            '[DYNAMIC_SKIP] refining temporary path against frozen original path '
+            'active_rejoin_index=%d original_rejoin_index=%d '
+            'projected_block_start=%d projected_block_end=%d'
+            % (
+                active_rejoin_index,
+                original_rejoin_index,
+                projected_report['blocked_start_index'],
+                projected_report['blocked_end_index'],
+            )
+        )
+        self.get_logger().warn(text)
+        self._publish_dynamic_skip_status(text)
+        return original_path, projected_report
+
+    def _dynamic_bypass_source_path_and_report(self, report):
+        original_path, projected_report = self._project_temporary_block_to_original_path(
+            report
+        )
+        if original_path is not None and projected_report is not None:
+            return original_path, projected_report
+        return self.active_path, report
+
+    def _start_dynamic_skip(self, report):
+        if self.dynamic_skip_in_progress:
+            return False
+
+        self.dynamic_skip_in_progress = True
+        self._set_status(self.STATUS_SKIPPING_DYNAMIC_OBSTACLE)
+        self._log_dynamic_obstacle_detected(report)
+
+        path, report = self._dynamic_bypass_source_path_and_report(report)
+        if path is None:
+            self.dynamic_skip_in_progress = False
+            self._set_status(self.STATUS_EXECUTING)
+            return False
+
+        return self._begin_dynamic_bypass_search(
+            path,
+            report,
+            after_failure=False,
+        )
+
+    def _start_dynamic_skip_after_failure(self, report, error_code, error_label):
+        if self.dynamic_skip_in_progress:
+            return False
+
+        self.dynamic_skip_in_progress = True
+        self._set_status(self.STATUS_SKIPPING_DYNAMIC_OBSTACLE)
+        self._log_dynamic_obstacle_detected(report)
+
+        path, report = self._dynamic_bypass_source_path_and_report(report)
+        if path is None:
+            self.dynamic_skip_in_progress = False
+            return False
+
+        return self._begin_dynamic_bypass_search(
+            path,
+            report,
+            after_failure=True,
+            error_code=error_code,
+            error_label=error_label,
+        )
+
+    def _cancel_current_goal_for_dynamic_skip(self):
+        if self.current_goal_handle is None:
+            self.dynamic_skip_failure_counter += 1
+            text = (
+                '[DYNAMIC_SKIP] cannot cancel FollowPath for skip; '
+                'no current goal handle is available'
+            )
+            self.get_logger().warn(text)
+            self._publish_dynamic_skip_status(text)
+            self.dynamic_skip_in_progress = False
+            if self.dynamic_skip_cancel_final_status is not None:
+                final_status = self.dynamic_skip_cancel_final_status
+                self.dynamic_skip_cancel_final_status = None
+                self.dynamic_skip_pending_monitor_resume_index = None
+                self._finish_execution(final_status)
+            else:
+                self.dynamic_skip_pending_monitor_resume_index = None
+                self._set_status(self.STATUS_EXECUTING)
+            return False
+
+        self.dynamic_skip_cancel_requested = True
+        self.dynamic_skip_cancel_goal_handle = self.current_goal_handle
+        cancel_future = self.current_goal_handle.cancel_goal_async()
+        cancel_future.add_done_callback(self._dynamic_skip_cancel_done_callback)
+        return True
+
+    def _dynamic_skip_cancel_done_callback(self, future):
+        try:
+            future.result()
+        except Exception as exc:
+            self.dynamic_skip_cancel_requested = False
+            self.dynamic_skip_cancel_goal_handle = None
+            self.dynamic_skip_pending_rejoin_path = None
+            self.dynamic_skip_pending_report = None
+            self.dynamic_skip_pending_monitor_resume_index = None
+            self.dynamic_skip_finish_after_cancel = False
+            self.dynamic_skip_cancel_final_status = None
+            self.dynamic_skip_in_progress = False
+            self.dynamic_skip_failure_counter += 1
+            text = '[DYNAMIC_SKIP] FollowPath cancel for skip failed: %s' % exc
+            self.get_logger().warn(text)
+            self._publish_dynamic_skip_status(text)
+            if (
+                self.dynamic_skip_failure_counter
+                >= self.dynamic_skip_max_consecutive_failures
+            ):
+                self.latest_path_error = (
+                    'dynamic obstacle skip cancel failed repeatedly'
+                )
+                self._finish_execution(self.STATUS_FAILED)
+            else:
+                self._set_status(self.STATUS_EXECUTING)
+            return
+
+        self.current_goal_handle = None
+        self.goal_in_flight = False
+        self.dynamic_skip_cancel_requested = False
+
+        pending_path = self.dynamic_skip_pending_rejoin_path
+        finish_after_cancel = self.dynamic_skip_finish_after_cancel
+        final_status_after_cancel = self.dynamic_skip_cancel_final_status
+        self.dynamic_skip_pending_rejoin_path = None
+        self.dynamic_skip_pending_report = None
+        self.dynamic_skip_finish_after_cancel = False
+        self.dynamic_skip_cancel_final_status = None
+
+        if final_status_after_cancel is not None:
+            self.dynamic_skip_in_progress = False
+            self._finish_execution(final_status_after_cancel)
+            return
+
+        if finish_after_cancel or pending_path is None:
+            self.dynamic_skip_in_progress = False
+            self._finish_execution(self.STATUS_COMPLETED_WITH_SKIPS)
+            return
+
+        remaining_distance = self._path_length(pending_path)
+        self.get_logger().info(
+            '[DYNAMIC_SKIP] sending rejoin FollowPath '
+            'remaining_poses=%d remaining_distance=%.3f'
+            % (len(pending_path.poses), remaining_distance)
+        )
+        self._publish_dynamic_skip_status(
+            '[DYNAMIC_SKIP] sending rejoin FollowPath remaining_poses=%d '
+            'remaining_distance=%.3f'
+            % (len(pending_path.poses), remaining_distance)
+        )
+        self.dynamic_skip_in_progress = False
+        self._send_follow_path_goal(
+            pending_path,
+            'dynamic_obstacle_bypass_rejoin',
+        )
+
+    def _log_dynamic_obstacle_detected(self, report):
+        text = (
+            '[DYNAMIC_SKIP] obstacle detected on active path '
+            'nearest_index=%d blocked_start_index=%d blocked_end_index=%d '
+            'lookahead_end_index=%d max_cost=%d obstacle_distance=%.3f '
+            'threshold=%.3f local_costmap_frame=%s path_frame=%s'
+            % (
+                report.get('nearest_index', -1),
+                report.get('blocked_start_index', -1),
+                report.get('blocked_end_index', -1),
+                report.get('lookahead_end_index', -1),
+                report.get('max_cost', 0),
+                report.get('nearest_obstacle_distance_m', float('inf')),
+                report.get(
+                    'obstacle_distance_threshold_m',
+                    self.dynamic_obstacle_distance_threshold_m,
+                ),
+                report.get('local_costmap_frame', ''),
+                report.get('path_frame', ''),
+            )
+        )
+        self.get_logger().warn(text)
+        self._publish_dynamic_skip_status(text)
+
+    def _path_frame(self, path):
+        if path is not None and path.header.frame_id:
+            return path.header.frame_id
+        return self.global_frame
+
+    def _transform_pose_to_frame(self, pose_stamped, target_frame):
+        if pose_stamped is None:
+            return None
+
+        target_frame = target_frame or self.global_frame
+        source_frame = pose_stamped.header.frame_id or self.global_frame
+        if source_frame == target_frame:
+            transformed = copy.deepcopy(pose_stamped)
+            transformed.header.frame_id = target_frame
+            return transformed
+
         try:
             transform = self.tf_buffer.lookup_transform(
-                frame_id,
+                target_frame,
+                source_frame,
+                Time(),
+                timeout=Duration(seconds=self.tf_lookup_timeout_sec),
+            )
+        except TransformException as exc:
+            self.get_logger().debug(
+                'Could not transform pose %s -> %s: %s'
+                % (source_frame, target_frame, exc),
+                throttle_duration_sec=2.0,
+            )
+            return None
+
+        translation = transform.transform.translation
+        rotation = transform.transform.rotation
+        transform_yaw = self._yaw_from_quaternion(rotation)
+        pose_yaw = self._yaw_from_quaternion(pose_stamped.pose.orientation)
+        cos_yaw = math.cos(transform_yaw)
+        sin_yaw = math.sin(transform_yaw)
+        x = pose_stamped.pose.position.x
+        y = pose_stamped.pose.position.y
+
+        transformed = PoseStamped()
+        transformed.header.frame_id = target_frame
+        transformed.header.stamp = transform.header.stamp
+        transformed.pose.position.x = translation.x + cos_yaw * x - sin_yaw * y
+        transformed.pose.position.y = translation.y + sin_yaw * x + cos_yaw * y
+        transformed.pose.position.z = (
+            translation.z + pose_stamped.pose.position.z
+        )
+        transformed.pose.orientation = self._quaternion_from_yaw(
+            self._normalize_angle(transform_yaw + pose_yaw)
+        )
+        return transformed
+
+    def _world_to_costmap_cell(self, costmap, x, y):
+        resolution = costmap.info.resolution
+        if resolution <= 0.0:
+            return None
+
+        origin = costmap.info.origin
+        origin_yaw = self._yaw_from_quaternion(origin.orientation)
+        dx = x - origin.position.x
+        dy = y - origin.position.y
+        cos_yaw = math.cos(-origin_yaw)
+        sin_yaw = math.sin(-origin_yaw)
+        local_x = cos_yaw * dx - sin_yaw * dy
+        local_y = sin_yaw * dx + cos_yaw * dy
+        mx = int(math.floor(local_x / resolution))
+        my = int(math.floor(local_y / resolution))
+        if not in_bounds(mx, my, costmap.info.width, costmap.info.height):
+            return None
+        return mx, my
+
+    def _get_costmap_cost(self, costmap, pose_stamped):
+        costmap_frame = costmap.header.frame_id or self.global_frame
+        pose_in_costmap = self._transform_pose_to_frame(
+            pose_stamped,
+            costmap_frame,
+        )
+        if pose_in_costmap is None:
+            return {
+                'valid': False,
+                'inside': False,
+                'cost': 100,
+                'mx': -1,
+                'my': -1,
+                'reason': 'tf_unavailable',
+            }
+
+        cell = self._world_to_costmap_cell(
+            costmap,
+            pose_in_costmap.pose.position.x,
+            pose_in_costmap.pose.position.y,
+        )
+        if cell is None:
+            return {
+                'valid': False,
+                'inside': False,
+                'cost': 100,
+                'mx': -1,
+                'my': -1,
+                'reason': 'outside_costmap',
+            }
+
+        mx, my = cell
+        index = map_to_flat_index(mx, my, costmap.info.width)
+        cost = int(costmap.data[index])
+        return {
+            'valid': True,
+            'inside': True,
+            'cost': cost,
+            'mx': mx,
+            'my': my,
+            'reason': 'unknown' if cost < 0 else 'ok',
+        }
+
+    def _get_costmap_cell_for_pose(self, costmap, pose_stamped):
+        costmap_frame = costmap.header.frame_id or self.global_frame
+        pose_in_costmap = self._transform_pose_to_frame(
+            pose_stamped,
+            costmap_frame,
+        )
+        if pose_in_costmap is None:
+            return None, 'tf_unavailable'
+
+        cell = self._world_to_costmap_cell(
+            costmap,
+            pose_in_costmap.pose.position.x,
+            pose_in_costmap.pose.position.y,
+        )
+        if cell is None:
+            return None, 'outside_costmap'
+        return cell, 'ok'
+
+    def _static_reference_status_near_pose(self, pose_stamped, padding_m=None):
+        status = {
+            'known_static': False,
+            'free': False,
+            'unknown_count': 0,
+            'checked_count': 0,
+            'max_value': 0,
+            'reason': 'not_checked',
+        }
+        if not self.dynamic_use_static_reference_check:
+            status['free'] = True
+            status['reason'] = 'static_reference_disabled'
+            return status
+
+        if self.static_map is None:
+            status['reason'] = 'static_map_unavailable'
+            self.get_logger().warn(
+                'static map not available; dynamic detection cannot distinguish walls',
+                throttle_duration_sec=5.0,
+            )
+            return status
+
+        static_frame = self.static_map.header.frame_id or self.global_frame
+        pose_in_static = self._transform_pose_to_frame(pose_stamped, static_frame)
+        if pose_in_static is None:
+            status['reason'] = 'static_map_tf_unavailable'
+            return status
+
+        resolution = self.static_map.info.resolution
+        if resolution <= 0.0:
+            status['reason'] = 'invalid_static_map_resolution'
+            return status
+
+        position = pose_in_static.pose.position
+        cell = self._world_to_costmap_cell(self.static_map, position.x, position.y)
+        if cell is None:
+            status['reason'] = 'outside_static_map'
+            return status
+
+        center_mx, center_my = cell
+        radius_m = (
+            self.static_reference_padding_m
+            if padding_m is None
+            else max(0.0, padding_m)
+        )
+        radius_cells = int(math.ceil(radius_m / resolution))
+        include_distance_m = radius_m + resolution * 0.5 + 1.0e-9
+
+        for dy in range(-radius_cells, radius_cells + 1):
+            for dx in range(-radius_cells, radius_cells + 1):
+                mx = center_mx + dx
+                my = center_my + dy
+                if not in_bounds(
+                    mx,
+                    my,
+                    self.static_map.info.width,
+                    self.static_map.info.height,
+                ):
+                    continue
+
+                cell_x, cell_y = self._costmap_cell_center(self.static_map, mx, my)
+                if (
+                    self._distance_2d(position.x, position.y, cell_x, cell_y)
+                    > include_distance_m
+                ):
+                    continue
+
+                status['checked_count'] += 1
+                index = map_to_flat_index(mx, my, self.static_map.info.width)
+                value = int(self.static_map.data[index])
+                if value < 0:
+                    status['unknown_count'] += 1
+                    continue
+
+                status['max_value'] = max(status['max_value'], value)
+                if value >= self.static_map_occupied_threshold:
+                    status['known_static'] = True
+                    status['reason'] = 'known_static_obstacle'
+                    return status
+
+        if status['checked_count'] == 0:
+            status['reason'] = 'no_static_cells_checked'
+            return status
+        if status['unknown_count'] > 0:
+            status['reason'] = 'unknown_static_reference_cells'
+            return status
+
+        status['free'] = True
+        status['reason'] = 'static_reference_free'
+        return status
+
+    def _is_known_static_obstacle_near_pose(self, pose_stamped, padding_m=None):
+        """
+        Returns True if the saved/static map already contains an occupied cell
+        near this pose. Used to suppress dynamic skip near known walls.
+        """
+        if not self.dynamic_use_static_reference_check:
+            return False
+        return self._static_reference_status_near_pose(pose_stamped, padding_m)[
+            'known_static'
+        ]
+
+    def _is_local_lethal_dynamic_cell(self, cost):
+        if cost < 0:
+            return self.dynamic_treat_unknown_as_blocked
+        return cost >= self.dynamic_obstacle_cost_threshold
+
+    def _is_local_inscribed_dynamic_cell(self, cost):
+        if cost < 0:
+            return False
+        return (
+            cost >= self.dynamic_inscribed_cost_threshold
+            and cost < self.dynamic_obstacle_cost_threshold
+        )
+
+    def _is_dynamic_cost_blocked(self, cost):
+        if cost < 0:
+            return self.dynamic_treat_unknown_as_blocked
+        blocking_threshold = self.dynamic_obstacle_cost_threshold
+        if self.dynamic_enable_local_only_inscribed_fallback:
+            blocking_threshold = min(
+                blocking_threshold,
+                self.dynamic_inscribed_cost_threshold,
+            )
+        return cost >= blocking_threshold
+
+    def _effective_dynamic_cost(self, cost):
+        if cost < 0:
+            return 100 if self.dynamic_treat_unknown_as_blocked else 0
+        return cost
+
+    def _is_local_cell_traversable(self, mx, my):
+        if self.local_costmap is None:
+            return False
+        if not in_bounds(
+            mx,
+            my,
+            self.local_costmap.info.width,
+            self.local_costmap.info.height,
+        ):
+            return False
+        index = map_to_flat_index(mx, my, self.local_costmap.info.width)
+        cost = int(self.local_costmap.data[index])
+        return not self._is_dynamic_cost_blocked(cost)
+
+    def _is_pose_traversable_in_local_costmap(self, pose_stamped):
+        if self.local_costmap is None:
+            return False, 'local_costmap_unavailable', 100
+        cost_info = self._get_costmap_cost(self.local_costmap, pose_stamped)
+        if not cost_info['valid'] or not cost_info['inside']:
+            return False, cost_info['reason'], self._effective_dynamic_cost(
+                cost_info['cost']
+            )
+        max_cost = self._effective_dynamic_cost(cost_info['cost'])
+        if self._is_dynamic_cost_blocked(cost_info['cost']):
+            return False, cost_info['reason'], max_cost
+        return True, 'traversable', max_cost
+
+    def _costmap_cell_center(self, costmap, mx, my):
+        resolution = costmap.info.resolution
+        origin = costmap.info.origin
+        origin_yaw = self._yaw_from_quaternion(origin.orientation)
+        local_x = (mx + 0.5) * resolution
+        local_y = (my + 0.5) * resolution
+        cos_yaw = math.cos(origin_yaw)
+        sin_yaw = math.sin(origin_yaw)
+        return (
+            origin.position.x + cos_yaw * local_x - sin_yaw * local_y,
+            origin.position.y + sin_yaw * local_x + cos_yaw * local_y,
+        )
+
+    def _nearest_dynamic_obstacle_distance(
+        self,
+        costmap,
+        pose_stamped,
+        max_distance_m,
+        inscribed_max_distance_m=None,
+    ):
+        costmap_frame = costmap.header.frame_id or self.global_frame
+        pose_in_costmap = self._transform_pose_to_frame(
+            pose_stamped,
+            costmap_frame,
+        )
+        if pose_in_costmap is None:
+            return {
+                'valid': False,
+                'blocked': False,
+                'distance_m': float('inf'),
+                'max_cost': 100,
+                'inflated_ignored_count': 0,
+                'max_ignored_inflated_cost': 0,
+                'inscribed_local_only_count': 0,
+                'nearest_inscribed_distance_m': float('inf'),
+                'nearest_lethal_pose': None,
+                'nearest_inscribed_pose': None,
+                'reason': 'tf_unavailable',
+            }
+
+        position = pose_in_costmap.pose.position
+        cell = self._world_to_costmap_cell(costmap, position.x, position.y)
+        if cell is None:
+            return {
+                'valid': False,
+                'blocked': False,
+                'distance_m': float('inf'),
+                'max_cost': 100,
+                'inflated_ignored_count': 0,
+                'max_ignored_inflated_cost': 0,
+                'inscribed_local_only_count': 0,
+                'nearest_inscribed_distance_m': float('inf'),
+                'nearest_lethal_pose': None,
+                'nearest_inscribed_pose': None,
+                'reason': 'outside_costmap',
+            }
+
+        resolution = costmap.info.resolution
+        if resolution <= 0.0:
+            return {
+                'valid': False,
+                'blocked': False,
+                'distance_m': float('inf'),
+                'max_cost': 100,
+                'inflated_ignored_count': 0,
+                'max_ignored_inflated_cost': 0,
+                'inscribed_local_only_count': 0,
+                'nearest_inscribed_distance_m': float('inf'),
+                'nearest_lethal_pose': None,
+                'nearest_inscribed_pose': None,
+                'reason': 'invalid_local_costmap_resolution',
+            }
+
+        mx, my = cell
+        cell_radius = max(0, int(math.ceil(max_distance_m / resolution)))
+        if inscribed_max_distance_m is None:
+            inscribed_max_distance_m = max_distance_m
+        inscribed_max_distance_m = max(0.0, inscribed_max_distance_m)
+        nearest_distance = float('inf')
+        nearest_inscribed_distance = float('inf')
+        max_cost = 0
+        inflated_ignored_count = 0
+        max_ignored_inflated_cost = 0
+        inscribed_local_only_count = 0
+        nearest_lethal_pose = None
+        nearest_inscribed_pose = None
+        for dy in range(-cell_radius, cell_radius + 1):
+            for dx in range(-cell_radius, cell_radius + 1):
+                sample_mx = mx + dx
+                sample_my = my + dy
+                if not in_bounds(
+                    sample_mx,
+                    sample_my,
+                    costmap.info.width,
+                    costmap.info.height,
+                ):
+                    continue
+
+                index = map_to_flat_index(sample_mx, sample_my, costmap.info.width)
+                cost = int(costmap.data[index])
+                max_cost = max(max_cost, self._effective_dynamic_cost(cost))
+
+                cell_x, cell_y = self._costmap_cell_center(
+                    costmap,
+                    sample_mx,
+                    sample_my,
+                )
+                distance = self._distance_2d(position.x, position.y, cell_x, cell_y)
+                if distance > max_distance_m + 1.0e-9:
+                    continue
+
+                if self._is_local_lethal_dynamic_cell(cost):
+                    if distance < nearest_distance:
+                        nearest_distance = distance
+                        nearest_lethal_pose = self._costmap_cell_to_pose(
+                            costmap,
+                            sample_mx,
+                            sample_my,
+                            costmap_frame,
+                        )
+                    continue
+
+                if (
+                    self._is_local_inscribed_dynamic_cell(cost)
+                    and distance <= inscribed_max_distance_m + 1.0e-9
+                ):
+                    inscribed_local_only_count += 1
+                    if distance < nearest_inscribed_distance:
+                        nearest_inscribed_distance = distance
+                        nearest_inscribed_pose = self._costmap_cell_to_pose(
+                            costmap,
+                            sample_mx,
+                            sample_my,
+                            costmap_frame,
+                        )
+
+                if cost > 0:
+                    inflated_ignored_count += 1
+                    max_ignored_inflated_cost = max(max_ignored_inflated_cost, cost)
+
+        if math.isfinite(nearest_distance):
+            return {
+                'valid': True,
+                'blocked': True,
+                'distance_m': nearest_distance,
+                'max_cost': max_cost,
+                'inflated_ignored_count': inflated_ignored_count,
+                'max_ignored_inflated_cost': max_ignored_inflated_cost,
+                'inscribed_local_only_count': inscribed_local_only_count,
+                'nearest_inscribed_distance_m': nearest_inscribed_distance,
+                'nearest_lethal_pose': nearest_lethal_pose,
+                'nearest_inscribed_pose': nearest_inscribed_pose,
+                'reason': 'dynamic_obstacle_within_threshold',
+            }
+
+        return {
+            'valid': True,
+            'blocked': False,
+            'distance_m': float('inf'),
+            'max_cost': max_cost,
+            'inflated_ignored_count': inflated_ignored_count,
+            'max_ignored_inflated_cost': max_ignored_inflated_cost,
+            'inscribed_local_only_count': inscribed_local_only_count,
+            'nearest_inscribed_distance_m': nearest_inscribed_distance,
+            'nearest_lethal_pose': nearest_lethal_pose,
+            'nearest_inscribed_pose': nearest_inscribed_pose,
+            'reason': (
+                'inflated_or_non_lethal_local_cost'
+                if inflated_ignored_count > 0
+                else 'clear'
+            ),
+        }
+
+    def _nearest_static_obstacle_distance(self, pose_stamped, max_distance_m):
+        if self.static_map is None:
+            return {
+                'valid': False,
+                'distance_m': float('inf'),
+                'reason': 'static_map_unavailable',
+            }
+
+        static_frame = self.static_map.header.frame_id or self.global_frame
+        pose_in_static = self._transform_pose_to_frame(pose_stamped, static_frame)
+        if pose_in_static is None:
+            return {
+                'valid': False,
+                'distance_m': float('inf'),
+                'reason': 'static_map_tf_unavailable',
+            }
+
+        position = pose_in_static.pose.position
+        cell = self._world_to_costmap_cell(self.static_map, position.x, position.y)
+        if cell is None:
+            return {
+                'valid': False,
+                'distance_m': float('inf'),
+                'reason': 'outside_static_map',
+            }
+
+        resolution = self.static_map.info.resolution
+        if resolution <= 0.0:
+            return {
+                'valid': False,
+                'distance_m': float('inf'),
+                'reason': 'invalid_static_map_resolution',
+            }
+
+        center_mx, center_my = cell
+        cell_radius = max(0, int(math.ceil(max_distance_m / resolution)))
+        nearest_distance = float('inf')
+        for dy in range(-cell_radius, cell_radius + 1):
+            for dx in range(-cell_radius, cell_radius + 1):
+                mx = center_mx + dx
+                my = center_my + dy
+                if not in_bounds(
+                    mx,
+                    my,
+                    self.static_map.info.width,
+                    self.static_map.info.height,
+                ):
+                    continue
+
+                index = map_to_flat_index(mx, my, self.static_map.info.width)
+                value = int(self.static_map.data[index])
+                if value < self.static_map_occupied_threshold:
+                    continue
+
+                cell_x, cell_y = self._costmap_cell_center(self.static_map, mx, my)
+                distance = self._distance_2d(position.x, position.y, cell_x, cell_y)
+                if distance <= max_distance_m + 1.0e-9:
+                    nearest_distance = min(nearest_distance, distance)
+
+        return {
+            'valid': True,
+            'distance_m': nearest_distance,
+            'reason': (
+                'static_obstacle_found'
+                if math.isfinite(nearest_distance)
+                else 'no_static_obstacle_within_radius'
+            ),
+        }
+
+    def _dynamic_static_encroachment_detected(
+        self,
+        path_pose,
+        local_obstacle_distance,
+    ):
+        if not math.isfinite(local_obstacle_distance):
+            return False
+
+        search_radius = self._get_dynamic_collision_radius_m() + 0.20
+        static_info = self._nearest_static_obstacle_distance(
+            path_pose,
+            search_radius,
+        )
+        static_distance = static_info.get('distance_m', float('inf'))
+        if (
+            math.isfinite(static_distance)
+            and static_distance - local_obstacle_distance
+            > self.dynamic_static_encroachment_tolerance_m
+        ):
+            text = (
+                '[DYNAMIC_DETECT] static object encroachment detected '
+                'local_dist=%.3f static_dist=%.3f'
+                % (local_obstacle_distance, static_distance)
+            )
+            self.get_logger().warn(text)
+            self._publish_dynamic_skip_status(text)
+            return True
+        if (
+            not math.isfinite(static_distance)
+            and search_radius - local_obstacle_distance
+            > self.dynamic_static_encroachment_tolerance_m
+        ):
+            text = (
+                '[DYNAMIC_DETECT] static object encroachment detected '
+                'local_dist=%.3f static_dist=unavailable'
+                % local_obstacle_distance
+            )
+            self.get_logger().warn(text)
+            self._publish_dynamic_skip_status(text)
+            return True
+        return False
+
+    def _is_pose_safe_in_local_costmap(self, pose_stamped):
+        if self.local_costmap is None:
+            return False, 'local_costmap_unavailable', 100
+
+        cost_info = self._get_costmap_cost(self.local_costmap, pose_stamped)
+        max_cost = self._effective_dynamic_cost(cost_info['cost'])
+        if not cost_info['valid'] or not cost_info['inside']:
+            return False, cost_info['reason'], max_cost
+        if self._is_dynamic_cost_blocked(cost_info['cost']):
+            return False, cost_info['reason'], max_cost
+
+        resolution = self.local_costmap.info.resolution
+        if resolution <= 0.0:
+            return False, 'invalid_local_costmap_resolution', max_cost
+
+        cell_radius = int(
+            math.ceil(self.dynamic_rejoin_min_clearance_m / resolution)
+        )
+        radius_sq = cell_radius * cell_radius
+        center_mx = cost_info['mx']
+        center_my = cost_info['my']
+
+        for dy in range(-cell_radius, cell_radius + 1):
+            for dx in range(-cell_radius, cell_radius + 1):
+                if dx * dx + dy * dy > radius_sq:
+                    continue
+                mx = center_mx + dx
+                my = center_my + dy
+                if not in_bounds(
+                    mx,
+                    my,
+                    self.local_costmap.info.width,
+                    self.local_costmap.info.height,
+                ):
+                    return False, 'clearance_outside_local_costmap', max_cost
+                index = map_to_flat_index(mx, my, self.local_costmap.info.width)
+                cost = int(self.local_costmap.data[index])
+                max_cost = max(max_cost, self._effective_dynamic_cost(cost))
+                if self._is_dynamic_cost_blocked(cost):
+                    return False, 'clearance_blocked', max_cost
+
+        return True, 'safe', max_cost
+
+    def _find_nearest_path_index(self, path, robot_pose):
+        path_frame = self._path_frame(path)
+        robot_in_path_frame = self._transform_pose_to_frame(robot_pose, path_frame)
+        if robot_in_path_frame is None:
+            return -1, float('inf')
+
+        position = robot_in_path_frame.pose.position
+        return self._nearest_path_pose(path, position.x, position.y)
+
+    def _find_dynamic_monitor_nearest_path_index(self, path, robot_pose):
+        path_frame = self._path_frame(path)
+        robot_in_path_frame = self._transform_pose_to_frame(robot_pose, path_frame)
+        if robot_in_path_frame is None:
+            return -1, float('inf')
+
+        pose_count = len(path.poses)
+        if pose_count == 0:
+            return -1, float('inf')
+
+        seed_index = max(
+            0,
+            min(self.dynamic_last_nearest_index, pose_count - 1),
+        )
+        start_index = self._index_before_distance(
+            path,
+            seed_index,
+            self.dynamic_progress_search_backtrack_m,
+        )
+        end_index = self._index_after_distance(
+            path,
+            seed_index,
+            self.dynamic_progress_search_forward_m,
+        )
+        end_index = max(start_index, min(end_index, pose_count - 1))
+
+        position = robot_in_path_frame.pose.position
+        nearest_index = start_index
+        nearest_distance = float('inf')
+        for index in range(start_index, end_index + 1):
+            path_position = path.poses[index].pose.position
+            distance = self._distance_2d(
+                position.x,
+                position.y,
+                path_position.x,
+                path_position.y,
+            )
+            if distance < nearest_distance:
+                nearest_index = index
+                nearest_distance = distance
+
+        progress_index = max(seed_index, nearest_index)
+        self.dynamic_last_nearest_index = progress_index
+        if progress_index != nearest_index:
+            progress_position = path.poses[progress_index].pose.position
+            nearest_distance = self._distance_2d(
+                position.x,
+                position.y,
+                progress_position.x,
+                progress_position.y,
+            )
+        return progress_index, nearest_distance
+
+    def _distance_along_path(self, path, start_idx, end_idx):
+        if path is None or len(path.poses) < 2:
+            return 0.0
+        start_idx = max(0, min(start_idx, len(path.poses) - 1))
+        end_idx = max(0, min(end_idx, len(path.poses) - 1))
+        if end_idx <= start_idx:
+            return 0.0
+
+        total = 0.0
+        for index in range(start_idx + 1, end_idx + 1):
+            previous = path.poses[index - 1].pose.position
+            current = path.poses[index].pose.position
+            total += self._distance_2d(previous.x, previous.y, current.x, current.y)
+        return total
+
+    def _index_after_distance(self, path, start_idx, distance_m):
+        if path is None or not path.poses:
+            return 0
+        start_idx = max(0, min(start_idx, len(path.poses) - 1))
+        if distance_m <= 0.0:
+            return start_idx
+
+        total = 0.0
+        for index in range(start_idx + 1, len(path.poses)):
+            previous = path.poses[index - 1].pose.position
+            current = path.poses[index].pose.position
+            total += self._distance_2d(previous.x, previous.y, current.x, current.y)
+            if total >= distance_m:
+                return index
+        return len(path.poses) - 1
+
+    def _index_before_distance(self, path, start_idx, distance_m):
+        if path is None or not path.poses:
+            return 0
+        start_idx = max(0, min(start_idx, len(path.poses) - 1))
+        if distance_m <= 0.0:
+            return start_idx
+
+        total = 0.0
+        for index in range(start_idx - 1, -1, -1):
+            previous = path.poses[index].pose.position
+            current = path.poses[index + 1].pose.position
+            total += self._distance_2d(previous.x, previous.y, current.x, current.y)
+            if total >= distance_m:
+                return index
+        return 0
+
+    def _make_dynamic_detection_report(
+        self,
+        blocked,
+        path,
+        nearest_index,
+        nearest_distance,
+        blocked_start_index,
+        blocked_end_index,
+        lookahead_end_index,
+        min_cost,
+        max_cost,
+        nearest_obstacle_distance,
+        reason,
+        local_lethal_count,
+        inflated_ignored_count,
+        static_known_blocked_count,
+        dynamic_only_blocked_count,
+        blocked_path_length_m,
+        consecutive_count,
+        dynamic_only_blocked_poses=None,
+        static_known_blocked_poses=None,
+        static_unknown_blocked_count=0,
+        max_ignored_inflated_cost=0,
+        local_inscribed_count=0,
+    ):
+        return {
+            'blocked': blocked,
+            'nearest_index': nearest_index,
+            'nearest_distance': nearest_distance,
+            'blocked_start_index': blocked_start_index,
+            'blocked_end_index': blocked_end_index,
+            'lookahead_end_index': lookahead_end_index,
+            'min_cost': int(min_cost if min_cost is not None else 0),
+            'max_cost': int(max_cost),
+            'nearest_obstacle_distance_m': nearest_obstacle_distance,
+            'obstacle_distance_threshold_m': self._get_dynamic_detection_radius_m(),
+            'reason': reason,
+            'local_costmap_frame': self.local_costmap.header.frame_id
+            or self.global_frame,
+            'path_frame': self._path_frame(path),
+            'local_lethal_count': local_lethal_count,
+            'inflated_ignored_count': inflated_ignored_count,
+            'static_known_blocked_count': static_known_blocked_count,
+            'static_unknown_blocked_count': static_unknown_blocked_count,
+            'dynamic_only_blocked_count': dynamic_only_blocked_count,
+            'blocked_path_length_m': blocked_path_length_m,
+            'consecutive_count': consecutive_count,
+            'max_ignored_inflated_cost': int(max_ignored_inflated_cost),
+            'local_inscribed_count': local_inscribed_count,
+            'dynamic_only_blocked_poses': dynamic_only_blocked_poses or [],
+            'static_known_blocked_poses': static_known_blocked_poses or [],
+        }
+
+    def _publish_dynamic_detection_debug(self, report):
+        text = (
+            '[DYNAMIC_DETECT] nearest_index=%d lookahead_end_index=%d '
+            'local_lethal_count=%d local_inscribed_count=%d '
+            'inflated_ignored_count=%d '
+            'static_known_blocked_count=%d dynamic_only_blocked_count=%d '
+            'blocked_path_length_m=%.3f consecutive_count=%d'
+            % (
+                report.get('nearest_index', -1),
+                report.get('lookahead_end_index', -1),
+                report.get('local_lethal_count', 0),
+                report.get('local_inscribed_count', 0),
+                report.get('inflated_ignored_count', 0),
+                report.get('static_known_blocked_count', 0),
+                report.get('dynamic_only_blocked_count', 0),
+                report.get('blocked_path_length_m', 0.0),
+                report.get('consecutive_count', 0),
+            )
+        )
+        self.get_logger().info(text, throttle_duration_sec=1.0)
+        self._publish_dynamic_skip_status(text)
+
+    def _reset_dynamic_detection_candidate(self):
+        self.dynamic_detection_candidate = None
+
+    def _detect_dynamic_blocked_interval(self, path, force_confirm=False):
+        if not self.enable_dynamic_obstacle_skip:
+            return None
+        if path is None or len(path.poses) < 2:
+            return None
+        if self.execution_status != self.STATUS_EXECUTING:
+            return None
+        if self.local_costmap is None:
+            return None
+
+        now = time.monotonic()
+        if now < self.dynamic_skip_monitor_suppressed_until_monotonic:
+            return None
+
+        path_frame = self._path_frame(path)
+        robot_pose = self._lookup_robot_pose(path_frame)
+        if robot_pose is None:
+            return None
+
+        nearest_index, nearest_distance = self._find_dynamic_monitor_nearest_path_index(
+            path,
+            robot_pose,
+        )
+        if nearest_index < 0:
+            return None
+
+        if self.dynamic_skip_monitor_resume_index is not None:
+            if nearest_index < self.dynamic_skip_monitor_resume_index:
+                now = time.monotonic()
+                if (
+                    now
+                    - getattr(
+                        self,
+                        'last_dynamic_skip_resume_wait_log',
+                        0.0,
+                    )
+                    >= 2.0
+                ):
+                    self.last_dynamic_skip_resume_wait_log = now
+                    self._publish_dynamic_skip_status(
+                        '[DYNAMIC_SKIP] following temporary detour before '
+                        'resuming obstacle checks at path_index=%d current=%d'
+                        % (
+                            self.dynamic_skip_monitor_resume_index,
+                            nearest_index,
+                        )
+                    )
+                return {
+                    'blocked': False,
+                    'nearest_index': nearest_index,
+                    'nearest_distance': nearest_distance,
+                    'blocked_start_index': -1,
+                    'blocked_end_index': -1,
+                    'lookahead_end_index': nearest_index,
+                    'min_cost': 0,
+                    'max_cost': 0,
+                    'nearest_obstacle_distance_m': float('inf'),
+                    'obstacle_distance_threshold_m': (
+                        self._get_dynamic_detection_radius_m()
+                    ),
+                    'reason': 'temporary_detour_in_progress',
+                    'local_costmap_frame': self.local_costmap.header.frame_id
+                    or self.global_frame,
+                    'path_frame': path_frame,
+                }
+            self.dynamic_skip_monitor_resume_index = None
+
+        lookahead_end_index = self._index_after_distance(
+            path,
+            nearest_index,
+            self.dynamic_skip_lookahead_m,
+        )
+        dynamic_only_blocked_indices = []
+        dynamic_only_blocked_poses = []
+        static_known_blocked_poses = []
+        local_lethal_count = 0
+        local_inscribed_count = 0
+        inflated_ignored_count = 0
+        static_known_blocked_count = 0
+        static_unknown_blocked_count = 0
+        max_ignored_inflated_cost = 0
+        min_cost = None
+        max_cost = 0
+        nearest_obstacle_distance = float('inf')
+        reason = 'clear'
+        detection_radius_m = self._get_dynamic_detection_radius_m()
+        distance_from_nearest = 0.0
+
+        for index in range(nearest_index, lookahead_end_index + 1):
+            if index > nearest_index:
+                previous = path.poses[index - 1].pose.position
+                current = path.poses[index].pose.position
+                distance_from_nearest += self._distance_2d(
+                    previous.x,
+                    previous.y,
+                    current.x,
+                    current.y,
+                )
+            if (
+                self.dynamic_active_path_is_temporary
+                and self.dynamic_connector_allow_blocked_start
+                and distance_from_nearest
+                <= self.dynamic_connector_start_grace_m + 1.0e-6
+            ):
+                continue
+            obstacle_info = self._nearest_dynamic_obstacle_distance(
+                self.local_costmap,
+                path.poses[index],
+                detection_radius_m,
+                inscribed_max_distance_m=self.dynamic_obstacle_distance_threshold_m,
+            )
+            if not obstacle_info['valid']:
+                reason = obstacle_info['reason']
+                continue
+            inflated_ignored_count += obstacle_info.get(
+                'inflated_ignored_count',
+                0,
+            )
+            max_ignored_inflated_cost = max(
+                max_ignored_inflated_cost,
+                obstacle_info.get('max_ignored_inflated_cost', 0),
+            )
+            max_cost = max(max_cost, obstacle_info.get('max_cost', 0))
+            blocked_by_lethal = obstacle_info['blocked']
+            blocked_by_inscribed = (
+                self.dynamic_enable_local_only_inscribed_fallback
+                and obstacle_info.get('inscribed_local_only_count', 0) > 0
+            )
+            if not blocked_by_lethal and not blocked_by_inscribed:
+                if obstacle_info.get('reason') == 'inflated_or_non_lethal_local_cost':
+                    reason = obstacle_info['reason']
+                continue
+
+            if blocked_by_lethal:
+                local_lethal_count += 1
+                static_check_pose = (
+                    obstacle_info.get('nearest_lethal_pose') or path.poses[index]
+                )
+                static_padding_m = self.static_reference_padding_m
+                effective_cost = obstacle_info['max_cost']
+                obstacle_distance = obstacle_info['distance_m']
+                candidate_reason = 'local_only_dynamic_obstacle_candidate'
+            else:
+                local_inscribed_count += 1
+                static_check_pose = (
+                    obstacle_info.get('nearest_inscribed_pose') or path.poses[index]
+                )
+                static_padding_m = (
+                    self.dynamic_inscribed_static_reference_padding_m
+                )
+                effective_cost = obstacle_info.get(
+                    'max_ignored_inflated_cost',
+                    obstacle_info.get('max_cost', 0),
+                )
+                obstacle_distance = obstacle_info.get(
+                    'nearest_inscribed_distance_m',
+                    float('inf'),
+                )
+                candidate_reason = (
+                    'local_only_inscribed_cost_collision_risk'
+                )
+
+            static_status = self._static_reference_status_near_pose(
+                static_check_pose,
+                padding_m=static_padding_m,
+            )
+            if self.dynamic_use_static_reference_check:
+                static_encroachment = False
+                if static_status['known_static']:
+                    static_encroachment = self._dynamic_static_encroachment_detected(
+                        path.poses[index],
+                        obstacle_distance,
+                    )
+                    if not static_encroachment:
+                        static_known_blocked_count += 1
+                        static_known_blocked_poses.append(
+                            copy.deepcopy(path.poses[index])
+                        )
+                        reason = 'known_static_wall_or_corner'
+                        continue
+                if not static_encroachment and not static_status['free']:
+                    static_unknown_blocked_count += 1
+                    reason = static_status['reason']
+                    continue
+
+            min_cost = effective_cost if min_cost is None else min(
+                min_cost,
+                effective_cost,
+            )
+            max_cost = max(max_cost, effective_cost)
+            nearest_obstacle_distance = min(
+                nearest_obstacle_distance,
+                obstacle_distance,
+            )
+            dynamic_only_blocked_indices.append(index)
+            dynamic_only_blocked_poses.append(copy.deepcopy(path.poses[index]))
+            reason = candidate_reason
+
+        if not dynamic_only_blocked_indices:
+            self._reset_dynamic_detection_candidate()
+            report = self._make_dynamic_detection_report(
+                False,
+                path,
+                nearest_index,
+                nearest_distance,
+                -1,
+                -1,
+                lookahead_end_index,
+                0,
+                max_cost,
+                float('inf'),
+                reason,
+                local_lethal_count,
+                inflated_ignored_count,
+                static_known_blocked_count,
+                0,
+                0.0,
+                0,
+                [],
+                static_known_blocked_poses,
+                static_unknown_blocked_count,
+                max_ignored_inflated_cost,
+                local_inscribed_count,
+            )
+            self.dynamic_ignored_static_marker_poses = static_known_blocked_poses
+            if static_known_blocked_count > 0:
+                text = (
+                    '[DYNAMIC_DETECT] rejected: known static wall/corner; '
+                    'keeping normal FollowPath'
+                )
+                self.get_logger().info(text, throttle_duration_sec=1.0)
+                self._publish_dynamic_skip_status(text)
+                self._publish_skipped_segment_markers()
+            elif inflated_ignored_count > 0:
+                text = (
+                    '[DYNAMIC_DETECT] rejected: inflated/non-lethal cost; '
+                    'rejected inflated local cost; cost=%d threshold=%d'
+                    % (
+                        max_ignored_inflated_cost,
+                        self.dynamic_obstacle_cost_threshold,
+                    )
+                )
+                self.get_logger().info(text, throttle_duration_sec=1.0)
+                self._publish_dynamic_skip_status(text)
+            self._publish_dynamic_detection_debug(report)
+            return report
+
+        blocked_start_index = self._index_before_distance(
+            path,
+            dynamic_only_blocked_indices[0],
+            self.dynamic_skip_padding_m,
+        )
+        blocked_end_index = self._index_after_distance(
+            path,
+            dynamic_only_blocked_indices[-1],
+            self.dynamic_skip_padding_m,
+        )
+        blocked_path_length_m = self._distance_along_path(
+            path,
+            dynamic_only_blocked_indices[0],
+            dynamic_only_blocked_indices[-1],
+        )
+
+        if len(dynamic_only_blocked_indices) < self.dynamic_min_blocked_pose_count:
+            self._reset_dynamic_detection_candidate()
+            report = self._make_dynamic_detection_report(
+                False,
+                path,
+                nearest_index,
+                nearest_distance,
+                blocked_start_index,
+                blocked_end_index,
+                lookahead_end_index,
+                min_cost,
+                max_cost,
+                nearest_obstacle_distance,
+                'too_few_blocked_poses',
+                local_lethal_count,
+                inflated_ignored_count,
+                static_known_blocked_count,
+                len(dynamic_only_blocked_indices),
+                blocked_path_length_m,
+                0,
+                dynamic_only_blocked_poses,
+                static_known_blocked_poses,
+                static_unknown_blocked_count,
+                max_ignored_inflated_cost,
+                local_inscribed_count,
+            )
+            text = (
+                '[DYNAMIC_DETECT] rejected: too few blocked poses '
+                'blocked_pose_count=%d required=%d'
+                % (
+                    len(dynamic_only_blocked_indices),
+                    self.dynamic_min_blocked_pose_count,
+                )
+            )
+            self.get_logger().info(text, throttle_duration_sec=1.0)
+            self._publish_dynamic_skip_status(text)
+            self._publish_dynamic_detection_debug(report)
+            return report
+
+        if blocked_path_length_m < self.dynamic_min_blocked_path_length_m:
+            self._reset_dynamic_detection_candidate()
+            report = self._make_dynamic_detection_report(
+                False,
+                path,
+                nearest_index,
+                nearest_distance,
+                blocked_start_index,
+                blocked_end_index,
+                lookahead_end_index,
+                min_cost,
+                max_cost,
+                nearest_obstacle_distance,
+                'blocked_path_length_below_threshold',
+                local_lethal_count,
+                inflated_ignored_count,
+                static_known_blocked_count,
+                len(dynamic_only_blocked_indices),
+                blocked_path_length_m,
+                0,
+                dynamic_only_blocked_poses,
+                static_known_blocked_poses,
+                static_unknown_blocked_count,
+                max_ignored_inflated_cost,
+                local_inscribed_count,
+            )
+            text = (
+                '[DYNAMIC_DETECT] rejected: too few blocked poses '
+                'blocked_path_length_m=%.3f required=%.3f'
+                % (
+                    blocked_path_length_m,
+                    self.dynamic_min_blocked_path_length_m,
+                )
+            )
+            self.get_logger().info(text, throttle_duration_sec=1.0)
+            self._publish_dynamic_skip_status(text)
+            self._publish_dynamic_detection_debug(report)
+            return report
+
+        candidate = self.dynamic_detection_candidate
+        candidate_changed = False
+        if candidate is not None:
+            if (
+                self.dynamic_detection_hysteresis_sec > 0.0
+                and now - candidate.get('last_seen_time', 0.0)
+                > self.dynamic_detection_hysteresis_sec
+            ):
+                candidate_changed = True
+            index_margin = max(1, self.dynamic_resume_ignore_index_margin)
+            if (
+                abs(blocked_start_index - candidate.get('blocked_start_index', -1))
+                > index_margin
+            ):
+                candidate_changed = True
+
+        if candidate is None or candidate_changed:
+            candidate = {
+                'first_seen_time': now,
+                'last_seen_time': now,
+                'count': 0,
+                'nearest_index': nearest_index,
+                'blocked_start_index': blocked_start_index,
+                'blocked_end_index': blocked_end_index,
+                'max_cost': int(max_cost),
+                'min_distance': nearest_obstacle_distance,
+            }
+
+        candidate['last_seen_time'] = now
+        candidate['count'] = candidate.get('count', 0) + 1
+        candidate['nearest_index'] = nearest_index
+        candidate['blocked_start_index'] = blocked_start_index
+        candidate['blocked_end_index'] = blocked_end_index
+        candidate['max_cost'] = max(candidate.get('max_cost', 0), int(max_cost))
+        candidate['min_distance'] = min(
+            candidate.get('min_distance', float('inf')),
+            nearest_obstacle_distance,
+        )
+        self.dynamic_detection_candidate = candidate
+        consecutive_count = candidate['count']
+
+        required_consecutive = (
+            1 if force_confirm else self.dynamic_required_consecutive_detections
+        )
+        report = self._make_dynamic_detection_report(
+            consecutive_count >= required_consecutive,
+            path,
+            nearest_index,
+            nearest_distance,
+            blocked_start_index,
+            blocked_end_index,
+            lookahead_end_index,
+            min_cost,
+            max_cost,
+            nearest_obstacle_distance,
+            reason,
+            local_lethal_count,
+            inflated_ignored_count,
+            static_known_blocked_count,
+            len(dynamic_only_blocked_indices),
+            blocked_path_length_m,
+            consecutive_count,
+            dynamic_only_blocked_poses,
+            static_known_blocked_poses,
+            static_unknown_blocked_count,
+            max_ignored_inflated_cost,
+            local_inscribed_count,
+        )
+        self._publish_dynamic_detection_debug(report)
+
+        if consecutive_count < required_consecutive:
+            text = (
+                '[DYNAMIC_DETECT] candidate seen count=%d/%d '
+                'nearest_index=%d blocked_start_index=%d blocked_end_index=%d '
+                'max_cost=%d min_distance=%.3f'
+                % (
+                    consecutive_count,
+                    required_consecutive,
+                    nearest_index,
+                    blocked_start_index,
+                    blocked_end_index,
+                    int(max_cost),
+                    nearest_obstacle_distance,
+                )
+            )
+            self.get_logger().info(text)
+            self._publish_dynamic_skip_status(text)
+            report['blocked'] = False
+            report['reason'] = 'candidate_pending_confirmation'
+            return report
+
+        report['reason'] = 'confirmed_local_only_dynamic_obstacle'
+        self.dynamic_confirmed_marker_report = copy.deepcopy(report)
+        self.dynamic_ignored_static_marker_poses = static_known_blocked_poses
+        text = (
+            '[DYNAMIC_DETECT] confirmed local-only dynamic obstacle '
+            'nearest_index=%d blocked_start=%d blocked_end=%d'
+            % (nearest_index, blocked_start_index, blocked_end_index)
+        )
+        self.get_logger().warn(text)
+        self._publish_dynamic_skip_status(text)
+        self._publish_skipped_segment_markers()
+        return report
+
+    def _is_rejoin_pose_static_safe(self, pose_stamped):
+        if not self.dynamic_use_static_reference_check:
+            return True, 'static_reference_disabled'
+        status = self._static_reference_status_near_pose(
+            pose_stamped,
+            self.static_reference_padding_m,
+        )
+        if status['known_static']:
+            return False, 'known_static_obstacle'
+        return True, status['reason']
+
+    def _is_rejoin_pose_global_safe(self, pose_stamped):
+        if self.nav_costmap is None:
+            return True, 'global_costmap_unavailable'
+        cost_info = self._get_costmap_cost(self.nav_costmap, pose_stamped)
+        if not cost_info['valid']:
+            if cost_info['reason'] == 'tf_unavailable':
+                return False, 'global_costmap_tf_unavailable'
+            return True, cost_info['reason']
+        if not cost_info['inside']:
+            return True, 'outside_global_costmap'
+        cost = int(cost_info['cost'])
+        if cost < 0:
+            if self.dynamic_treat_unknown_as_blocked:
+                return False, 'unknown_global_costmap'
+            return True, 'unknown_global_costmap_allowed'
+        if cost >= self.dynamic_obstacle_cost_threshold:
+            return False, 'lethal_global_costmap_cell'
+        return True, 'global_safe'
+
+    def _is_pose_inside_local_costmap(self, pose_stamped):
+        if self.local_costmap is None:
+            return False
+        cost_info = self._get_costmap_cost(self.local_costmap, pose_stamped)
+        return bool(cost_info['valid'] and cost_info['inside'])
+
+    def _is_rejoin_pose_locally_clear_if_visible(self, pose_stamped):
+        if self.local_costmap is None:
+            return True, 'local_costmap_unavailable'
+        local = self._check_local_corridor_at_pose(
+            pose_stamped,
+            self._get_dynamic_collision_radius_m(),
+        )
+        if not local['valid']:
+            return False, local['reason']
+        if not local['inside']:
+            return True, 'outside_local_costmap'
+        if local['blocked']:
+            return False, local['reason']
+        return True, local['reason']
+
+    def _find_rejoin_candidates_after_block(self, path, report):
+        if path is None or not path.poses:
+            return []
+
+        blocked_end_index = max(
+            0,
+            min(report.get('blocked_end_index', -1), len(path.poses) - 1),
+        )
+        blocked_start_index = max(
+            0,
+            min(report.get('blocked_start_index', blocked_end_index), len(path.poses) - 1),
+        )
+        if blocked_end_index >= len(path.poses) - 1:
+            return []
+
+        text = (
+            '[DYNAMIC_REJOIN] searching original path from index=%d '
+            'max_distance=%.2fm'
+            % (blocked_end_index + 1, self.dynamic_rejoin_max_search_distance_m)
+        )
+        self.get_logger().info(text)
+        self._publish_dynamic_skip_status(text)
+
+        candidates = []
+        last_reason = 'no_candidate_checked'
+        for index in range(blocked_end_index + 1, len(path.poses)):
+            if index <= blocked_end_index or index <= blocked_start_index:
+                last_reason = 'behind_or_inside_blocked_interval'
+                continue
+
+            distance_from_block = self._distance_along_path(
+                path,
+                blocked_end_index,
+                index,
+            )
+            if distance_from_block > self.dynamic_rejoin_max_search_distance_m:
+                break
+
+            remaining_poses = len(path.poses) - index
+            near_end = index >= len(path.poses) - self.dynamic_skip_min_remaining_poses
+            if (
+                remaining_poses < self.dynamic_skip_min_remaining_poses
+                and not near_end
+            ):
+                last_reason = 'candidate_leaves_too_few_remaining_poses'
+                continue
+
+            inside_local = self._is_pose_inside_local_costmap(path.poses[index])
+            static_safe, static_reason = self._is_rejoin_pose_static_safe(
+                path.poses[index]
+            )
+            global_safe, global_reason = self._is_rejoin_pose_global_safe(
+                path.poses[index]
+            )
+            local_safe, local_reason = self._is_rejoin_pose_locally_clear_if_visible(
+                path.poses[index]
+            )
+            planner_allowed = static_safe and global_safe and local_safe
+            text = (
+                '[DYNAMIC_REJOIN] candidate index=%d distance_from_block=%.3f '
+                'inside_local_costmap=%s static_safe=%s global_safe=%s '
+                'planner_allowed=%s static_reason=%s global_reason=%s '
+                'local_reason=%s'
+                % (
+                    index,
+                    distance_from_block,
+                    str(inside_local).lower(),
+                    str(static_safe).lower(),
+                    str(global_safe).lower(),
+                    str(planner_allowed).lower(),
+                    static_reason,
+                    global_reason,
+                    local_reason,
+                )
+            )
+            self.get_logger().info(text)
+            self._publish_dynamic_skip_status(text)
+
+            if not planner_allowed:
+                last_reason = (
+                    'index=%d static_safe=%s global_safe=%s local_safe=%s'
+                    % (
+                        index,
+                        str(static_safe).lower(),
+                        str(global_safe).lower(),
+                        str(local_safe).lower(),
+                    )
+                )
+                continue
+
+            candidates.append(index)
+            if len(candidates) >= self.dynamic_max_rejoin_candidates:
+                break
+
+        if not candidates:
+            text = (
+                '[DYNAMIC_REJOIN] no candidate within %.2fm last_reason=%s'
+                % (self.dynamic_rejoin_max_search_distance_m, last_reason)
+            )
+            self.get_logger().warn(text)
+            self._publish_dynamic_skip_status(text)
+        return candidates
+
+    def _find_rejoin_index_after_block(self, path, blocked_end_index, start_index=None):
+        report = {
+            'blocked_start_index': blocked_end_index,
+            'blocked_end_index': blocked_end_index,
+        }
+        candidates = self._find_rejoin_candidates_after_block(path, report)
+        if start_index is not None:
+            candidates = [index for index in candidates if index >= start_index]
+        if candidates:
+            return candidates[0], 'safe_rejoin'
+        return (
+            None,
+            'no_safe_rejoin_within_%.2fm'
+            % self.dynamic_rejoin_max_search_distance_m,
+        )
+
+    def _find_rejoin_index_after_block_legacy(self, path, blocked_end_index, start_index=None):
+        if path is None or not path.poses:
+            return None, 'path_empty'
+        if blocked_end_index >= len(path.poses) - 1:
+            return None, 'blocked_to_path_end'
+
+        robot_pose = None
+        if self.dynamic_require_safe_connector:
+            robot_pose = self._lookup_robot_pose(self._path_frame(path))
+            if robot_pose is None:
+                return None, 'robot_pose_unavailable_for_connector'
+
+        last_reason = 'no_candidate_checked'
+        first_index = blocked_end_index + 1
+        if start_index is not None:
+            first_index = max(first_index, start_index)
+        for index in range(first_index, len(path.poses)):
+            distance_from_block = self._distance_along_path(
+                path,
+                blocked_end_index,
+                index,
+            )
+            if distance_from_block > self.dynamic_rejoin_max_search_distance_m:
+                return (
+                    None,
+                    'no_safe_rejoin_within_%.2fm last_reason=%s'
+                    % (
+                        self.dynamic_rejoin_max_search_distance_m,
+                        last_reason,
+                    ),
+                )
+
+            remaining_poses = len(path.poses) - index
+            if (
+                remaining_poses < self.dynamic_skip_min_remaining_poses
+                and index < len(path.poses) - self.dynamic_skip_min_remaining_poses
+            ):
+                last_reason = 'candidate_leaves_too_few_remaining_poses'
+                continue
+
+            traversable, reason, _ = self._is_pose_traversable_in_local_costmap(
+                path.poses[index]
+            )
+            if not traversable:
+                last_reason = 'index=%d unsafe:%s' % (index, reason)
+                continue
+
+            if self.dynamic_require_safe_connector:
+                connector_safe, connector_reason = self._is_connector_safe_to_rejoin(
+                    robot_pose,
+                    path.poses[index],
+                )
+                if not connector_safe:
+                    last_reason = (
+                        'index=%d connector_unsafe:%s'
+                        % (index, connector_reason)
+                    )
+                    continue
+
+            return index, 'safe_rejoin'
+
+        return None, last_reason
+
+    def _build_dynamic_rejoin_path(self, path, report, rejoin_index):
+        if not self.dynamic_enable_local_detour:
+            return self._build_path_from_index(path, rejoin_index)
+
+        path_frame = self._path_frame(path)
+        robot_pose = self._lookup_robot_pose(path_frame)
+        if robot_pose is None:
+            return None
+
+        nearest_index = max(
+            0,
+            min(report.get('nearest_index', 0), len(path.poses) - 1),
+        )
+        blocked_start_index = max(
+            nearest_index,
+            min(report.get('blocked_start_index', nearest_index), rejoin_index),
+        )
+        min_offset = max(
+            self.dynamic_detour_min_lateral_offset_m,
+            self.dynamic_rejoin_min_clearance_m,
+        )
+        max_offset = max(min_offset, self.dynamic_detour_max_lateral_offset_m)
+
+        offsets = []
+        offset = min_offset
+        while offset <= max_offset + 1.0e-6:
+            offsets.append(offset)
+            offset += self.dynamic_detour_offset_step_m
+
+        if self.dynamic_enable_local_astar_detour:
+            astar_candidate = self._build_local_astar_detour_path(
+                path,
+                robot_pose,
+                rejoin_index,
+            )
+            if astar_candidate is not None:
+                self.get_logger().info(
+                    '[DYNAMIC_SKIP] local A* detour selected '
+                    'rejoin_index=%d poses=%d distance=%.3f'
+                    % (
+                        rejoin_index,
+                        len(astar_candidate.poses),
+                        self._path_length(astar_candidate),
+                    )
+                )
+                self._publish_dynamic_skip_status(
+                    '[DYNAMIC_SKIP] local A* detour selected '
+                    'rejoin_index=%d poses=%d distance=%.3f'
+                    % (
+                        rejoin_index,
+                        len(astar_candidate.poses),
+                        self._path_length(astar_candidate),
+                    )
+                )
+                return astar_candidate
+
+        for offset in offsets:
+            for side in (1.0, -1.0):
+                candidate = self._make_dynamic_detour_candidate(
+                    path,
+                    robot_pose,
+                    nearest_index,
+                    blocked_start_index,
+                    rejoin_index,
+                    side * offset,
+                )
+                if candidate is not None:
+                    self.get_logger().info(
+                        '[DYNAMIC_SKIP] temporary detour selected '
+                        'rejoin_index=%d lateral_offset=%.3f poses=%d '
+                        'distance=%.3f'
+                        % (
+                            rejoin_index,
+                            side * offset,
+                            len(candidate.poses),
+                            self._path_length(candidate),
+                        )
+                    )
+                    self._publish_dynamic_skip_status(
+                        '[DYNAMIC_SKIP] temporary detour selected '
+                        'rejoin_index=%d lateral_offset=%.3f poses=%d '
+                        'distance=%.3f'
+                        % (
+                            rejoin_index,
+                            side * offset,
+                            len(candidate.poses),
+                            self._path_length(candidate),
+                        )
+                    )
+                    return candidate
+
+        return None
+
+    def _build_local_astar_connector_path(self, path, robot_pose, rejoin_index):
+        if self.local_costmap is None or rejoin_index >= len(path.poses):
+            return None
+
+        start_cell, start_reason = self._get_costmap_cell_for_pose(
+            self.local_costmap,
+            robot_pose,
+        )
+        goal_cell, goal_reason = self._get_costmap_cell_for_pose(
+            self.local_costmap,
+            path.poses[rejoin_index],
+        )
+        if start_cell is None or goal_cell is None:
+            self.get_logger().info(
+                '[DYNAMIC_CONNECTOR] local A* unavailable: '
+                'start_reason=%s goal_reason=%s'
+                % (start_reason, goal_reason),
+                throttle_duration_sec=2.0,
+            )
+            return None
+
+        if not self._is_local_cell_traversable(*goal_cell):
+            return None
+
+        cell_path = self._find_local_costmap_astar(start_cell, goal_cell)
+        if not cell_path:
+            return None
+
+        connector = Path()
+        connector.header = copy.deepcopy(path.header)
+        connector.header.frame_id = self._path_frame(path)
+        self._append_pose_without_duplicate(connector, robot_pose)
+
+        previous_pose = connector.poses[-1] if connector.poses else None
+        for mx, my in cell_path:
+            pose = self._costmap_cell_to_pose(
+                self.local_costmap,
+                mx,
+                my,
+                connector.header.frame_id,
+            )
+            if pose is None:
+                return None
+            if previous_pose is not None:
+                previous_position = previous_pose.pose.position
+                position = pose.pose.position
+                if (
+                    self._distance_2d(
+                        previous_position.x,
+                        previous_position.y,
+                        position.x,
+                        position.y,
+                    )
+                    < self.dynamic_detour_sample_step_m
+                ):
+                    continue
+            connector.poses.append(pose)
+            previous_pose = pose
+
+        if connector.poses:
+            connector.poses[-1] = copy.deepcopy(path.poses[rejoin_index])
+
+        if len(connector.poses) < 2:
+            return None
+
+        self._recompute_orientations(connector)
+        self._stamp_path(connector)
+        return connector
+
+    def _build_lateral_detour_connector_path(
+        self,
+        path,
+        report,
+        robot_pose,
+        rejoin_index,
+    ):
+        if rejoin_index >= len(path.poses):
+            return None
+
+        nearest_index = max(
+            0,
+            min(report.get('nearest_index', 0), len(path.poses) - 1),
+        )
+        blocked_start_index = max(
+            nearest_index,
+            min(report.get('blocked_start_index', nearest_index), rejoin_index),
+        )
+        min_offset = max(
+            self.dynamic_detour_min_lateral_offset_m,
+            self.dynamic_rejoin_min_clearance_m,
+        )
+        max_offset = max(min_offset, self.dynamic_detour_max_lateral_offset_m)
+        offsets = []
+        offset = min_offset
+        while offset <= max_offset + 1.0e-6:
+            offsets.append(offset)
+            offset += self.dynamic_detour_offset_step_m
+
+        for offset in offsets:
+            for side in (1.0, -1.0):
+                connector = self._make_dynamic_detour_connector_candidate(
+                    path,
+                    robot_pose,
+                    nearest_index,
+                    blocked_start_index,
+                    rejoin_index,
+                    side * offset,
+                )
+                if connector is not None:
+                    self.get_logger().info(
+                        '[DYNAMIC_CONNECTOR] lateral connector selected '
+                        'rejoin_index=%d lateral_offset=%.3f poses=%d '
+                        'distance=%.3f'
+                        % (
+                            rejoin_index,
+                            side * offset,
+                            len(connector.poses),
+                            self._path_length(connector),
+                        )
+                    )
+                    return connector
+        return None
+
+    def _make_dynamic_detour_connector_candidate(
+        self,
+        path,
+        robot_pose,
+        nearest_index,
+        blocked_start_index,
+        rejoin_index,
+        lateral_offset_m,
+    ):
+        if rejoin_index >= len(path.poses):
+            return None
+
+        connector = Path()
+        connector.header = copy.deepcopy(path.header)
+        connector.header.frame_id = self._path_frame(path)
+        self._append_pose_without_duplicate(connector, robot_pose)
+
+        prefix_end_index = max(
+            nearest_index,
+            min(blocked_start_index - 1, rejoin_index - 1),
+        )
+        for index in range(nearest_index + 1, prefix_end_index + 1):
+            safe, _, _ = self._is_pose_safe_in_local_costmap(path.poses[index])
+            if not safe:
+                break
+            self._append_pose_without_duplicate(connector, path.poses[index])
+
+        start_anchor = connector.poses[-1]
+        rejoin_pose = path.poses[rejoin_index]
+        tangent = self._path_tangent_for_detour(path, nearest_index, rejoin_index)
+        if tangent is None:
+            return None
+
+        tangent_x, tangent_y = tangent
+        perp_x = -tangent_y
+        perp_y = tangent_x
+        start_offset = self._offset_pose_xy(
+            start_anchor,
+            perp_x * lateral_offset_m,
+            perp_y * lateral_offset_m,
+        )
+        end_offset = self._offset_pose_xy(
+            rejoin_pose,
+            perp_x * lateral_offset_m,
+            perp_y * lateral_offset_m,
+        )
+
+        previous = start_anchor
+        for point in (start_offset, end_offset, rejoin_pose):
+            if not self._append_safe_line_samples(connector, previous, point):
+                return None
+            previous = point
+
+        if len(connector.poses) < 2:
+            return None
+
+        self._recompute_orientations(connector)
+        self._stamp_path(connector)
+        return connector
+
+    def _build_local_astar_detour_path(self, path, robot_pose, rejoin_index):
+        if self.local_costmap is None or rejoin_index >= len(path.poses):
+            return None
+
+        start_cell, start_reason = self._get_costmap_cell_for_pose(
+            self.local_costmap,
+            robot_pose,
+        )
+        goal_cell, goal_reason = self._get_costmap_cell_for_pose(
+            self.local_costmap,
+            path.poses[rejoin_index],
+        )
+        if start_cell is None or goal_cell is None:
+            self.get_logger().info(
+                '[DYNAMIC_SKIP] local A* detour unavailable: '
+                'start_reason=%s goal_reason=%s'
+                % (start_reason, goal_reason),
+                throttle_duration_sec=2.0,
+            )
+            return None
+
+        if not self._is_local_cell_traversable(*goal_cell):
+            return None
+
+        cell_path = self._find_local_costmap_astar(start_cell, goal_cell)
+        if not cell_path:
+            return None
+
+        candidate = Path()
+        candidate.header = copy.deepcopy(path.header)
+        candidate.header.frame_id = self._path_frame(path)
+        self._append_pose_without_duplicate(candidate, robot_pose)
+
+        previous_pose = candidate.poses[-1] if candidate.poses else None
+        for mx, my in cell_path:
+            pose = self._costmap_cell_to_pose(
+                self.local_costmap,
+                mx,
+                my,
+                candidate.header.frame_id,
+            )
+            if pose is None:
+                return None
+            if previous_pose is not None:
+                previous_position = previous_pose.pose.position
+                position = pose.pose.position
+                if (
+                    self._distance_2d(
+                        previous_position.x,
+                        previous_position.y,
+                        position.x,
+                        position.y,
+                    )
+                    < self.dynamic_detour_sample_step_m
+                ):
+                    continue
+            candidate.poses.append(pose)
+            previous_pose = pose
+
+        if candidate.poses:
+            candidate.poses[-1] = copy.deepcopy(path.poses[rejoin_index])
+
+        for index in range(rejoin_index + 1, len(path.poses)):
+            self._append_pose_without_duplicate(candidate, path.poses[index])
+
+        if len(candidate.poses) < self.min_path_poses:
+            return None
+
+        self._recompute_orientations(candidate)
+        self._stamp_path(candidate)
+        return candidate
+
+    def _find_local_costmap_astar(self, start_cell, goal_cell):
+        width = self.local_costmap.info.width
+        height = self.local_costmap.info.height
+        start = tuple(start_cell)
+        goal = tuple(goal_cell)
+        if not self._is_local_cell_traversable(*start):
+            start = self._nearest_traversable_cell(start)
+            if start is None:
+                return None
+        if not self._is_local_cell_traversable(*goal):
+            return None
+
+        open_heap = []
+        heapq.heappush(open_heap, (0.0, start))
+        came_from = {}
+        g_score = {start: 0.0}
+        visited = set()
+        neighbors = (
+            (-1, -1, math.sqrt(2.0)),
+            (0, -1, 1.0),
+            (1, -1, math.sqrt(2.0)),
+            (-1, 0, 1.0),
+            (1, 0, 1.0),
+            (-1, 1, math.sqrt(2.0)),
+            (0, 1, 1.0),
+            (1, 1, math.sqrt(2.0)),
+        )
+
+        while open_heap:
+            _, current = heapq.heappop(open_heap)
+            if current in visited:
+                continue
+            if current == goal:
+                return self._reconstruct_cell_path(came_from, current)
+            visited.add(current)
+
+            for dx, dy, move_cost in neighbors:
+                neighbor = (current[0] + dx, current[1] + dy)
+                if not in_bounds(neighbor[0], neighbor[1], width, height):
+                    continue
+                if not self._is_local_cell_traversable(*neighbor):
+                    continue
+
+                index = map_to_flat_index(neighbor[0], neighbor[1], width)
+                cost = int(self.local_costmap.data[index])
+                cost_penalty = max(0.0, self._effective_dynamic_cost(cost)) / 100.0
+                tentative_g = g_score[current] + move_cost + cost_penalty
+                if tentative_g >= g_score.get(neighbor, float('inf')):
+                    continue
+
+                came_from[neighbor] = current
+                g_score[neighbor] = tentative_g
+                heuristic = math.hypot(goal[0] - neighbor[0], goal[1] - neighbor[1])
+                heapq.heappush(open_heap, (tentative_g + heuristic, neighbor))
+
+        return None
+
+    def _nearest_traversable_cell(self, start):
+        width = self.local_costmap.info.width
+        height = self.local_costmap.info.height
+        max_radius = max(1, int(math.ceil(0.30 / self.local_costmap.info.resolution)))
+        for radius in range(max_radius + 1):
+            for dy in range(-radius, radius + 1):
+                for dx in range(-radius, radius + 1):
+                    if max(abs(dx), abs(dy)) != radius:
+                        continue
+                    cell = (start[0] + dx, start[1] + dy)
+                    if not in_bounds(cell[0], cell[1], width, height):
+                        continue
+                    if self._is_local_cell_traversable(*cell):
+                        return cell
+        return None
+
+    def _reconstruct_cell_path(self, came_from, current):
+        path = [current]
+        while current in came_from:
+            current = came_from[current]
+            path.append(current)
+        path.reverse()
+        return path
+
+    def _costmap_cell_to_pose(self, costmap, mx, my, target_frame):
+        costmap_frame = costmap.header.frame_id or self.global_frame
+        x, y = self._costmap_cell_center(costmap, mx, my)
+        pose = PoseStamped()
+        pose.header.frame_id = costmap_frame
+        pose.header.stamp = self.get_clock().now().to_msg()
+        pose.pose.position.x = x
+        pose.pose.position.y = y
+        pose.pose.position.z = 0.0
+        pose.pose.orientation.w = 1.0
+        return self._transform_pose_to_frame(pose, target_frame)
+
+    def _make_dynamic_detour_candidate(
+        self,
+        path,
+        robot_pose,
+        nearest_index,
+        blocked_start_index,
+        rejoin_index,
+        lateral_offset_m,
+    ):
+        if rejoin_index >= len(path.poses):
+            return None
+
+        candidate = Path()
+        candidate.header = copy.deepcopy(path.header)
+        candidate.header.frame_id = self._path_frame(path)
+        self._append_pose_without_duplicate(candidate, robot_pose)
+
+        prefix_end_index = max(
+            nearest_index,
+            min(blocked_start_index - 1, rejoin_index - 1),
+        )
+        for index in range(nearest_index + 1, prefix_end_index + 1):
+            safe, _, _ = self._is_pose_safe_in_local_costmap(path.poses[index])
+            if not safe:
+                break
+            self._append_pose_without_duplicate(candidate, path.poses[index])
+
+        start_anchor = candidate.poses[-1]
+        rejoin_pose = path.poses[rejoin_index]
+        tangent = self._path_tangent_for_detour(
+            path,
+            nearest_index,
+            rejoin_index,
+        )
+        if tangent is None:
+            return None
+
+        tangent_x, tangent_y = tangent
+        perp_x = -tangent_y
+        perp_y = tangent_x
+        start_offset = self._offset_pose_xy(
+            start_anchor,
+            perp_x * lateral_offset_m,
+            perp_y * lateral_offset_m,
+        )
+        end_offset = self._offset_pose_xy(
+            rejoin_pose,
+            perp_x * lateral_offset_m,
+            perp_y * lateral_offset_m,
+        )
+
+        detour_points = [start_offset, end_offset, rejoin_pose]
+        previous = start_anchor
+        for point in detour_points:
+            if not self._append_safe_line_samples(candidate, previous, point):
+                return None
+            previous = point
+
+        for index in range(rejoin_index + 1, len(path.poses)):
+            self._append_pose_without_duplicate(candidate, path.poses[index])
+
+        if len(candidate.poses) < self.min_path_poses:
+            return None
+
+        self._recompute_orientations(candidate)
+        self._stamp_path(candidate)
+        return candidate
+
+    def _path_tangent_for_detour(self, path, nearest_index, rejoin_index):
+        start_index = max(0, min(nearest_index, len(path.poses) - 1))
+        end_index = max(0, min(rejoin_index, len(path.poses) - 1))
+        start = path.poses[start_index].pose.position
+        end = path.poses[end_index].pose.position
+        dx = end.x - start.x
+        dy = end.y - start.y
+        length = math.hypot(dx, dy)
+        if length > 1.0e-3:
+            return dx / length, dy / length
+
+        if start_index + 1 < len(path.poses):
+            next_point = path.poses[start_index + 1].pose.position
+            dx = next_point.x - start.x
+            dy = next_point.y - start.y
+            length = math.hypot(dx, dy)
+            if length > 1.0e-3:
+                return dx / length, dy / length
+
+        if start_index > 0:
+            previous = path.poses[start_index - 1].pose.position
+            dx = start.x - previous.x
+            dy = start.y - previous.y
+            length = math.hypot(dx, dy)
+            if length > 1.0e-3:
+                return dx / length, dy / length
+
+        return None
+
+    def _offset_pose_xy(self, pose_stamped, dx, dy):
+        output = copy.deepcopy(pose_stamped)
+        output.pose.position.x += dx
+        output.pose.position.y += dy
+        return output
+
+    def _append_safe_line_samples(self, path, start_pose, end_pose):
+        start = start_pose.pose.position
+        end = end_pose.pose.position
+        distance = self._distance_2d(start.x, start.y, end.x, end.y)
+        steps = max(
+            1,
+            int(math.ceil(distance / self.dynamic_detour_sample_step_m)),
+        )
+
+        for step in range(1, steps + 1):
+            ratio = step / steps
+            sample = PoseStamped()
+            sample.header = copy.deepcopy(path.header)
+            sample.pose.position.x = start.x + ratio * (end.x - start.x)
+            sample.pose.position.y = start.y + ratio * (end.y - start.y)
+            sample.pose.position.z = 0.0
+            sample.pose.orientation.w = 1.0
+            traversable, _, _ = self._is_pose_traversable_in_local_costmap(sample)
+            if not traversable:
+                return False
+            self._append_pose_without_duplicate(path, sample)
+        return True
+
+    def _is_connector_safe_to_rejoin(self, robot_pose, rejoin_pose):
+        if self.local_costmap is None:
+            return False, 'local_costmap_unavailable'
+        path_frame = robot_pose.header.frame_id or self.global_frame
+        rejoin_in_path_frame = self._transform_pose_to_frame(
+            rejoin_pose,
+            path_frame,
+        )
+        if rejoin_in_path_frame is None:
+            return False, 'rejoin_transform_unavailable'
+
+        start = robot_pose.pose.position
+        end = rejoin_in_path_frame.pose.position
+        distance = self._distance_2d(start.x, start.y, end.x, end.y)
+        sample_step = max(0.05, self.local_costmap.info.resolution)
+        steps = max(1, int(math.ceil(distance / sample_step)))
+        for step in range(steps + 1):
+            ratio = step / steps
+            sample = PoseStamped()
+            sample.header.frame_id = path_frame
+            sample.header.stamp = self.get_clock().now().to_msg()
+            sample.pose.position.x = start.x + ratio * (end.x - start.x)
+            sample.pose.position.y = start.y + ratio * (end.y - start.y)
+            sample.pose.position.z = 0.0
+            sample.pose.orientation.w = 1.0
+            safe, reason, _ = self._is_pose_safe_in_local_costmap(sample)
+            if not safe:
+                return False, reason
+        return True, 'safe'
+
+    def _build_path_from_index(self, path, start_index):
+        trimmed = Path()
+        trimmed.header = copy.deepcopy(path.header)
+        start_index = max(0, min(start_index, len(path.poses)))
+        trimmed.poses = copy.deepcopy(path.poses[start_index:])
+        self._stamp_path(trimmed)
+        return trimmed
+
+    def _find_pose_index_in_path(self, path, pose_stamped, tolerance_m=0.02):
+        if path is None or pose_stamped is None or not path.poses:
+            return None
+
+        path_frame = self._path_frame(path)
+        pose_in_path_frame = self._transform_pose_to_frame(
+            pose_stamped,
+            path_frame,
+        )
+        if pose_in_path_frame is None:
+            return None
+
+        target = pose_in_path_frame.pose.position
+        best_index = None
+        best_distance = float('inf')
+        for index, candidate in enumerate(path.poses):
+            position = candidate.pose.position
+            distance = self._distance_2d(
+                target.x,
+                target.y,
+                position.x,
+                position.y,
+            )
+            if distance < best_distance:
+                best_index = index
+                best_distance = distance
+
+        if best_index is None or best_distance > tolerance_m:
+            return None
+        return best_index
+
+    def _record_skipped_segment(self, path, start_index, end_index, rejoin_index, report):
+        if path is None or not path.poses:
+            return None
+
+        start_index = max(0, min(start_index, len(path.poses) - 1))
+        end_index = max(start_index, min(end_index, len(path.poses) - 1))
+        rejoin_index = max(0, min(rejoin_index, len(path.poses)))
+        segment_id = self.dynamic_skip_counter + 1
+        pose_count = end_index - start_index + 1
+        distance_m = self._distance_along_path(path, start_index, end_index)
+        timestamp_sec = self.get_clock().now().nanoseconds * 1.0e-9
+
+        skipped = {
+            'id': segment_id,
+            'reason': 'DYNAMIC_LOCAL_OBSTACLE',
+            'source_path_frame': self._path_frame(path),
+            'start_index': start_index,
+            'end_index': end_index,
+            'rejoin_index': rejoin_index,
+            'pose_count': pose_count,
+            'distance_m': distance_m,
+            'timestamp_sec': timestamp_sec,
+            'min_obstacle_cost': int(report.get('min_cost', 0)),
+            'max_obstacle_cost': int(report.get('max_cost', 0)),
+            '_poses': copy.deepcopy(path.poses[start_index : end_index + 1]),
+            '_rejoin_pose': copy.deepcopy(path.poses[rejoin_index])
+            if rejoin_index < len(path.poses)
+            else None,
+        }
+        self.skipped_segments.append(skipped)
+        self.dynamic_skip_counter += 1
+        self.dynamic_skip_failure_counter = 0
+
+        text = (
+            '[DYNAMIC_SKIP] skipped segment recorded '
+            'segment_id=%d poses=%d distance=%.3f rejoin_index=%d max_cost=%d'
+            % (
+                segment_id,
+                pose_count,
+                distance_m,
+                rejoin_index,
+                skipped['max_obstacle_cost'],
+            )
+        )
+        self.get_logger().warn(text)
+        self._publish_dynamic_skip_status(
+            '%s skipped_segment_count=%d skipped_pose_count=%d '
+            'skipped_distance_m=%.3f mark_skipped_segments_uncovered=%s '
+            'retry_skipped_segments_at_end=%s'
+            % (
+                text,
+                len(self.skipped_segments),
+                self._skipped_pose_count(),
+                self._skipped_distance_m(),
+                str(self.mark_skipped_segments_uncovered).lower(),
+                str(self.retry_skipped_segments_at_end).lower(),
+            )
+        )
+        return skipped
+
+    def _publish_skipped_segment_markers(self):
+        if not self.publish_skipped_segments or not hasattr(
+            self,
+            'skipped_segments_pub',
+        ):
+            return
+
+        frame_id = self.global_frame
+        if self.skipped_segments:
+            frame_id = self.skipped_segments[0]['source_path_frame'] or frame_id
+        elif self.dynamic_confirmed_marker_report:
+            poses = self.dynamic_confirmed_marker_report.get(
+                'dynamic_only_blocked_poses',
+                [],
+            )
+            if poses:
+                frame_id = poses[0].header.frame_id or frame_id
+        elif self.dynamic_ignored_static_marker_poses:
+            frame_id = (
+                self.dynamic_ignored_static_marker_poses[0].header.frame_id
+                or frame_id
+            )
+        elif self.dynamic_candidate_marker_path is not None:
+            frame_id = self.dynamic_candidate_marker_path.header.frame_id or frame_id
+        markers = self._delete_all_markers(frame_id, 'dynamic_skipped_segments')
+        stamp = self.get_clock().now().to_msg()
+
+        for segment in self.skipped_segments:
+            poses = segment.get('_poses', [])
+            if not poses:
+                continue
+
+            base_id = segment['id'] * 10
+            segment_path = Path()
+            segment_path.header.frame_id = segment['source_path_frame']
+            segment_path.header.stamp = stamp
+            segment_path.poses = copy.deepcopy(poses)
+            markers.markers.append(
+                self._make_path_line_marker(
+                    segment_path,
+                    stamp,
+                    base_id + 1,
+                    'dynamic_skipped_segments',
+                    (1.0, 0.25, 0.0, 0.95),
+                    0.06,
+                    0.14,
+                )
+            )
+            markers.markers.append(
+                self._make_pose_marker(
+                    segment['source_path_frame'],
+                    stamp,
+                    base_id + 2,
+                    'dynamic_skipped_segments',
+                    poses[0],
+                    Marker.SPHERE,
+                    (1.0, 0.05, 0.0, 0.95),
+                    0.18,
+                )
+            )
+
+            rejoin_pose = segment.get('_rejoin_pose')
+            if rejoin_pose is not None:
+                markers.markers.append(
+                    self._make_pose_marker(
+                        segment['source_path_frame'],
+                        stamp,
+                        base_id + 3,
+                        'dynamic_skipped_segments',
+                        rejoin_pose,
+                        Marker.SPHERE,
+                        (0.0, 0.9, 0.25, 0.95),
+                        0.18,
+                    )
+                )
+                text_pose = rejoin_pose
+            else:
+                text_pose = poses[-1]
+
+            label = Marker()
+            label.header.frame_id = segment['source_path_frame']
+            label.header.stamp = stamp
+            label.ns = 'dynamic_skipped_segments'
+            label.id = base_id + 4
+            label.type = Marker.TEXT_VIEW_FACING
+            label.action = Marker.ADD
+            label.pose = copy.deepcopy(text_pose.pose)
+            label.pose.position.z += 0.45
+            label.pose.orientation.x = 0.0
+            label.pose.orientation.y = 0.0
+            label.pose.orientation.z = 0.0
+            label.pose.orientation.w = 1.0
+            label.scale.z = 0.18
+            label.color.r = 1.0
+            label.color.g = 0.2
+            label.color.b = 0.0
+            label.color.a = 0.95
+            label.text = 'SKIPPED_DYNAMIC_OBSTACLE'
+            markers.markers.append(label)
+
+        confirmed_poses = []
+        if self.dynamic_confirmed_marker_report:
+            confirmed_poses = self.dynamic_confirmed_marker_report.get(
+                'dynamic_only_blocked_poses',
+                [],
+            )
+        if confirmed_poses:
+            marker = Marker()
+            marker.header.frame_id = confirmed_poses[0].header.frame_id or frame_id
+            marker.header.stamp = stamp
+            marker.ns = 'dynamic_confirmed_object_area'
+            marker.id = 900001
+            marker.type = Marker.SPHERE_LIST
+            marker.action = Marker.ADD
+            marker.pose.orientation.w = 1.0
+            marker.scale.x = 0.14
+            marker.scale.y = 0.14
+            marker.scale.z = 0.14
+            marker.color.r = 1.0
+            marker.color.g = 0.30
+            marker.color.b = 0.0
+            marker.color.a = 0.95
+            for pose_stamped in confirmed_poses:
+                point = copy.deepcopy(pose_stamped.pose.position)
+                point.z += 0.18
+                marker.points.append(point)
+            markers.markers.append(marker)
+
+        if self.dynamic_ignored_static_marker_poses:
+            marker = Marker()
+            marker.header.frame_id = (
+                self.dynamic_ignored_static_marker_poses[0].header.frame_id
+                or frame_id
+            )
+            marker.header.stamp = stamp
+            marker.ns = 'dynamic_ignored_static_wall'
+            marker.id = 900002
+            marker.type = Marker.SPHERE_LIST
+            marker.action = Marker.ADD
+            marker.pose.orientation.w = 1.0
+            marker.scale.x = 0.08
+            marker.scale.y = 0.08
+            marker.scale.z = 0.08
+            marker.color.r = 0.65
+            marker.color.g = 0.65
+            marker.color.b = 0.25
+            marker.color.a = 0.75
+            for pose_stamped in self.dynamic_ignored_static_marker_poses:
+                point = copy.deepcopy(pose_stamped.pose.position)
+                point.z += 0.16
+                marker.points.append(point)
+            markers.markers.append(marker)
+
+        if (
+            self.dynamic_candidate_marker_path is not None
+            and self.dynamic_candidate_marker_path.poses
+        ):
+            markers.markers.append(
+                self._make_path_line_marker(
+                    self.dynamic_candidate_marker_path,
+                    stamp,
+                    900003,
+                    'dynamic_candidate_rejoin_path',
+                    (0.0, 0.85, 1.0, 0.9),
+                    0.035,
+                    0.10,
+                )
+            )
+
+        self.skipped_segments_pub.publish(markers)
+
+    def _publish_dynamic_skip_status(self, text):
+        msg = String()
+        msg.data = text
+        if hasattr(self, 'dynamic_skip_status_pub'):
+            self.dynamic_skip_status_pub.publish(msg)
+        self._publish_debug_info(text)
+
+    def _skipped_pose_count(self):
+        return sum(segment['pose_count'] for segment in self.skipped_segments)
+
+    def _skipped_distance_m(self):
+        return sum(segment['distance_m'] for segment in self.skipped_segments)
+
+    def _skipped_summary_text(self, completed_with_skips):
+        return (
+            'skipped_segment_count=%d skipped_pose_count=%d '
+            'skipped_distance_m=%.3f completed_with_skips=%s '
+            'reason=dynamic_local_obstacles skipped_sections_retried=false '
+            'skipped_sections_counted_as_covered=false'
+            % (
+                len(self.skipped_segments),
+                self._skipped_pose_count(),
+                self._skipped_distance_m(),
+                str(completed_with_skips).lower(),
+            )
+        )
+
+    def _lookup_robot_pose(self, target_frame):
+        try:
+            transform = self.tf_buffer.lookup_transform(
+                target_frame,
                 self.robot_base_frame,
                 Time(),
                 timeout=Duration(seconds=self.tf_lookup_timeout_sec),
@@ -1330,18 +6435,21 @@ class CoverageFollowPathExecutorNode(Node):
         except TransformException as exc:
             self.get_logger().warn(
                 'Could not lookup TF %s -> %s: %s'
-                % (frame_id, self.robot_base_frame, exc),
+                % (target_frame, self.robot_base_frame, exc),
                 throttle_duration_sec=2.0,
             )
             return None
 
         translation = transform.transform.translation
         rotation = transform.transform.rotation
-        return {
-            'x': translation.x,
-            'y': translation.y,
-            'yaw': self._yaw_from_quaternion(rotation),
-        }
+        pose_stamped = PoseStamped()
+        pose_stamped.header.frame_id = target_frame
+        pose_stamped.header.stamp = transform.header.stamp
+        pose_stamped.pose.position.x = translation.x
+        pose_stamped.pose.position.y = translation.y
+        pose_stamped.pose.position.z = translation.z
+        pose_stamped.pose.orientation = copy.deepcopy(rotation)
+        return pose_stamped
 
     def _make_empty_report(self):
         return {
@@ -1392,7 +6500,9 @@ class CoverageFollowPathExecutorNode(Node):
             'distance_to_first=%s nearest_index=%d distance_to_nearest=%s '
             'start_index=%d max_consecutive_pose_jump=%.3f max_jump_index=%d '
             'follow_path_ready=%s robot_start_used=%s nav_costmap_used=%s '
-            'nav_blocked_cells=%d nav_unknown_samples=%d max_observed_cost=%d'
+            'nav_blocked_cells=%d nav_unknown_samples=%d max_observed_cost=%d '
+            'skipped_segment_count=%d skipped_pose_count=%d '
+            'skipped_distance_m=%.3f completed_with_skips=%s'
             % (
                 'PASS' if report['valid'] else 'FAIL',
                 report['status'],
@@ -1416,6 +6526,10 @@ class CoverageFollowPathExecutorNode(Node):
                 report.get('blocked_pose_count', 0),
                 report.get('unknown_pose_count', 0),
                 report.get('max_observed_cost', 0),
+                len(self.skipped_segments),
+                self._skipped_pose_count(),
+                self._skipped_distance_m(),
+                str(len(self.skipped_segments) > 0).lower(),
             )
         )
 
@@ -1734,6 +6848,10 @@ class CoverageFollowPathExecutorNode(Node):
         delete_markers = self._delete_all_markers(self.global_frame, 'coverage_cleanup')
         self.debug_markers_pub.publish(delete_markers)
         self.path_markers_pub.publish(delete_markers)
+        if hasattr(self, 'skipped_segments_pub'):
+            self.skipped_segments_pub.publish(
+                self._delete_all_markers(self.global_frame, 'dynamic_skipped_segments')
+            )
 
     def _log_follow_path_send(self, path, report, reason):
         first_pose = path.poses[0].pose
