@@ -132,6 +132,7 @@ class CoverageFollowPathExecutorNode(Node):
         self.dynamic_active_path_is_temporary = False
         self.dynamic_active_original_rejoin_index = None
         self.dynamic_active_rejoin_path_index = None
+        self.dynamic_last_temporary_rejoin_refresh_monotonic = 0.0
         self.dynamic_planner_in_flight = False
         self.dynamic_planner_goal_handle = None
         self.dynamic_planner_pending_context = None
@@ -363,6 +364,9 @@ class CoverageFollowPathExecutorNode(Node):
             'dynamic_monitor_temporary_paths': True,
             'dynamic_connector_allow_blocked_start': True,
             'dynamic_connector_start_grace_m': 0.20,
+            'dynamic_refresh_temporary_rejoin': True,
+            'dynamic_temporary_rejoin_check_distance_m': 0.80,
+            'dynamic_temporary_rejoin_refresh_cooldown_sec': 0.75,
             'dynamic_refine_connector_path': True,
             'dynamic_connector_refinement_iterations': 3,
             'dynamic_connector_refinement_step_m': 0.04,
@@ -535,6 +539,15 @@ class CoverageFollowPathExecutorNode(Node):
         self.dynamic_connector_start_grace_m = self._double_param(
             'dynamic_connector_start_grace_m'
         )
+        self.dynamic_refresh_temporary_rejoin = self._bool_param(
+            'dynamic_refresh_temporary_rejoin'
+        )
+        self.dynamic_temporary_rejoin_check_distance_m = self._double_param(
+            'dynamic_temporary_rejoin_check_distance_m'
+        )
+        self.dynamic_temporary_rejoin_refresh_cooldown_sec = self._double_param(
+            'dynamic_temporary_rejoin_refresh_cooldown_sec'
+        )
         self.dynamic_refine_connector_path = self._bool_param(
             'dynamic_refine_connector_path'
         )
@@ -674,6 +687,14 @@ class CoverageFollowPathExecutorNode(Node):
         self.dynamic_connector_start_grace_m = max(
             0.0,
             self.dynamic_connector_start_grace_m,
+        )
+        self.dynamic_temporary_rejoin_check_distance_m = max(
+            self.dynamic_skip_lookahead_m,
+            self.dynamic_temporary_rejoin_check_distance_m,
+        )
+        self.dynamic_temporary_rejoin_refresh_cooldown_sec = max(
+            0.0,
+            self.dynamic_temporary_rejoin_refresh_cooldown_sec,
         )
         self.dynamic_connector_refinement_iterations = max(
             0,
@@ -1008,6 +1029,7 @@ class CoverageFollowPathExecutorNode(Node):
         self.dynamic_skip_pending_active_rejoin_index = None
         self.dynamic_active_original_rejoin_index = None
         self.dynamic_active_rejoin_path_index = None
+        self.dynamic_last_temporary_rejoin_refresh_monotonic = 0.0
         self._clear_dynamic_planner_state()
         self.dynamic_controller_blocked_reports_count = 0
         self.selected_start_index = 0
@@ -1076,6 +1098,7 @@ class CoverageFollowPathExecutorNode(Node):
         self.dynamic_skip_pending_active_rejoin_index = None
         self.dynamic_active_original_rejoin_index = None
         self.dynamic_active_rejoin_path_index = None
+        self.dynamic_last_temporary_rejoin_refresh_monotonic = 0.0
         self._clear_dynamic_planner_state()
         self.dynamic_controller_blocked_reports_count = 0
         if self.publish_skipped_segments:
@@ -1590,6 +1613,7 @@ class CoverageFollowPathExecutorNode(Node):
         self.dynamic_skip_pending_active_rejoin_index = None
         self.dynamic_active_original_rejoin_index = None
         self.dynamic_active_rejoin_path_index = None
+        self.dynamic_last_temporary_rejoin_refresh_monotonic = 0.0
         self.execution_start_monotonic = None
         self._set_status(final_status)
 
@@ -2101,6 +2125,9 @@ class CoverageFollowPathExecutorNode(Node):
                 '[DYNAMIC_SKIP] monitor cooldown active after rejoin goal',
                 throttle_duration_sec=2.0,
             )
+            return
+
+        if self._refresh_dynamic_temporary_rejoin_if_needed():
             return
 
         report = self._detect_dynamic_blocked_interval(self.active_path)
@@ -3737,6 +3764,8 @@ class CoverageFollowPathExecutorNode(Node):
         self._clear_dynamic_planner_state()
         self.dynamic_skip_failure_counter += 1
         object_imminent = self._is_dynamic_obstacle_imminent(report)
+        if report.get('dynamic_rejoin_refresh') and not after_failure:
+            object_imminent = False
         should_stop = (
             object_imminent
             or after_failure
@@ -3889,6 +3918,170 @@ class CoverageFollowPathExecutorNode(Node):
             return original_path, projected_report
         return self.active_path, report
 
+    def _current_active_path_nearest_index(self):
+        if self.active_path is None or not self.active_path.poses:
+            return None
+
+        robot_pose = self._lookup_robot_pose(self._path_frame(self.active_path))
+        if robot_pose is None:
+            return None
+
+        nearest_index, _ = self._find_dynamic_monitor_nearest_path_index(
+            self.active_path,
+            robot_pose,
+        )
+        if nearest_index < 0:
+            return None
+        return nearest_index
+
+    def _project_active_temporary_index_to_original(self, active_index):
+        if self.cached_raw_path is None or not self.cached_raw_path.poses:
+            return None
+
+        original_rejoin_index = self.dynamic_active_original_rejoin_index
+        if original_rejoin_index is None:
+            original_rejoin_index = 0
+        original_rejoin_index = max(
+            0,
+            min(int(original_rejoin_index), len(self.cached_raw_path.poses) - 1),
+        )
+
+        active_rejoin_index = self.dynamic_active_rejoin_path_index
+        if active_rejoin_index is None:
+            active_rejoin_index = 0
+        active_rejoin_index = max(0, int(active_rejoin_index))
+        active_index = max(0, int(active_index))
+
+        if not self.dynamic_active_path_is_temporary:
+            mapped = self.selected_start_index + active_index
+        elif active_index < active_rejoin_index:
+            mapped = original_rejoin_index
+        else:
+            mapped = original_rejoin_index + (active_index - active_rejoin_index)
+        return max(0, min(mapped, len(self.cached_raw_path.poses) - 1))
+
+    def _temporary_rejoin_refresh_report(self):
+        if (
+            not self.dynamic_refresh_temporary_rejoin
+            or not self.dynamic_active_path_is_temporary
+            or self.cached_raw_path is None
+            or not self.cached_raw_path.poses
+            or self.dynamic_active_original_rejoin_index is None
+        ):
+            return None
+
+        nearest_active_index = self._current_active_path_nearest_index()
+        if nearest_active_index is None:
+            return None
+
+        current_original_index = self._project_active_temporary_index_to_original(
+            nearest_active_index
+        )
+        if current_original_index is None:
+            return None
+
+        start_index = max(
+            int(self.dynamic_active_original_rejoin_index),
+            current_original_index,
+        )
+        start_index = max(0, min(start_index, len(self.cached_raw_path.poses) - 1))
+        end_index = self._index_after_distance(
+            self.cached_raw_path,
+            start_index,
+            self.dynamic_temporary_rejoin_check_distance_m,
+        )
+
+        for index in range(start_index, end_index + 1):
+            pose_stamped = self.cached_raw_path.poses[index]
+            static_safe, static_reason = self._is_rejoin_pose_static_safe(pose_stamped)
+            global_safe, global_reason = self._is_rejoin_pose_global_safe(pose_stamped)
+            local_safe, local_reason = self._is_rejoin_pose_locally_clear_if_visible(
+                pose_stamped
+            )
+            if static_safe and global_safe and local_safe:
+                continue
+
+            reason = (
+                'temporary_rejoin_pose_unsafe original_index=%d '
+                'static_safe=%s global_safe=%s local_safe=%s '
+                'static_reason=%s global_reason=%s local_reason=%s'
+                % (
+                    index,
+                    str(static_safe).lower(),
+                    str(global_safe).lower(),
+                    str(local_safe).lower(),
+                    static_reason,
+                    global_reason,
+                    local_reason,
+                )
+            )
+            report = {
+                'blocked': True,
+                'nearest_index': current_original_index,
+                'nearest_distance': 0.0,
+                'blocked_start_index': index,
+                'blocked_end_index': index,
+                'lookahead_end_index': end_index,
+                'min_cost': 0,
+                'max_cost': self.dynamic_obstacle_cost_threshold,
+                'nearest_obstacle_distance_m': float('inf'),
+                'obstacle_distance_threshold_m': self._get_dynamic_detection_radius_m(),
+                'reason': reason,
+                'local_costmap_frame': self.local_costmap.header.frame_id
+                if self.local_costmap is not None
+                else self.global_frame,
+                'path_frame': self._path_frame(self.cached_raw_path),
+                'local_lethal_count': 0,
+                'inflated_ignored_count': 0,
+                'static_known_blocked_count': 0,
+                'static_unknown_blocked_count': 0,
+                'dynamic_only_blocked_count': 1,
+                'blocked_path_length_m': 0.0,
+                'consecutive_count': self.dynamic_required_consecutive_detections,
+                'dynamic_only_blocked_poses': [copy.deepcopy(pose_stamped)],
+                'static_known_blocked_poses': [],
+                'dynamic_rejoin_refresh': True,
+            }
+            text = (
+                '[DYNAMIC_REPLAN] temporary coverage rejoin became unsafe; '
+                'searching farther coverage pose reason=%s'
+                % reason
+            )
+            self.get_logger().warn(text)
+            self._publish_dynamic_skip_status(text)
+            return report
+
+        return None
+
+    def _refresh_dynamic_temporary_rejoin_if_needed(self):
+        if self.dynamic_skip_in_progress:
+            return False
+
+        now = time.monotonic()
+        if (
+            self.dynamic_last_temporary_rejoin_refresh_monotonic > 0.0
+            and now - self.dynamic_last_temporary_rejoin_refresh_monotonic
+            < self.dynamic_temporary_rejoin_refresh_cooldown_sec
+        ):
+            return False
+
+        report = self._temporary_rejoin_refresh_report()
+        if report is None:
+            return False
+
+        self.dynamic_last_temporary_rejoin_refresh_monotonic = now
+        self.dynamic_skip_in_progress = True
+        self._set_status(self.STATUS_SKIPPING_DYNAMIC_OBSTACLE)
+        self._publish_dynamic_skip_status(
+            '[DYNAMIC_REPLAN] keeping current FollowPath while planning '
+            'updated temporary connector'
+        )
+        return self._begin_dynamic_bypass_search(
+            self.cached_raw_path,
+            report,
+            after_failure=False,
+        )
+
     def _start_dynamic_skip(self, report):
         if self.dynamic_skip_in_progress:
             return False
@@ -3896,6 +4089,10 @@ class CoverageFollowPathExecutorNode(Node):
         self.dynamic_skip_in_progress = True
         self._set_status(self.STATUS_SKIPPING_DYNAMIC_OBSTACLE)
         self._log_dynamic_obstacle_detected(report)
+        self._publish_dynamic_skip_status(
+            '[DYNAMIC_REPLAN] keeping current FollowPath while searching '
+            'next safe coverage pose and temporary connector'
+        )
 
         path, report = self._dynamic_bypass_source_path_and_report(report)
         if path is None:

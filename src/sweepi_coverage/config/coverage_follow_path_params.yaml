@@ -113,6 +113,9 @@ coverage_follow_path_executor_node:
     dynamic_monitor_temporary_paths: true
     dynamic_connector_allow_blocked_start: true
     dynamic_connector_start_grace_m: 0.20
+    dynamic_refresh_temporary_rejoin: true
+    dynamic_temporary_rejoin_check_distance_m: 0.80
+    dynamic_temporary_rejoin_refresh_cooldown_sec: 0.75
     dynamic_refine_connector_path: true
     dynamic_connector_refinement_iterations: 3
     dynamic_connector_refinement_step_m: 0.04

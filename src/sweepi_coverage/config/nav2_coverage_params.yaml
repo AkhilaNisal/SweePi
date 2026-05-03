@@ -144,8 +144,8 @@ local_costmap:
 global_costmap:
   global_costmap:
     ros__parameters:
-      update_frequency: 1.0
-      publish_frequency: 1.0
+      update_frequency: 8.0
+      publish_frequency: 4.0
       global_frame: map
       robot_base_frame: base_link
       robot_radius: 0.20
