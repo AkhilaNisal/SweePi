@@ -123,7 +123,7 @@ coverage_follow_path_executor_node:
     dynamic_treat_unknown_as_blocked: true
     dynamic_skip_lookahead_m: 0.60
     dynamic_skip_padding_m: 0.05
-    dynamic_rejoin_max_search_distance_m: 6.00 # change from 3.00 m
+    dynamic_rejoin_max_search_distance_m: 5.00 # change from 3.00 m
     dynamic_rejoin_min_clearance_m: 0.03 # change from 0.05 m
     dynamic_max_rejoin_candidates: 60   # change from 20
     dynamic_required_consecutive_detections: 2
@@ -150,11 +150,11 @@ coverage_follow_path_executor_node:
     dynamic_skip_replan_cooldown_sec: 3.0
     dynamic_resume_ignore_index_margin: 5
     dynamic_progress_search_backtrack_m: 0.20
-    dynamic_progress_search_forward_m: 2.0  # change from 1.00 m
+    dynamic_progress_search_forward_m: 1.0  # change from 1.00 m
     retry_skipped_segments_at_end: false
     mark_skipped_segments_uncovered: true
     publish_skipped_segments: true
-    dynamic_require_safe_connector: true # change from true
+    dynamic_require_safe_connector: false # change from true
     dynamic_enable_local_astar_detour: true
     dynamic_enable_local_detour: true
     dynamic_detour_min_lateral_offset_m: 0.10
