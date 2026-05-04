@@ -19,10 +19,10 @@ coverage_planner_node:
     coverage_stats_topic: "/coverage_stats"
     coverage_cell_value: 50
     robot_radius_m: 0.20
-    coverage_safety_margin_m: 0.1 # change from 0.10 m
+    coverage_safety_margin_m: 0.05 # change from 0.10 m
     coverage_spacing_m: 0.25  # change from 0.25 m
     min_segment_length_m: 0.30
-    inflation_radius_m: 0.25 # change from 0.30 m
+    inflation_radius_m: 0.28 # change from 0.30 m
     min_region_area_m2: 0.20
     path_publish_rate_hz: 1.0
     planning_direction: "auto"
@@ -64,8 +64,8 @@ coverage_follow_path_executor_node:
     dynamic_skip_status_topic: "/coverage_dynamic_skip_status"
     follow_path_action_name: "/follow_path"
     controller_id: "FollowPath"
-    goal_checker_id: ""
-    progress_checker_id: ""
+    goal_checker_id: "goal_checker"
+    progress_checker_id: "progress_checker"
     global_frame: "map"
     robot_base_frame: "base_link"
     costmap_topic: "/global_costmap/costmap"
@@ -123,7 +123,7 @@ coverage_follow_path_executor_node:
     dynamic_treat_unknown_as_blocked: true
     dynamic_skip_lookahead_m: 0.60
     dynamic_skip_padding_m: 0.05
-    dynamic_rejoin_max_search_distance_m: 3.00 # change from 1.00 m
+    dynamic_rejoin_max_search_distance_m: 6.00 # change from 3.00 m
     dynamic_rejoin_min_clearance_m: 0.03 # change from 0.05 m
     dynamic_max_rejoin_candidates: 60   # change from 20
     dynamic_required_consecutive_detections: 2
@@ -154,7 +154,7 @@ coverage_follow_path_executor_node:
     retry_skipped_segments_at_end: false
     mark_skipped_segments_uncovered: true
     publish_skipped_segments: true
-    dynamic_require_safe_connector: false
+    dynamic_require_safe_connector: true # change from true
     dynamic_enable_local_astar_detour: true
     dynamic_enable_local_detour: true
     dynamic_detour_min_lateral_offset_m: 0.10
