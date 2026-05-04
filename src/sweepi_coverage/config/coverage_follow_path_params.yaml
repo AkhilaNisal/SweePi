@@ -19,10 +19,10 @@ coverage_planner_node:
     coverage_stats_topic: "/coverage_stats"
     coverage_cell_value: 50
     robot_radius_m: 0.20
-    coverage_safety_margin_m: 0.10
-    coverage_spacing_m: 0.25
+    coverage_safety_margin_m: 0.1 # change from 0.10 m
+    coverage_spacing_m: 0.25  # change from 0.25 m
     min_segment_length_m: 0.30
-    inflation_radius_m: 0.30
+    inflation_radius_m: 0.25 # change from 0.30 m
     min_region_area_m2: 0.20
     path_publish_rate_hz: 1.0
     planning_direction: "auto"
@@ -106,9 +106,9 @@ coverage_follow_path_executor_node:
     dynamic_enable_local_only_inscribed_fallback: true
     dynamic_inscribed_cost_threshold: 99
     dynamic_obstacle_distance_threshold_m: 0.05
-    dynamic_object_clearance_m: 0.05
-    dynamic_collision_check_radius_m: 0.25
-    dynamic_connector_tracking_clearance_m: 0.12
+    dynamic_object_clearance_m: 0.05 # change from 0.05 m 
+    dynamic_collision_check_radius_m: 0.25 # change from 0.25 m
+    dynamic_connector_tracking_clearance_m: 0.12 # change from 0.12 m
     dynamic_use_corridor_for_detection: true
     dynamic_monitor_temporary_paths: true
     dynamic_connector_allow_blocked_start: true
@@ -123,9 +123,9 @@ coverage_follow_path_executor_node:
     dynamic_treat_unknown_as_blocked: true
     dynamic_skip_lookahead_m: 0.60
     dynamic_skip_padding_m: 0.05
-    dynamic_rejoin_max_search_distance_m: 1.00
-    dynamic_rejoin_min_clearance_m: 0.05
-    dynamic_max_rejoin_candidates: 20
+    dynamic_rejoin_max_search_distance_m: 3.00 # change from 1.00 m
+    dynamic_rejoin_min_clearance_m: 0.03 # change from 0.05 m
+    dynamic_max_rejoin_candidates: 60   # change from 20
     dynamic_required_consecutive_detections: 2
     dynamic_min_blocked_pose_count: 2
     dynamic_min_blocked_path_length_m: 0.10
@@ -150,7 +150,7 @@ coverage_follow_path_executor_node:
     dynamic_skip_replan_cooldown_sec: 3.0
     dynamic_resume_ignore_index_margin: 5
     dynamic_progress_search_backtrack_m: 0.20
-    dynamic_progress_search_forward_m: 3.00
+    dynamic_progress_search_forward_m: 2.0  # change from 1.00 m
     retry_skipped_segments_at_end: false
     mark_skipped_segments_uncovered: true
     publish_skipped_segments: true
