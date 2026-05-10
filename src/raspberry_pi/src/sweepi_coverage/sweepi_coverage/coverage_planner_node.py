@@ -3,6 +3,7 @@
 
 from collections import deque
 import heapq
+import json
 import math
 
 import rclpy
@@ -77,6 +78,7 @@ class CoveragePlannerNode(Node):
         self.declare_parameter('nav_costmap_timeout_sec', 2.0)
         self.declare_parameter('wait_for_nav_costmap_before_planning', False)
         self.declare_parameter('wait_for_robot_pose_before_planning', False)
+        self.declare_parameter('selection_topic', '/coverage_selection')
 
         self.coverage_map_topic = (
             self.get_parameter('coverage_map_topic').get_parameter_value().string_value
@@ -224,6 +226,9 @@ class CoveragePlannerNode(Node):
             .get_parameter_value()
             .bool_value
         )
+        self.selection_topic = (
+            self.get_parameter('selection_topic').get_parameter_value().string_value
+        )
 
         self._sanitize_startup_parameters()
 
@@ -243,6 +248,8 @@ class CoveragePlannerNode(Node):
         self.connector_count = 0
         self.connector_pose_count = 0
         self.connector_failure_count = 0
+        self.selection = None
+        self.selection_checksum = None
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
@@ -274,6 +281,12 @@ class CoveragePlannerNode(Node):
             self.nav_costmap_topic,
             self.nav_costmap_callback,
             nav_costmap_qos,
+        )
+        self.selection_sub = self.create_subscription(
+            String,
+            self.selection_topic,
+            self.selection_callback,
+            10,
         )
         self.coverage_path_pub = self.create_publisher(
             Path,
@@ -455,10 +468,15 @@ class CoveragePlannerNode(Node):
             base_planning_mask,
             msg,
         )
+        planning_mask, selection_stats = self._apply_selection_mask(
+            planning_mask,
+            msg,
+        )
         debug_mask = self._make_planning_mask_msg(msg, planning_mask)
         valid_cell_count = sum(1 for is_valid in planning_mask if is_valid)
         stats['valid_cells'] = valid_cell_count
         stats.update(nav_stats)
+        stats.update(selection_stats)
         self.connector_count = 0
         self.connector_pose_count = 0
         self.connector_failure_count = 0
@@ -884,6 +902,93 @@ class CoveragePlannerNode(Node):
 
     def _nav_costmap_enabled(self):
         return self.use_nav_costmap_for_planning or self.use_global_costmap_for_planning
+
+    def selection_callback(self, msg):
+        """Update the current room/zone selection filter for coverage planning."""
+        try:
+            payload = json.loads(msg.data)
+        except json.JSONDecodeError:
+            self.get_logger().warn(
+                'Ignoring invalid JSON on %s' % self.selection_topic,
+                throttle_duration_sec=5.0,
+            )
+            return
+
+        checksum = hash(msg.data)
+        if checksum == self.selection_checksum:
+            return
+
+        self.selection = payload
+        self.selection_checksum = checksum
+        if not self.path_frozen:
+            self.plan_dirty = True
+
+    def _apply_selection_mask(self, planning_mask, coverage_msg):
+        stats = {
+            'selection_active': False,
+            'selection_filtered_cells': 0,
+        }
+        if self.selection is None:
+            return planning_mask, stats
+
+        zones = list(self.selection.get('zones', []))
+        room_polygons = list(self.selection.get('rooms', []))
+        no_go_zones = list(self.selection.get('no_go_zones', []))
+        active_polygons = []
+        for zone in [*zones, *room_polygons]:
+            polygon = zone.get('polygon', [])
+            if len(polygon) >= 3:
+                active_polygons.append(polygon)
+        no_go_polygons = [
+            zone.get('polygon', [])
+            for zone in no_go_zones
+            if len(zone.get('polygon', [])) >= 3
+        ]
+
+        if not active_polygons and not no_go_polygons:
+            return planning_mask, stats
+
+        stats['selection_active'] = True
+        filtered_mask = list(planning_mask)
+        width = coverage_msg.info.width
+        height = coverage_msg.info.height
+
+        for y in range(height):
+            for x in range(width):
+                index = map_to_flat_index(x, y, width)
+                if not filtered_mask[index]:
+                    continue
+
+                world_x, world_y = map_to_world(x, y, coverage_msg.info)
+                allowed = True
+                if active_polygons:
+                    allowed = any(
+                        self._point_in_polygon(world_x, world_y, polygon)
+                        for polygon in active_polygons
+                    )
+                blocked = any(
+                    self._point_in_polygon(world_x, world_y, polygon)
+                    for polygon in no_go_polygons
+                )
+
+                if not allowed or blocked:
+                    filtered_mask[index] = False
+                    stats['selection_filtered_cells'] += 1
+
+        return filtered_mask, stats
+
+    def _point_in_polygon(self, x, y, polygon):
+        inside = False
+        point_count = len(polygon)
+        for index in range(point_count):
+            x1, y1 = polygon[index]
+            x2, y2 = polygon[(index + 1) % point_count]
+            intersects = ((y1 > y) != (y2 > y)) and (
+                x < ((x2 - x1) * (y - y1) / ((y2 - y1) or 1.0e-9) + x1)
+            )
+            if intersects:
+                inside = not inside
+        return inside
 
     def _nav_costmap_is_stale(self):
         if self.nav_costmap_timeout_sec <= 0.0:
@@ -1737,6 +1842,8 @@ class CoveragePlannerNode(Node):
             'nav_costmap_filtered_cells': 0,
             'nav_costmap_stale': False,
             'nav_costmap_frame_mismatch': False,
+            'selection_active': False,
+            'selection_filtered_cells': 0,
             'robot_start_used': False,
             'valid_cells': 0,
             'coverable': 0,
@@ -1818,6 +1925,7 @@ class CoveragePlannerNode(Node):
             'covered=%d uncovered=%d total=%d percentage=%.1f '
             'path_length_m=%.2f segments=%d poses=%d max_jump_m=%.3f '
             'follow_path_ready=%s robot_start_used=%s nav_costmap_used=%s '
+            'selection_active=%s selection_filtered_cells=%d '
             'nav_blocked_cells=%d nav_filtered_cells=%d'
             % (
                 stats['covered'],
@@ -1831,6 +1939,8 @@ class CoveragePlannerNode(Node):
                 str(stats.get('follow_path_ready', True)).lower(),
                 str(stats.get('robot_start_used', False)).lower(),
                 str(stats.get('nav_costmap_used', False)).lower(),
+                str(stats.get('selection_active', False)).lower(),
+                stats.get('selection_filtered_cells', 0),
                 stats.get('nav_costmap_blocked_cells', 0),
                 stats.get('nav_costmap_filtered_cells', 0),
             )

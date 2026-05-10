@@ -21,6 +21,9 @@ def generate_launch_description():
     auto_start = LaunchConfiguration('auto_start')
     require_robot_near_start = LaunchConfiguration('require_robot_near_start')
     max_start_distance_m = LaunchConfiguration('max_start_distance_m')
+    api_host = LaunchConfiguration('api_host')
+    api_port = LaunchConfiguration('api_port')
+    ws_port = LaunchConfiguration('ws_port')
 
     use_sim_time_param = {
         'use_sim_time': ParameterValue(use_sim_time, value_type=bool),
@@ -51,6 +54,21 @@ def generate_launch_description():
             'max_start_distance_m',
             default_value='0.75',
             description='Maximum allowed robot distance to first path pose',
+        ),
+        DeclareLaunchArgument(
+            'api_host',
+            default_value='0.0.0.0',
+            description='LAN API bind host',
+        ),
+        DeclareLaunchArgument(
+            'api_port',
+            default_value='8080',
+            description='LAN API HTTP port',
+        ),
+        DeclareLaunchArgument(
+            'ws_port',
+            default_value='8765',
+            description='LAN API websocket port',
         ),
         Node(
             package='sweepi_coverage',
@@ -93,5 +111,18 @@ def generate_launch_description():
             name='coverage_manager_node',
             output='screen',
             parameters=[params_file, use_sim_time_param],
+        ),
+        Node(
+            package='sweepi_api_bridge',
+            executable='api_bridge_node.py',
+            name='api_bridge_node',
+            output='screen',
+            parameters=[
+                {
+                    'api_host': api_host,
+                    'api_port': api_port,
+                    'ws_port': ws_port,
+                }
+            ],
         ),
     ])

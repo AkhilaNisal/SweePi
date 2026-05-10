@@ -5,13 +5,24 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SEARCH_DIR="$SCRIPT_DIR"
+while [ "$SEARCH_DIR" != "/" ] && [ ! -d "$SEARCH_DIR/.git" ]; do
+    SEARCH_DIR="$(dirname "$SEARCH_DIR")"
+done
+
+if [ ! -d "$SEARCH_DIR/.git" ]; then
+    echo -e "${RED}Could not locate the SweePi repository root${NC}"
+    exit 1
+fi
+
+MAP_DIR="$SEARCH_DIR/runtime/raspberry_pi/maps"
+
 if [ $# -eq 0 ]; then
     echo -e "${YELLOW}Usage: $0 <map_name>${NC}"
     echo ""
     echo -e "${YELLOW}Available maps:${NC}"
-    
-    MAP_DIR="$HOME/ros2_ws/src/sweepi_slam/maps"
-    
+
     if [ -d "$MAP_DIR" ]; then
         find "$MAP_DIR" -name "*.yaml" | xargs -I {} basename {} .yaml
     else
@@ -21,7 +32,6 @@ if [ $# -eq 0 ]; then
 fi
 
 MAP_NAME=$1
-MAP_DIR="$HOME/ros2_ws/src/sweepi_slam/maps"
 MAP_PATH="$MAP_DIR/$MAP_NAME"
 
 if [ ! -f "$MAP_PATH.yaml" ]; then

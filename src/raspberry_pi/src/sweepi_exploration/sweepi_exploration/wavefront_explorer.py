@@ -17,6 +17,7 @@ from nav2_msgs.action import NavigateToPose
 from nav_msgs.msg import OccupancyGrid
 from rclpy.action import ActionClient
 from rclpy.node import Node
+from sweepi_api_bridge.runtime_paths import maps_root
 from visualization_msgs.msg import Marker, MarkerArray
 
 
@@ -157,10 +158,8 @@ class WavefrontExplorer(Node):
 
     def _setup_maps_directory(self):
         """Setup maps directory."""
-        home = os.path.expanduser('~')
-        maps_dir = os.path.join(home, 'SweePi', 'maps')
         try:
-            os.makedirs(maps_dir, exist_ok=True)
+            maps_dir = str(maps_root())
         except Exception as e:
             self.get_logger().warn(f'⚠️  Could not create maps directory: {e}')
             maps_dir = '/tmp/swepi_maps'
