@@ -4,8 +4,8 @@ Wavefront-Based Frontier Explorer for SweePi
 CRITICAL FIX: Smarter proximity blocking + connectivity check
 """
 
+import json
 import math
-import os
 from collections import deque
 from datetime import datetime
 
@@ -17,7 +17,8 @@ from nav2_msgs.action import NavigateToPose
 from nav_msgs.msg import OccupancyGrid
 from rclpy.action import ActionClient
 from rclpy.node import Node
-from sweepi_api_bridge.runtime_paths import maps_root
+from std_msgs.msg import String
+from std_srvs.srv import Trigger
 from visualization_msgs.msg import Marker, MarkerArray
 
 
@@ -91,6 +92,7 @@ class WavefrontExplorer(Node):
         self.map_info = None
         self.navigating = False
         self.exploration_active = False
+        self.exploration_state = 'idle'
         self.goals_reached = 0
         self.goals_attempted = 0
         self.start_time = None
@@ -98,6 +100,9 @@ class WavefrontExplorer(Node):
         self.no_frontier_count = 0
         self.current_goal_start_time = None
         self.current_goal_handle = None
+        self.frontiers_remaining = 0
+        self.last_goal = None
+        self.status_message = 'Exploration idle'
 
         # ============================================================
         # REGION-BASED TRACKING
@@ -121,9 +126,6 @@ class WavefrontExplorer(Node):
         self.total_timeout_count = 0
         self.max_total_timeouts = 10
 
-        # Setup maps directory
-        self.maps_dir = self._setup_maps_directory()
-
         # Subscribers
         self.map_sub = self.create_subscription(
             OccupancyGrid, '/map', self.map_callback, 10)
@@ -135,12 +137,21 @@ class WavefrontExplorer(Node):
             MarkerArray, '/exploration/blocked_regions', 10)
         self.unreachable_pub = self.create_publisher(
             MarkerArray, '/exploration/unreachable_areas', 10)
+        self.status_pub = self.create_publisher(
+            String, '/exploration/status_json', 10)
+
+        # Services
+        self.start_service = self.create_service(
+            Trigger, '/exploration/start', self._start_exploration_callback)
+        self.stop_service = self.create_service(
+            Trigger, '/exploration/stop', self._stop_exploration_callback)
 
         # Action client
         self.nav_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
 
         # Timer
         self.timer = self.create_timer(self.exploration_frequency, self.explore)
+        self.status_timer = self.create_timer(1.0, self._publish_status)
 
         # Log Configuration
         self.get_logger().info('=' * 70)
@@ -154,23 +165,92 @@ class WavefrontExplorer(Node):
         self.get_logger().info('   📏 SMART BLOCKING:')
         self.get_logger().info(f'      unreachable_region_radius: {self.unreachable_region_radius}m')
         self.get_logger().info(f'      smart_blocking_enabled: {self.smart_blocking_enabled}')
+        self.get_logger().info('   HTTP/API control: idle until /exploration/start is called')
         self.get_logger().info('=' * 70)
-
-    def _setup_maps_directory(self):
-        """Setup maps directory."""
-        try:
-            maps_dir = str(maps_root())
-        except Exception as e:
-            self.get_logger().warn(f'⚠️  Could not create maps directory: {e}')
-            maps_dir = '/tmp/swepi_maps'
-            os.makedirs(maps_dir, exist_ok=True)
-        return maps_dir
 
     def map_callback(self, msg):
         """Receive occupancy grid map."""
         self.map_data = np.array(msg.data, dtype=np.int8).reshape(
             (msg.info.height, msg.info.width))
         self.map_info = msg.info
+
+    # ============================================================
+    # API CONTROL SERVICES
+    # ============================================================
+    def _start_exploration_callback(self, _request, response):
+        """Start exploration when requested by the API bridge."""
+        if self.exploration_state == 'exploring':
+            response.success = False
+            response.message = 'Exploration is already running'
+            return response
+
+        self._reset_exploration_run()
+        self.exploration_state = 'exploring'
+        self.status_message = 'Exploration started'
+        self.get_logger().info('🚀 Exploration enabled by /exploration/start')
+        self._publish_status()
+
+        response.success = True
+        response.message = 'Exploration started'
+        return response
+
+    def _stop_exploration_callback(self, _request, response):
+        """Stop exploration when requested by the API bridge."""
+        if self.current_goal_handle is not None:
+            self.current_goal_handle.cancel_goal_async()
+
+        self.navigating = False
+        self.current_goal_handle = None
+        self.current_goal_region = None
+        self.exploration_active = False
+        self.exploration_state = 'idle'
+        self.status_message = 'Exploration stopped'
+        self.get_logger().info('🛑 Exploration stopped by /exploration/stop')
+        self._publish_status()
+
+        response.success = True
+        response.message = 'Exploration stopped'
+        return response
+
+    def _reset_exploration_run(self):
+        """Reset per-run exploration state while keeping the latest live map."""
+        self.navigating = False
+        self.exploration_active = False
+        self.goals_reached = 0
+        self.goals_attempted = 0
+        self.start_time = None
+        self.exploration_start_time = None
+        self.no_frontier_count = 0
+        self.current_goal_start_time = None
+        self.current_goal_handle = None
+        self.current_goal_region = None
+        self.frontiers_remaining = 0
+        self.last_goal = None
+        self.region_attempts = {}
+        self.region_successes = {}
+        self.blocked_regions = set()
+        self.unreachable_areas = []
+        self.unreachable_region_map = {}
+        self.consecutive_timeout_count = 0
+        self.total_timeout_count = 0
+
+    def _publish_status(self):
+        """Publish reliable exploration state for the API bridge."""
+        payload = {
+            'state': self.exploration_state,
+            'map_available': self.map_data is not None,
+            'frontiers_remaining': int(self.frontiers_remaining),
+            'last_goal': (
+                {'x': self.last_goal[0], 'y': self.last_goal[1]}
+                if self.last_goal is not None else None
+            ),
+            'goals_reached': int(self.goals_reached),
+            'goals_attempted': int(self.goals_attempted),
+            'message': self.status_message,
+        }
+        message = String()
+        message.data = json.dumps(payload)
+        self.status_pub.publish(message)
 
     # ============================================================
     # COORDINATE CONVERSION
@@ -463,7 +543,11 @@ class WavefrontExplorer(Node):
     # ============================================================
     def explore(self):
         """Main exploration loop."""
+        if self.exploration_state != 'exploring':
+            return
+
         if self.map_data is None:
+            self.status_message = 'Waiting for /map from SLAM Toolbox'
             self.get_logger().info('⏳ Waiting for map...', throttle_duration_sec=5.0)
             return
 
@@ -471,6 +555,7 @@ class WavefrontExplorer(Node):
             elapsed = (datetime.now() - self.exploration_start_time).total_seconds()
             if elapsed > self.max_exploration_time:
                 self.get_logger().warn(f'⏰ MAX EXPLORATION TIME')
+                self.status_message = 'Exploration completed: max exploration time reached'
                 self._finish_exploration()
                 return
 
@@ -491,32 +576,39 @@ class WavefrontExplorer(Node):
 
                 if self.total_timeout_count >= self.max_total_timeouts:
                     self.get_logger().warn(f'🛑 Max total timeouts')
+                    self.status_message = 'Exploration completed: max total timeouts reached'
                     self._finish_exploration()
                     return
 
                 if self.consecutive_timeout_count >= self.max_consecutive_timeouts:
                     self.get_logger().warn(f'🛑 Max consecutive timeouts')
+                    self.status_message = 'Exploration completed: max consecutive timeouts reached'
                     self._finish_exploration()
                     return
             return
 
         if not self.nav_client.wait_for_server(timeout_sec=0.5):
+            self.status_message = 'Waiting for Nav2 navigate_to_pose action'
             self.get_logger().info('⏳ Waiting for Nav2...', throttle_duration_sec=10.0)
             return
 
         frontiers = self.wavefront_frontier_detection()
+        self.frontiers_remaining = len(frontiers)
         self._publish_frontier_markers(frontiers)
         self._publish_unreachable_areas()
 
         if not frontiers:
             self.no_frontier_count += 1
+            self.status_message = f'No valid frontiers ({self.no_frontier_count}/3)'
             self.get_logger().info(f'ℹ️  No valid frontiers ({self.no_frontier_count}/3)')
 
-            if self.no_frontier_count >= 3 and self.exploration_active:
+            if self.no_frontier_count >= 3:
+                self.status_message = 'Exploration completed: no valid frontiers remaining'
                 self._finish_exploration()
             return
 
         self.no_frontier_count = 0
+        self.status_message = f'Exploring; {self.frontiers_remaining} frontiers remaining'
 
         if not self.exploration_active:
             self.exploration_active = True
@@ -540,9 +632,11 @@ class WavefrontExplorer(Node):
 
         self.current_goal_region = region_key
         attempts = self.region_attempts[region_key]
+        self.last_goal = (goal_x, goal_y)
 
         self.get_logger().info(
             f'📍 Goal: ({goal_x:.2f}, {goal_y:.2f}) | Attempt: {attempts}/{self.max_attempts_per_frontier}')
+        self.status_message = f'Navigating to frontier ({goal_x:.2f}, {goal_y:.2f})'
 
         goal_msg = NavigateToPose.Goal()
         goal_msg.pose = self._make_pose_stamped(goal_x, goal_y)
@@ -589,8 +683,10 @@ class WavefrontExplorer(Node):
 
                 self.get_logger().info(
                     f'✅ Goal reached! ({self.goals_reached}/{self.goals_attempted})')
+                self.status_message = 'Goal reached; selecting next frontier'
             else:
                 self.get_logger().warn(f'⚠️  Goal failed')
+                self.status_message = 'Goal failed; selecting another frontier'
                 self._mark_frontier_failed(region_key, frontier_x, frontier_y)
         except Exception as e:
             self.get_logger().error(f'Result error: {e}')
@@ -616,7 +712,7 @@ class WavefrontExplorer(Node):
     # ============================================================
     def _finish_exploration(self):
         """Complete exploration and save map."""
-        if not self.exploration_active:
+        if self.exploration_state != 'exploring':
             return
 
         elapsed = (datetime.now() - self.start_time).total_seconds() if self.start_time else 0
@@ -628,69 +724,9 @@ class WavefrontExplorer(Node):
         self.get_logger().info(f'   📍 Unreachable areas: {len(self.unreachable_areas)}')
         self.get_logger().info('=' * 70)
 
-        self._save_map(elapsed)
         self.exploration_active = False
-
-    def _save_map(self, exploration_time):
-        """Save map to file."""
-        try:
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            map_name = f'swepi_exploration_map_{timestamp}'
-            pgm_file = os.path.join(self.maps_dir, f'{map_name}.pgm')
-            yaml_file = os.path.join(self.maps_dir, f'{map_name}.yaml')
-
-            self._save_pgm_file(pgm_file)
-            self._save_yaml_file(yaml_file, pgm_file, exploration_time)
-
-            self.get_logger().info('=' * 70)
-            self.get_logger().info('💾 MAP SAVED SUCCESSFULLY')
-            self.get_logger().info(f'   📄 PGM: {pgm_file}')
-            self.get_logger().info(f'   📄 YAML: {yaml_file}')
-            self.get_logger().info('=' * 70)
-
-        except Exception as e:
-            self.get_logger().error(f'❌ Failed to save map: {e}')
-
-    def _save_pgm_file(self, filename):
-        """Save map as PGM."""
-        height, width = self.map_data.shape
-        image_data = np.zeros((height, width), dtype=np.uint8)
-
-        for y in range(height):
-            for x in range(width):
-                cell = self.map_data[y, x]
-                if cell == -1:
-                    image_data[y, x] = 128
-                elif cell == 0:
-                    image_data[y, x] = 255
-                else:
-                    image_data[y, x] = 0
-
-        with open(filename, 'wb') as f:
-            f.write(b'P5\n')
-            f.write(f'{width} {height}\n'.encode())
-            f.write(b'255\n')
-            f.write(image_data.tobytes())
-
-    def _save_yaml_file(self, filename, pgm_file, exploration_time):
-        """Save metadata."""
-        yaml_content = f"""image: {os.path.basename(pgm_file)}
-resolution: {self.map_info.resolution}
-origin: [{self.map_info.origin.position.x}, {self.map_info.origin.position.y}, 0.0]
-negate: 0
-occupied_thresh: 0.65
-free_thresh: 0.196
-
-swepi_metadata:
-  timestamp: {datetime.now().isoformat()}
-  exploration_time: {exploration_time:.2f}
-  goals_reached: {self.goals_reached}
-  goals_attempted: {self.goals_attempted}
-  unreachable_areas: {len(self.unreachable_areas)}
-"""
-
-        with open(filename, 'w') as f:
-            f.write(yaml_content)
+        self.exploration_state = 'completed'
+        self._publish_status()
 
     # ============================================================
     # VISUALIZATION

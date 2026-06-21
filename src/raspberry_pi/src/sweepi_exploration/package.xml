@@ -13,6 +13,7 @@
   <!-- Core ROS 2 -->
   <depend>rclpy</depend>
   <depend>std_msgs</depend>
+  <depend>std_srvs</depend>
   <depend>nav_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>sensor_msgs</depend>
@@ -20,7 +21,6 @@
 
   <!-- Navigation -->
   <depend>nav2_msgs</depend>
-  <depend>sweepi_api_bridge</depend>
   <depend>sweepi_slam</depend>
 
   <!-- Visualization -->

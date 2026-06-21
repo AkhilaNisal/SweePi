@@ -82,6 +82,14 @@ class ApiBridgeNode(Node):
             'errors': [],
             'warnings': [],
         }
+        self.exploration_area_name: str | None = None
+        self.exploration_status = {
+            'state': 'idle',
+            'map_available': False,
+            'frontiers_remaining': 0,
+            'last_goal': None,
+            'message': 'Exploration status has not been received yet',
+        }
         self.selection = {
             'selection_id': None,
             'room_ids': [],
@@ -128,8 +136,22 @@ class ApiBridgeNode(Node):
             self._manager_status_callback,
             10,
         )
+        self.exploration_status_sub = self.create_subscription(
+            String,
+            '/exploration/status_json',
+            self._exploration_status_callback,
+            10,
+        )
         self.selection_pub = self.create_publisher(String, self.selection_topic, 10)
 
+        self.start_exploration_client = self.create_client(
+            Trigger,
+            '/exploration/start',
+        )
+        self.stop_exploration_client = self.create_client(
+            Trigger,
+            '/exploration/stop',
+        )
         self.start_cleaning_client = self.create_client(
             Trigger,
             '/manager/start_cleaning',
@@ -235,6 +257,17 @@ class ApiBridgeNode(Node):
             )
 
         self._broadcast('status.update', self.robot_status())
+
+    def _exploration_status_callback(self, msg: String) -> None:
+        try:
+            payload = json.loads(msg.data)
+        except json.JSONDecodeError:
+            self.get_logger().warn('Ignoring invalid exploration status JSON')
+            return
+
+        with self._lock:
+            self.exploration_status = payload
+        self._broadcast('exploration.update', self.exploration_status_payload())
 
     def _start_http_server(self) -> ThreadingHTTPServer:
         node = self
@@ -459,6 +492,12 @@ class ApiBridgeNode(Node):
         if path.startswith('/api/v1/maps/') and path.endswith('/metadata') and method == 'PUT':
             map_id = path.split('/')[-2]
             return save_map_metadata(map_id, body), HTTPStatus.OK
+        if path == '/api/v1/exploration/start' and method == 'POST':
+            return self.start_exploration(body), HTTPStatus.OK
+        if path == '/api/v1/exploration/stop' and method == 'POST':
+            return self.stop_exploration(), HTTPStatus.OK
+        if path == '/api/v1/exploration/status' and method == 'GET':
+            return self.exploration_status_payload(), HTTPStatus.OK
         if path == '/api/v1/cleaning/selection' and method == 'PUT':
             return self.update_selection(body), HTTPStatus.OK
         if path == '/api/v1/cleaning/start' and method == 'POST':
@@ -506,6 +545,25 @@ class ApiBridgeNode(Node):
             },
             'errors': manager_status.get('errors', []),
             'warnings': manager_status.get('warnings', []),
+        }
+
+    def exploration_status_payload(self) -> dict:
+        with self._lock:
+            status = dict(self.exploration_status)
+            area_name = self.exploration_area_name
+            map_available = self.map_msg is not None
+
+        last_goal = status.get('last_goal')
+        if not isinstance(last_goal, dict):
+            last_goal = None
+
+        return {
+            'state': status.get('state', 'idle'),
+            'area_name': area_name,
+            'map_available': map_available,
+            'frontiers_remaining': int(status.get('frontiers_remaining', 0) or 0),
+            'last_goal': last_goal,
+            'message': status.get('message', ''),
         }
 
     def current_map_payload(self) -> dict:
@@ -567,6 +625,91 @@ class ApiBridgeNode(Node):
             self.selection = payload
         self._broadcast('status.update', self.robot_status())
         return {'accepted': True, 'selection': payload}
+
+    def start_exploration(self, body: dict) -> dict:
+        area_name = str(body.get('area_name', '')).strip()
+        if not area_name:
+            raise ValueError('area_name is required')
+
+        service_result = self._trigger_service_result(
+            self.start_exploration_client,
+            '/exploration/start',
+        )
+        if not service_result.get('accepted', False):
+            return {
+                'accepted': False,
+                'state': self.exploration_status_payload().get('state', 'idle'),
+                'area_name': area_name,
+                'message': service_result.get('message', 'Exploration start failed'),
+            }
+
+        with self._lock:
+            self.exploration_area_name = area_name
+            self.exploration_status = {
+                **self.exploration_status,
+                'state': 'exploring',
+                'message': 'Exploration started',
+            }
+        payload = {
+            'accepted': True,
+            'state': 'exploring',
+            'area_name': area_name,
+            'message': 'Exploration started',
+        }
+        self._broadcast('exploration.update', self.exploration_status_payload())
+        return payload
+
+    def stop_exploration(self) -> dict:
+        with self._lock:
+            area_name = self.exploration_area_name
+
+        service_result = self._trigger_service_result(
+            self.stop_exploration_client,
+            '/exploration/stop',
+        )
+        if not service_result.get('accepted', False):
+            return {
+                'accepted': False,
+                'state': self.exploration_status_payload().get('state', 'idle'),
+                'area_name': area_name,
+                'map_saved': False,
+                'message': service_result.get('message', 'Exploration stop failed'),
+            }
+
+        map_saved = False
+        map_id = None
+        if area_name:
+            try:
+                save_result = self.save_current_map(area_name)
+                map_saved = True
+                map_id = save_result['map_id']
+                message = 'Exploration stopped and map saved'
+            except ValueError as exc:
+                message = f'Exploration stopped, but {exc}'
+        else:
+            message = 'Exploration stopped, but no active area_name was available for map saving'
+
+        if not map_saved and message == 'Exploration stopped, but No live /map is available to save':
+            message = 'Exploration stopped, but no live /map was available to save'
+
+        with self._lock:
+            self.exploration_status = {
+                **self.exploration_status,
+                'state': 'idle',
+                'message': message,
+            }
+        self._broadcast('exploration.update', self.exploration_status_payload())
+
+        response = {
+            'accepted': True,
+            'state': 'idle',
+            'area_name': area_name,
+            'map_saved': map_saved,
+            'message': message,
+        }
+        if map_id is not None:
+            response['map_id'] = map_id
+        return response
 
     def start_cleaning(self, task_type: str, body: dict) -> dict:
         if task_type == 'selected' and not self.selection.get('zones') and not self.selection.get('room_ids'):
@@ -650,10 +793,13 @@ class ApiBridgeNode(Node):
         }
 
     def _service_result(self, client) -> dict:
+        return self._trigger_service_result(client, 'Required ROS service')
+
+    def _trigger_service_result(self, client, service_name: str) -> dict:
         if not client.wait_for_service(timeout_sec=1.0):
             return {
                 'accepted': False,
-                'message': 'Required ROS service is unavailable',
+                'message': f'{service_name} is unavailable',
             }
 
         event = threading.Event()

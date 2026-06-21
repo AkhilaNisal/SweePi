@@ -23,14 +23,15 @@ From the ROS 2 workspace:
 ```bash
 cd /home/akhila-wedamestrige/SweePi/src/raspberry_pi
 source /opt/ros/jazzy/setup.bash
-colcon build --symlink-install --packages-select sweepi_bringup sweepi_coverage sweepi_api_bridge
+colcon build --symlink-install --packages-select sweepi_bringup sweepi_coverage sweepi_api_bridge sweepi_slam sweepi_exploration
 source install/setup.bash
 ros2 launch sweepi_bringup sweepi_sim_full.launch.py
 ```
 
-`sweepi_sim_full.launch.py` starts Gazebo and then includes
-`coverage_follow_path.launch.py`, which starts the coverage nodes, coverage
-manager, and `api_bridge_node`.
+`sweepi_sim_full.launch.py` starts Gazebo, Nav2, SLAM Toolbox, the idle
+wavefront explorer, coverage nodes, coverage manager, and `api_bridge_node`.
+Exploration does not move the robot until the API calls
+`POST /api/v1/exploration/start`.
 
 Check that the bridge is listening:
 
@@ -53,7 +54,21 @@ curl http://localhost:8080/api/v1/robot/status
    curl http://localhost:8080/api/v1/robot/status
    ```
 
-3. Wait until a map is available:
+3. Start exploration and name the map that will be saved later:
+
+   ```bash
+   curl -X POST http://localhost:8080/api/v1/exploration/start \
+     -H "Content-Type: application/json" \
+     -d '{"area_name":"first_floor"}'
+   ```
+
+4. Check exploration status:
+
+   ```bash
+   curl http://localhost:8080/api/v1/exploration/status
+   ```
+
+5. Wait until a map is available:
 
    ```bash
    curl http://localhost:8080/api/v1/maps/current
@@ -62,20 +77,26 @@ curl http://localhost:8080/api/v1/robot/status
    The response should include `"available": true`. If cleaning starts before
    `/map` is available, the bridge can respond with `"accepted": false`.
 
-4. Start full-map cleaning:
+6. Stop exploration and save the current live `/map` using `area_name`:
+
+   ```bash
+   curl -X POST http://localhost:8080/api/v1/exploration/stop
+   ```
+
+7. Start full-map cleaning:
 
    ```bash
    curl -X POST http://localhost:8080/api/v1/cleaning/start
    ```
 
-5. Query progress:
+8. Query progress:
 
    ```bash
    curl http://localhost:8080/api/v1/robot/status
    curl http://localhost:8080/api/v1/maps/current
    ```
 
-6. Pause, resume, or stop when supported by the current robot state:
+9. Pause, resume, or stop when supported by the current robot state:
 
    ```bash
    curl -X POST http://localhost:8080/api/v1/cleaning/pause
@@ -92,6 +113,145 @@ idle     -> start_cleaning
 cleaning -> pause_cleaning, stop_cleaning
 paused   -> resume_cleaning, stop_cleaning
 error    -> stop_cleaning
+```
+
+## Exploration / Mapping API
+
+These endpoints control the `wavefront_explorer` node through ROS services.
+The API bridge stores the `area_name` from the start request and uses it when
+saving the live `/map` during stop.
+
+### POST /api/v1/exploration/start
+
+Purpose: Start autonomous mapping/exploration and set the map name that will be
+used when the map is saved.
+
+Curl:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/exploration/start \
+  -H "Content-Type: application/json" \
+  -d '{"area_name":"first_floor"}'
+```
+
+Postman:
+
+```text
+Method: POST
+URL:    http://localhost:8080/api/v1/exploration/start
+Body:   raw JSON
+```
+
+```json
+{
+  "area_name": "first_floor"
+}
+```
+
+Expected response:
+
+```json
+{
+  "accepted": true,
+  "state": "exploring",
+  "area_name": "first_floor",
+  "message": "Exploration started"
+}
+```
+
+If the explorer is not running, the response is:
+
+```json
+{
+  "accepted": false,
+  "state": "idle",
+  "area_name": "first_floor",
+  "message": "/exploration/start is unavailable"
+}
+```
+
+### GET /api/v1/exploration/status
+
+Purpose: Return the latest exploration status cached by the API bridge.
+
+Curl:
+
+```bash
+curl http://localhost:8080/api/v1/exploration/status
+```
+
+Postman:
+
+```text
+Method: GET
+URL:    http://localhost:8080/api/v1/exploration/status
+Body:   none
+```
+
+Expected response:
+
+```json
+{
+  "state": "exploring",
+  "area_name": "first_floor",
+  "map_available": true,
+  "frontiers_remaining": 10,
+  "last_goal": {
+    "x": 1.2,
+    "y": 0.5
+  },
+  "message": "Navigating to frontier (1.20, 0.50)"
+}
+```
+
+Reliable fields are `state`, `area_name`, `map_available`,
+`frontiers_remaining`, `last_goal`, and `message`. `frontiers_remaining` is the
+latest detected frontier count from the explorer loop. `last_goal` is `null`
+until the explorer sends its first Nav2 goal. Detailed completion reason,
+coverage quality, and per-frontier history are not exposed yet.
+
+### POST /api/v1/exploration/stop
+
+Purpose: Stop autonomous exploration and save the current live `/map` using the
+`area_name` supplied to `POST /api/v1/exploration/start`.
+
+Curl:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/exploration/stop
+```
+
+Postman:
+
+```text
+Method: POST
+URL:    http://localhost:8080/api/v1/exploration/stop
+Body:   none
+```
+
+Expected response when a live `/map` is available:
+
+```json
+{
+  "accepted": true,
+  "state": "idle",
+  "area_name": "first_floor",
+  "map_saved": true,
+  "map_id": "first_floor",
+  "message": "Exploration stopped and map saved"
+}
+```
+
+Expected response when no live `/map` is available:
+
+```json
+{
+  "accepted": true,
+  "state": "idle",
+  "area_name": "first_floor",
+  "map_saved": false,
+  "message": "Exploration stopped, but no live /map was available to save"
+}
 ```
 
 ## Postman Basics

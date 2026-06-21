@@ -11,6 +11,11 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     sweepi_slam_dir = get_package_share_directory('sweepi_slam')
+    slam_params_file = os.path.join(
+        sweepi_slam_dir,
+        'config',
+        'mapper_params_online_async.yaml',
+    )
 
     declare_use_sim_time = DeclareLaunchArgument(
         'use_sim_time', default_value='true')
@@ -54,6 +59,7 @@ def generate_launch_description():
         launch_arguments={
             'use_sim_time': LaunchConfiguration('use_sim_time'),
             'autostart': 'true',
+            'slam_params_file': slam_params_file,
         }.items(),
     )
 

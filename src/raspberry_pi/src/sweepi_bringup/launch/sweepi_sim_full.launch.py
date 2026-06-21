@@ -12,6 +12,7 @@ from launch.launch_description_sources import (
 def generate_launch_description():
     bringup_share = get_package_share_directory('sweepi_bringup')
     coverage_share = get_package_share_directory('sweepi_coverage')
+    exploration_share = get_package_share_directory('sweepi_exploration')
 
     gazebo_launch = os.path.join(bringup_share, 'launch', 'gazebo.launch.xml')
     nav2_launch = os.path.join(coverage_share, 'launch', 'nav2_bringup.launch.py')
@@ -19,6 +20,11 @@ def generate_launch_description():
         coverage_share,
         'launch',
         'coverage_follow_path.launch.py',
+    )
+    exploration_launch = os.path.join(
+        exploration_share,
+        'launch',
+        'exploration.launch.py',
     )
 
     return LaunchDescription([
@@ -39,6 +45,12 @@ def generate_launch_description():
             launch_arguments={
                 'use_sim_time': 'true',
                 'auto_start': 'false',
+            }.items(),
+        ),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(exploration_launch),
+            launch_arguments={
+                'use_sim_time': 'true',
             }.items(),
         ),
     ])
