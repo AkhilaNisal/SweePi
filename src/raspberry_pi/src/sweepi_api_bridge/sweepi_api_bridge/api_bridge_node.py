@@ -3,9 +3,11 @@
 
 from __future__ import annotations
 
-import asyncio
+import base64
+import hashlib
 import json
 import math
+import socketserver
 import threading
 import time
 import uuid
@@ -26,7 +28,6 @@ from rclpy.time import Time
 from std_msgs.msg import Float32, String
 from std_srvs.srv import Trigger
 from tf2_ros import Buffer, TransformException, TransformListener
-import websockets
 
 from sweepi_api_bridge.map_io import (
     list_saved_maps,
@@ -92,6 +93,7 @@ class ApiBridgeNode(Node):
         self.active_task: TaskContext | None = None
         self.last_terminal_status = ''
         self._lock = threading.Lock()
+        self._ws_lock = threading.Lock()
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
@@ -150,7 +152,7 @@ class ApiBridgeNode(Node):
         )
 
         self.http_server = self._start_http_server()
-        self.ws_loop, self.ws_clients = self._start_websocket_server()
+        self.ws_server, self.ws_clients = self._start_websocket_server()
         self.schedule_timer = self.create_timer(30.0, self._run_scheduler)
 
         self.get_logger().info(
@@ -261,52 +263,143 @@ class ApiBridgeNode(Node):
         return server
 
     def _start_websocket_server(self):
-        loop = asyncio.new_event_loop()
         clients: set = set()
         node = self
 
-        async def handler(websocket):
-            clients.add(websocket)
-            try:
-                await websocket.send(
-                    json.dumps({'type': 'status.snapshot', 'payload': node.robot_status()})
+        class WebSocketClient:
+            def __init__(self, handler):
+                self._handler = handler
+                self._send_lock = threading.Lock()
+
+            def send(self, message: str) -> None:
+                payload = message.encode('utf-8')
+                frame = bytearray([0x81])
+                if len(payload) < 126:
+                    frame.append(len(payload))
+                elif len(payload) <= 0xFFFF:
+                    frame.extend(
+                        [126, (len(payload) >> 8) & 0xFF, len(payload) & 0xFF]
+                    )
+                else:
+                    frame.append(127)
+                    frame.extend(len(payload).to_bytes(8, byteorder='big'))
+                frame.extend(payload)
+                with self._send_lock:
+                    self._handler.request.sendall(frame)
+
+        class Handler(socketserver.StreamRequestHandler):
+            def handle(self):
+                client = None
+                try:
+                    if not self._perform_handshake():
+                        return
+                    client = WebSocketClient(self)
+                    with node._ws_lock:
+                        clients.add(client)
+                    client.send(
+                        json.dumps(
+                            {
+                                'type': 'status.snapshot',
+                                'payload': node.robot_status(),
+                            }
+                        )
+                    )
+                    self._read_until_close()
+                except Exception as exc:  # pragma: no cover - defensive runtime logging
+                    node.get_logger().debug(f'WebSocket client disconnected: {exc}')
+                finally:
+                    if client is not None:
+                        with node._ws_lock:
+                            clients.discard(client)
+
+            def _perform_handshake(self) -> bool:
+                request_line = self.rfile.readline().decode('ascii', errors='ignore')
+                if not request_line.startswith('GET '):
+                    return False
+
+                headers = {}
+                while True:
+                    line = self.rfile.readline().decode('ascii', errors='ignore')
+                    if line in ('\r\n', '\n', ''):
+                        break
+                    key, _, value = line.partition(':')
+                    headers[key.strip().lower()] = value.strip()
+
+                ws_key = headers.get('sec-websocket-key')
+                if not ws_key:
+                    return False
+
+                accept = base64.b64encode(
+                    hashlib.sha1(
+                        (ws_key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11').encode(
+                            'ascii'
+                        )
+                    ).digest()
+                ).decode('ascii')
+                response = (
+                    'HTTP/1.1 101 Switching Protocols\r\n'
+                    'Upgrade: websocket\r\n'
+                    'Connection: Upgrade\r\n'
+                    f'Sec-WebSocket-Accept: {accept}\r\n'
+                    '\r\n'
                 )
-                async for _message in websocket:
-                    pass
-            finally:
-                clients.discard(websocket)
+                self.request.sendall(response.encode('ascii'))
+                return True
 
-        async def runner():
-            async with websockets.serve(handler, self.api_host, self.ws_port):
-                await asyncio.Future()
+            def _read_until_close(self) -> None:
+                while True:
+                    first = self.rfile.read(2)
+                    if len(first) < 2:
+                        return
+                    opcode = first[0] & 0x0F
+                    masked = bool(first[1] & 0x80)
+                    length = first[1] & 0x7F
+                    if length == 126:
+                        length = int.from_bytes(self.rfile.read(2), byteorder='big')
+                    elif length == 127:
+                        length = int.from_bytes(self.rfile.read(8), byteorder='big')
+                    mask = self.rfile.read(4) if masked else b''
+                    payload = self.rfile.read(length) if length else b''
+                    if masked and payload:
+                        payload = bytes(
+                            byte ^ mask[index % 4]
+                            for index, byte in enumerate(payload)
+                        )
+                    if opcode == 0x8:
+                        return
+                    if opcode == 0x9:
+                        self._send_control_frame(0xA, payload)
 
-        thread = threading.Thread(
-            target=self._run_asyncio_loop,
-            args=(loop, runner()),
-            daemon=True,
-        )
+            def _send_control_frame(self, opcode: int, payload: bytes) -> None:
+                if len(payload) > 125:
+                    payload = payload[:125]
+                self.request.sendall(bytes([0x80 | opcode, len(payload)]) + payload)
+
+        class Server(socketserver.ThreadingMixIn, socketserver.TCPServer):
+            allow_reuse_address = True
+            daemon_threads = True
+
+        server = Server((self.api_host, self.ws_port), Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
-        return loop, clients
-
-    def _run_asyncio_loop(self, loop, main_task):
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(main_task)
+        return server, clients
 
     def _broadcast(self, message_type: str, payload: dict) -> None:
-        if not hasattr(self, 'ws_loop'):
+        if not hasattr(self, 'ws_clients'):
             return
         message = json.dumps({'type': message_type, 'payload': payload})
-        asyncio.run_coroutine_threadsafe(self._ws_broadcast(message), self.ws_loop)
-
-    async def _ws_broadcast(self, message: str) -> None:
         dead_clients = []
-        for client in list(self.ws_clients):
+        with self._ws_lock:
+            clients = list(self.ws_clients)
+        for client in clients:
             try:
-                await client.send(message)
+                client.send(message)
             except Exception:
                 dead_clients.append(client)
-        for client in dead_clients:
-            self.ws_clients.discard(client)
+        if dead_clients:
+            with self._ws_lock:
+                for client in dead_clients:
+                    self.ws_clients.discard(client)
 
     def _handle_http_request(self, handler: BaseHTTPRequestHandler, method: str) -> None:
         parsed = urlparse(handler.path)
@@ -763,8 +856,9 @@ class ApiBridgeNode(Node):
     def destroy_node(self):
         if hasattr(self, 'http_server'):
             self.http_server.shutdown()
-        if hasattr(self, 'ws_loop'):
-            self.ws_loop.call_soon_threadsafe(self.ws_loop.stop)
+        if hasattr(self, 'ws_server'):
+            self.ws_server.shutdown()
+            self.ws_server.server_close()
         super().destroy_node()
 
 

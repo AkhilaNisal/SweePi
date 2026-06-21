@@ -23,7 +23,7 @@ def generate_launch_description():
         ),
         Node(
             package='sweepi_api_bridge',
-            executable='api_bridge_node.py',
+            executable='api_bridge_node',
             name='api_bridge_node',
             output='screen',
             parameters=[
