@@ -11,8 +11,21 @@ From the ROS 2 workspace:
 
 ```bash
 cd /home/akhila-wedamestrige/SweePi/src/raspberry_pi
-colcon build --packages-select sweepi_bringup sweepi_coverage sweepi_api_bridge
+source /opt/ros/jazzy/setup.bash
+colcon build --symlink-install --packages-select sweepi_bringup sweepi_coverage sweepi_api_bridge
 source install/setup.bash
+```
+
+After building, verify that the API bridge executable is installed:
+
+```bash
+ros2 pkg executables sweepi_api_bridge
+```
+
+Expected output:
+
+```text
+sweepi_api_bridge api_bridge_node
 ```
 
 ## Run Simulation
@@ -43,16 +56,26 @@ auto_start:=false
 The API bridge will be available at:
 
 ```text
-http://localhost:8080
-ws://localhost:8765
+HTTP:      http://localhost:8080
+WebSocket: ws://localhost:8765
 ```
 
-Example API test:
+Useful API tests:
 
 ```bash
 curl http://localhost:8080/api/v1/robot/status
 curl -X POST http://localhost:8080/api/v1/cleaning/start
 ```
+
+To check whether the API bridge is listening:
+
+```bash
+ss -ltnp | grep -E "8080|8765"
+```
+
+Expected result: both ports `8080` and `8765` should be listening.
+
+Note: `ws://localhost:8765` is a WebSocket URL. Do not run it directly as a terminal command, and do not test it with normal `curl`. Use a WebSocket client if direct WebSocket testing is needed.
 
 ## Run on Raspberry Pi
 
@@ -91,8 +114,8 @@ The real robot bringup should provide:
 From the Flutter app or another device on the same LAN, connect to:
 
 ```text
-http://<raspberry-pi-ip>:8080
-ws://<raspberry-pi-ip>:8765
+HTTP:      http://<raspberry-pi-ip>:8080
+WebSocket: ws://<raspberry-pi-ip>:8765
 ```
 
 Example:
@@ -117,9 +140,56 @@ sweepi_robot_full.launch.py    # Full real robot launch
 robot_bringup.launch.py        # Real robot hardware bringup placeholder
 ```
 
+The API bridge launch file is located in:
+
+```text
+src/raspberry_pi/src/sweepi_api_bridge/launch/api_bridge.launch.py
+```
+
+The API bridge node executable is:
+
+```text
+api_bridge_node
+```
+
+## Troubleshooting
+
+If `curl http://localhost:8080/api/v1/robot/status` fails with connection refused, the API bridge is not running or did not bind to port `8080`.
+
+Check whether the ports are open:
+
+```bash
+ss -ltnp | grep -E "8080|8765"
+```
+
+If nothing appears, check the launch terminal for errors related to:
+
+```text
+api_bridge_node
+sweepi_api_bridge
+```
+
+You can also run the API bridge alone:
+
+```bash
+cd /home/akhila-wedamestrige/SweePi/src/raspberry_pi
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+ros2 run sweepi_api_bridge api_bridge_node
+```
+
+Then test again from another terminal:
+
+```bash
+curl http://localhost:8080/api/v1/robot/status
+```
+
+If `/api/v1/cleaning/start` returns `accepted: false` because `/map` is unavailable, that means the bridge is reachable but the required map/coverage system is not ready yet.
+
 ## Notes
 
 * Use `sweepi_sim_full.launch.py` for Gazebo testing.
 * Use `sweepi_robot_full.launch.py` on the Raspberry Pi.
 * The API bridge does not replace Nav2 or coverage; it only exposes robot control/status to the mobile app.
 * For real robot mode, Gazebo is replaced by real hardware drivers.
+* The API bridge should expose HTTP on port `8080` and WebSocket on port `8765`.
