@@ -67,6 +67,9 @@ curl http://localhost:8080/api/v1/robot/status
 curl -X POST http://localhost:8080/api/v1/cleaning/start
 ```
 
+For the full HTTP and WebSocket reference, including Postman setup and the
+simulation control sequence, see [`docs/api.md`](api.md).
+
 To check whether the API bridge is listening:
 
 ```bash
