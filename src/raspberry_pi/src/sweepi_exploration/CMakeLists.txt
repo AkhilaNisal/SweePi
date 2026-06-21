@@ -24,10 +24,11 @@ install(
   DESTINATION lib/${PROJECT_NAME}
 )
 
-# Install config files
-install(
-  DIRECTORY config/
-  DESTINATION share/${PROJECT_NAME}/config
-)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/config")
+  install(
+    DIRECTORY config/
+    DESTINATION share/${PROJECT_NAME}/config
+  )
+endif()
 
 ament_package()

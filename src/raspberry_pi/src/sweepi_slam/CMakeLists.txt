@@ -9,13 +9,19 @@ endif()
 find_package(ament_cmake REQUIRED)
 
 
+set(SWEEPI_SLAM_SHARE_DIRS
+  config
+  launch
+  rviz
+)
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/maps")
+  list(APPEND SWEEPI_SLAM_SHARE_DIRS maps)
+endif()
+
 # Install config files
 install(
-  DIRECTORY
-    config
-    launch
-    rviz
-    maps
+  DIRECTORY ${SWEEPI_SLAM_SHARE_DIRS}
   DESTINATION share/${PROJECT_NAME}/
 )
 
