@@ -12,11 +12,14 @@ from datetime import datetime
 import numpy as np
 import rclpy
 from action_msgs.msg import GoalStatus
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, Twist
 from nav2_msgs.action import NavigateToPose
+from nav2_msgs.srv import SaveMap
 from nav_msgs.msg import OccupancyGrid
 from rclpy.action import ActionClient
 from rclpy.node import Node
+from std_msgs.msg import String
+from std_srvs.srv import SetBool, Trigger
 from visualization_msgs.msg import Marker, MarkerArray
 
 
@@ -61,6 +64,13 @@ class WavefrontExplorer(Node):
         self.declare_parameter('unreachable_region_radius', 0.5)  # REDUCED - only very close
         self.declare_parameter('smart_blocking_enabled', True)    # NEW: Check connectivity
 
+        # ============================================================
+        # MANUAL / AUTO CONTROL PARAMETERS
+        # ============================================================
+        self.declare_parameter('map_name', '')
+        self.declare_parameter('start_mode', 'auto')
+        self.declare_parameter('cmd_vel_topic', '/cmd_vel')
+
         # Get Parameters
         self.frontier_min_size = int(self.get_parameter('frontier_min_size').value)
         self.cluster_distance = float(self.get_parameter('cluster_distance').value)
@@ -82,6 +92,10 @@ class WavefrontExplorer(Node):
         
         self.unreachable_region_radius = float(self.get_parameter('unreachable_region_radius').value)
         self.smart_blocking_enabled = bool(self.get_parameter('smart_blocking_enabled').value)
+        self.configured_map_name = self._sanitize_map_name(
+            self.get_parameter('map_name').value)
+        self.start_mode = str(self.get_parameter('start_mode').value).strip().lower()
+        self.cmd_vel_topic = str(self.get_parameter('cmd_vel_topic').value)
 
         # ============================================================
         # STATE VARIABLES
@@ -97,6 +111,9 @@ class WavefrontExplorer(Node):
         self.no_frontier_count = 0
         self.current_goal_start_time = None
         self.current_goal_handle = None
+        self.ignore_current_goal_result = False
+        self.exploration_mode = self.start_mode if self.start_mode in ('auto', 'manual', 'stopped') else 'auto'
+        self.stop_reason = None
 
         # ============================================================
         # REGION-BASED TRACKING
@@ -134,9 +151,27 @@ class WavefrontExplorer(Node):
             MarkerArray, '/exploration/blocked_regions', 10)
         self.unreachable_pub = self.create_publisher(
             MarkerArray, '/exploration/unreachable_areas', 10)
+        self.mode_pub = self.create_publisher(
+            String, '/exploration/mode', 10)
+        self.cmd_vel_pub = self.create_publisher(
+            Twist, self.cmd_vel_topic, 10)
 
         # Action client
         self.nav_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
+
+        # Manual/automatic mode control services
+        self.set_manual_srv = self.create_service(
+            SetBool, '/set_manual_control', self._set_manual_control_callback)
+        self.manual_srv = self.create_service(
+            Trigger, '/switch_to_manual_control', self._switch_to_manual_callback)
+        self.auto_srv = self.create_service(
+            Trigger, '/switch_to_auto_exploration', self._switch_to_auto_callback)
+        self.stop_srv = self.create_service(
+            Trigger, '/stop_exploration', self._stop_exploration_callback)
+        self.stop_save_srv = self.create_service(
+            SaveMap, '/stop_exploration_and_save', self._stop_and_save_callback)
+        self.save_srv = self.create_service(
+            SaveMap, '/save_exploration_map', self._save_map_callback)
 
         # Timer
         self.timer = self.create_timer(self.exploration_frequency, self.explore)
@@ -153,7 +188,18 @@ class WavefrontExplorer(Node):
         self.get_logger().info('   📏 SMART BLOCKING:')
         self.get_logger().info(f'      unreachable_region_radius: {self.unreachable_region_radius}m')
         self.get_logger().info(f'      smart_blocking_enabled: {self.smart_blocking_enabled}')
+        self.get_logger().info('   CONTROL:')
+        self.get_logger().info(f'      map_name: {self.configured_map_name or "(missing)"}')
+        self.get_logger().info(f'      start_mode: {self.exploration_mode}')
+        self.get_logger().info(f'      cmd_vel_topic: {self.cmd_vel_topic}')
+        self.get_logger().info('      /set_manual_control true=manual false=auto')
+        self.get_logger().info('      /stop_exploration_and_save map_url=<name>')
         self.get_logger().info('=' * 70)
+        if not self.configured_map_name:
+            self.get_logger().error(
+                'map_name is required. Automatic and manual exploration will not save '
+                'a map until a valid name is provided.')
+        self._publish_mode_status()
 
     def _setup_maps_directory(self):
         """Setup maps directory."""
@@ -172,6 +218,158 @@ class WavefrontExplorer(Node):
         self.map_data = np.array(msg.data, dtype=np.int8).reshape(
             (msg.info.height, msg.info.width))
         self.map_info = msg.info
+
+    # ============================================================
+    # MANUAL / AUTO CONTROL
+    # ============================================================
+    def _set_manual_control_callback(self, request, response):
+        """Switch between manual teleop and automatic frontier exploration."""
+        if request.data:
+            response.success, response.message = self._set_exploration_mode(
+                'manual', 'manual control requested')
+        else:
+            response.success, response.message = self._set_exploration_mode(
+                'auto', 'automatic exploration requested')
+        return response
+
+    def _switch_to_manual_callback(self, request, response):
+        """Pause autonomous exploration so a teleop node can drive /cmd_vel."""
+        del request
+        response.success, response.message = self._set_exploration_mode(
+            'manual', 'manual control requested')
+        return response
+
+    def _switch_to_auto_callback(self, request, response):
+        """Resume autonomous frontier exploration."""
+        del request
+        response.success, response.message = self._set_exploration_mode(
+            'auto', 'automatic exploration requested')
+        return response
+
+    def _stop_exploration_callback(self, request, response):
+        """Stop further autonomous exploration without saving a map."""
+        del request
+        response.success, response.message = self._set_exploration_mode(
+            'stopped', 'stop requested')
+        return response
+
+    def _stop_and_save_callback(self, request, response):
+        """Stop further exploration and save the current map with the requested name."""
+        map_name = self._map_name_from_save_request(request)
+        if not map_name:
+            self.get_logger().error(
+                'Map save rejected: provide map_url in the request or launch with map_name.')
+            response.result = False
+            return response
+
+        mode_success, _ = self._set_exploration_mode(
+            'stopped', 'stop and save requested')
+        save_success, _ = self._save_map(
+            self._elapsed_exploration_time(), map_name)
+        response.result = mode_success and save_success
+        return response
+
+    def _save_map_callback(self, request, response):
+        """Save the current map without changing the current mode."""
+        map_name = self._map_name_from_save_request(request)
+        if not map_name:
+            self.get_logger().error(
+                'Map save rejected: provide map_url in the request or launch with map_name.')
+            response.result = False
+            return response
+
+        save_success, _ = self._save_map(
+            self._elapsed_exploration_time(), map_name)
+        response.result = save_success
+        return response
+
+    def _set_exploration_mode(self, mode, reason):
+        """Apply a control mode and cancel autonomous motion when leaving auto."""
+        if mode not in ('auto', 'manual', 'stopped'):
+            return False, f'Unsupported exploration mode: {mode}'
+
+        if mode == 'auto' and not self.configured_map_name:
+            message = 'Automatic exploration requires a non-empty map_name.'
+            self.get_logger().error(message)
+            return False, message
+
+        previous_mode = self.exploration_mode
+        self.exploration_mode = mode
+        self.stop_reason = reason if mode == 'stopped' else None
+
+        if mode in ('manual', 'stopped'):
+            self._cancel_current_goal()
+            self._publish_zero_velocity()
+            self.exploration_active = False
+            self.no_frontier_count = 0
+            if mode == 'manual':
+                message = (
+                    'Manual control enabled. Autonomous goals are paused; '
+                    f'publish teleop commands to {self.cmd_vel_topic}.')
+            else:
+                message = 'Exploration stopped. Use /switch_to_auto_exploration to explore again.'
+        else:
+            self.exploration_active = True
+            self.no_frontier_count = 0
+            self.start_time = datetime.now()
+            self.exploration_start_time = datetime.now()
+            message = 'Automatic exploration enabled.'
+
+        self.get_logger().info(
+            f'Exploration mode changed: {previous_mode} -> {mode} ({reason})')
+        self._publish_mode_status()
+        return True, message
+
+    def _cancel_current_goal(self):
+        """Cancel the current Nav2 goal if one is active."""
+        if self.current_goal_handle is not None:
+            try:
+                self.ignore_current_goal_result = True
+                self.current_goal_handle.cancel_goal_async()
+            except Exception as e:
+                self.get_logger().warn(f'Could not cancel current goal: {e}')
+        self.current_goal_handle = None
+        self.current_goal_region = None
+        self.current_goal_start_time = None
+        self.navigating = False
+
+    def _publish_zero_velocity(self):
+        """Send a stop command when autonomous control is paused/stopped."""
+        self.cmd_vel_pub.publish(Twist())
+
+    def _publish_mode_status(self):
+        """Publish the current exploration control mode."""
+        msg = String()
+        msg.data = self.exploration_mode
+        self.mode_pub.publish(msg)
+
+    def _elapsed_exploration_time(self):
+        if self.start_time is None:
+            return 0.0
+        return (datetime.now() - self.start_time).total_seconds()
+
+    def _sanitize_map_name(self, requested_name):
+        """Convert a user-provided map name into a safe filename stem."""
+        name = str(requested_name or '').strip()
+        if name.startswith('file://'):
+            name = name[len('file://'):]
+        if name.endswith('.yaml') or name.endswith('.pgm'):
+            name = os.path.splitext(name)[0]
+        name = os.path.basename(name)
+        safe_chars = []
+        for char in name:
+            if char.isalnum() or char in ('_', '-'):
+                safe_chars.append(char)
+            elif char in (' ', '.'):
+                safe_chars.append('_')
+        sanitized = ''.join(safe_chars).strip('_')
+        if sanitized:
+            return sanitized
+        return ''
+
+    def _map_name_from_save_request(self, request):
+        """Use nav2 SaveMap's map_url field as the requested map name."""
+        return self._sanitize_map_name(request.map_url) or self.configured_map_name
 
     # ============================================================
     # COORDINATE CONVERSION
@@ -468,6 +666,26 @@ class WavefrontExplorer(Node):
             self.get_logger().info('⏳ Waiting for map...', throttle_duration_sec=5.0)
             return
 
+        self._publish_mode_status()
+
+        if self.exploration_mode == 'manual':
+            self.get_logger().info(
+                'Manual control active; automatic frontier goals are paused.',
+                throttle_duration_sec=10.0)
+            return
+
+        if self.exploration_mode == 'stopped':
+            self.get_logger().info(
+                'Exploration stopped; no further frontier goals will be sent.',
+                throttle_duration_sec=10.0)
+            return
+
+        if not self.configured_map_name:
+            self.get_logger().error(
+                'Automatic exploration is blocked because map_name is missing.',
+                throttle_duration_sec=10.0)
+            return
+
         if self.exploration_active and self.exploration_start_time:
             elapsed = (datetime.now() - self.exploration_start_time).total_seconds()
             if elapsed > self.max_exploration_time:
@@ -505,6 +723,12 @@ class WavefrontExplorer(Node):
             self.get_logger().info('⏳ Waiting for Nav2...', throttle_duration_sec=10.0)
             return
 
+        if not self.exploration_active:
+            self.exploration_active = True
+            self.start_time = datetime.now()
+            self.exploration_start_time = datetime.now()
+            self.get_logger().info('🚀 Exploration started!')
+
         frontiers = self.wavefront_frontier_detection()
         self._publish_frontier_markers(frontiers)
         self._publish_unreachable_areas()
@@ -518,12 +742,6 @@ class WavefrontExplorer(Node):
             return
 
         self.no_frontier_count = 0
-
-        if not self.exploration_active:
-            self.exploration_active = True
-            self.start_time = datetime.now()
-            self.exploration_start_time = datetime.now()
-            self.get_logger().info('🚀 Exploration started!')
 
         goal = self.select_best_frontier(frontiers)
         if goal:
@@ -564,7 +782,18 @@ class WavefrontExplorer(Node):
 
             if not goal_handle.accepted:
                 self.get_logger().warn(f'❌ Goal rejected')
-                self._mark_frontier_failed(region_key, frontier_x, frontier_y)
+                if self.exploration_mode == 'auto':
+                    self._mark_frontier_failed(region_key, frontier_x, frontier_y)
+                self.navigating = False
+                self.current_goal_handle = None
+                return
+
+            if self.exploration_mode != 'auto':
+                self.get_logger().info(
+                    'Goal accepted after auto exploration was paused; canceling it.')
+                self.ignore_current_goal_result = True
+                goal_handle.cancel_goal_async()
+                self.current_goal_handle = None
                 self.navigating = False
                 return
 
@@ -573,13 +802,20 @@ class WavefrontExplorer(Node):
                 lambda f: self._goal_result(f, region_key, frontier_x, frontier_y))
         except Exception as e:
             self.get_logger().error(f'Goal error: {e}')
-            self._mark_frontier_failed(region_key, frontier_x, frontier_y)
+            if self.exploration_mode == 'auto':
+                self._mark_frontier_failed(region_key, frontier_x, frontier_y)
             self.navigating = False
 
     def _goal_result(self, future, region_key, frontier_x, frontier_y):
         """Handle goal result."""
         try:
             result = future.result()
+            if self.ignore_current_goal_result or self.exploration_mode != 'auto':
+                self.get_logger().info(
+                    'Ignoring Nav2 goal result because automatic exploration is not active.')
+                self.ignore_current_goal_result = False
+                return
+
             if result.status == GoalStatus.STATUS_SUCCEEDED:
                 self.goals_reached += 1
                 self.consecutive_timeout_count = 0
@@ -595,7 +831,8 @@ class WavefrontExplorer(Node):
                 self._mark_frontier_failed(region_key, frontier_x, frontier_y)
         except Exception as e:
             self.get_logger().error(f'Result error: {e}')
-            self._mark_frontier_failed(region_key, frontier_x, frontier_y)
+            if self.exploration_mode == 'auto':
+                self._mark_frontier_failed(region_key, frontier_x, frontier_y)
         finally:
             self.navigating = False
             self.current_goal_handle = None
@@ -620,7 +857,7 @@ class WavefrontExplorer(Node):
         if not self.exploration_active:
             return
 
-        elapsed = (datetime.now() - self.start_time).total_seconds() if self.start_time else 0
+        elapsed = self._elapsed_exploration_time()
 
         self.get_logger().info('=' * 70)
         self.get_logger().info('✅ EXPLORATION COMPLETE')
@@ -629,14 +866,26 @@ class WavefrontExplorer(Node):
         self.get_logger().info(f'   📍 Unreachable areas: {len(self.unreachable_areas)}')
         self.get_logger().info('=' * 70)
 
-        self._save_map(elapsed)
+        save_success, _ = self._save_map(elapsed, self.configured_map_name)
         self.exploration_active = False
+        self.exploration_mode = 'stopped'
+        self.stop_reason = 'exploration complete' if save_success else 'map save failed'
+        self._publish_mode_status()
 
-    def _save_map(self, exploration_time):
+    def _save_map(self, exploration_time, map_name=None):
         """Save map to file."""
+        if self.map_data is None or self.map_info is None:
+            message = 'No map has been received yet; cannot save.'
+            self.get_logger().warn(message)
+            return False, message
+
+        map_name = self._sanitize_map_name(map_name)
+        if not map_name:
+            message = 'A non-empty map name is required before saving.'
+            self.get_logger().error(message)
+            return False, message
+
         try:
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            map_name = f'swepi_exploration_map_{timestamp}'
             pgm_file = os.path.join(self.maps_dir, f'{map_name}.pgm')
             yaml_file = os.path.join(self.maps_dir, f'{map_name}.yaml')
 
@@ -648,9 +897,12 @@ class WavefrontExplorer(Node):
             self.get_logger().info(f'   📄 PGM: {pgm_file}')
             self.get_logger().info(f'   📄 YAML: {yaml_file}')
             self.get_logger().info('=' * 70)
+            return True, f'Map saved: {yaml_file}'
 
         except Exception as e:
-            self.get_logger().error(f'❌ Failed to save map: {e}')
+            message = f'Failed to save map: {e}'
+            self.get_logger().error(f'❌ {message}')
+            return False, message
 
     def _save_pgm_file(self, filename):
         """Save map as PGM."""

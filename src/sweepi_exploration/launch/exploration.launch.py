@@ -12,6 +12,9 @@ from launch_ros.actions import Node
 def generate_launch_description():
     sweepi_slam_dir = get_package_share_directory('sweepi_slam')
 
+    declare_map_name = DeclareLaunchArgument(
+        'map_name',
+        description='Required output map name. Used for automatic and manual map saves.')
     declare_use_sim_time = DeclareLaunchArgument(
         'use_sim_time', default_value='true')
     declare_frontier_min_size = DeclareLaunchArgument(
@@ -46,6 +49,12 @@ def generate_launch_description():
     declare_unreachable_region_radius = DeclareLaunchArgument(
         'unreachable_region_radius', default_value='0.3',
         description='Block all frontiers within this distance of failed frontier')
+    declare_start_mode = DeclareLaunchArgument(
+        'start_mode', default_value='auto',
+        description='Initial exploration mode: auto, manual, or stopped')
+    declare_cmd_vel_topic = DeclareLaunchArgument(
+        'cmd_vel_topic', default_value='/cmd_vel',
+        description='Velocity topic used by manual teleop and stop commands')
 
     slam_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -65,6 +74,7 @@ def generate_launch_description():
         parameters=[
             {
                 'use_sim_time': LaunchConfiguration('use_sim_time'),
+                'map_name': LaunchConfiguration('map_name'),
                 'frontier_min_size': LaunchConfiguration('frontier_min_size'),
                 'cluster_distance': LaunchConfiguration('cluster_distance'),
                 'exploration_frequency': LaunchConfiguration('exploration_frequency'),
@@ -79,11 +89,14 @@ def generate_launch_description():
                 'robot_radius': LaunchConfiguration('robot_radius'),
                 'safety_margin': LaunchConfiguration('safety_margin'),
                 'unreachable_region_radius': LaunchConfiguration('unreachable_region_radius'),
+                'start_mode': LaunchConfiguration('start_mode'),
+                'cmd_vel_topic': LaunchConfiguration('cmd_vel_topic'),
             }
         ],
     )
 
     return LaunchDescription([
+        declare_map_name,
         declare_use_sim_time,
         declare_frontier_min_size,
         declare_cluster_distance,
@@ -99,9 +112,13 @@ def generate_launch_description():
         declare_robot_radius,
         declare_safety_margin,
         declare_unreachable_region_radius,
+        declare_start_mode,
+        declare_cmd_vel_topic,
         
         LogInfo(msg='🚀 STARTING SWEEPI AUTONOMOUS EXPLORATION'),
+        LogInfo(msg='💾 Map name: ${map_name}'),
         LogInfo(msg='📏 Proximity-based blocking: ${unreachable_region_radius}m'),
+        LogInfo(msg='🎮 Exploration mode: ${start_mode}'),
         
         slam_launch,
         explorer,
