@@ -21,6 +21,27 @@ actually unsafe.
 
 ## Launch
 
+Start Nav2 with the saved map you want to cover. The normal path is to pass the
+same map name that was saved by exploration:
+
+```bash
+ros2 launch sweepi_coverage nav2_bringup.launch.py map_name:=kitchen_first_floor
+```
+
+This loads:
+
+```text
+~/SweePi/maps/kitchen_first_floor.yaml
+```
+
+You can still override the full map path when needed:
+
+```bash
+ros2 launch sweepi_coverage nav2_bringup.launch.py \
+  map_name:=kitchen_first_floor \
+  map:=/absolute/path/to/map.yaml
+```
+
 Start the FollowPath coverage stack:
 
 ```bash
@@ -40,7 +61,7 @@ The default params live in:
 src/sweepi_coverage/config/coverage_follow_path_params.yaml
 ```
 
-## Start And Cancel
+## Start And Runtime Controls
 
 Start execution with the latest valid `/coverage_path`:
 
@@ -48,7 +69,37 @@ Start execution with the latest valid `/coverage_path`:
 ros2 service call /start_coverage_follow_path std_srvs/srv/Trigger {}
 ```
 
-Cancel the active FollowPath goal:
+Pause at the current location. This cancels the active FollowPath goal and
+publishes zero velocity:
+
+```bash
+ros2 service call /pause_coverage_follow_path std_srvs/srv/Trigger {}
+```
+
+Continue coverage after a pause. The executor keeps the original coverage path
+and restarts from the nearest valid path pose using the same initial-position
+selection logic as normal start:
+
+```bash
+ros2 service call /continue_coverage_follow_path std_srvs/srv/Trigger {}
+```
+
+Stop coverage and prevent further coverage execution until reset:
+
+```bash
+ros2 service call /stop_coverage_follow_path std_srvs/srv/Trigger {}
+```
+
+Return home. The home pose is recorded from the robot pose when coverage first
+starts. Return home stops coverage, cancels the active FollowPath goal, and sends
+Nav2 `NavigateToPose` back to that initial pose:
+
+```bash
+ros2 service call /return_home_coverage_follow_path std_srvs/srv/Trigger {}
+```
+
+The older cancel service is still available for direct cancellation of the active
+SmoothPath or FollowPath action:
 
 ```bash
 ros2 service call /cancel_coverage_follow_path std_srvs/srv/Trigger {}
@@ -68,7 +119,10 @@ ros2 action list | grep follow
 ros2 action info /follow_path
 ros2 service call /validate_coverage_follow_path std_srvs/srv/Trigger {}
 ros2 service call /start_coverage_follow_path std_srvs/srv/Trigger {}
-ros2 service call /cancel_coverage_follow_path std_srvs/srv/Trigger {}
+ros2 service call /pause_coverage_follow_path std_srvs/srv/Trigger {}
+ros2 service call /continue_coverage_follow_path std_srvs/srv/Trigger {}
+ros2 service call /stop_coverage_follow_path std_srvs/srv/Trigger {}
+ros2 service call /return_home_coverage_follow_path std_srvs/srv/Trigger {}
 ```
 
 RViz/debug topics:

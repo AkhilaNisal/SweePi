@@ -2,9 +2,42 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
-from launch.substitutions import LaunchConfiguration
+from launch.actions import (
+    DeclareLaunchArgument,
+    IncludeLaunchDescription,
+    OpaqueFunction,
+)
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration
+
+
+def _map_path_from_name(map_name):
+    name = os.path.basename(str(map_name).strip())
+    if name.endswith('.yaml'):
+        name = name[:-5]
+    return os.path.join(os.path.expanduser('~'), 'SweePi', 'maps', f'{name}.yaml')
+
+
+def _include_nav2_bringup(context, nav2_bringup_launch, default_params_file):
+    map_override = LaunchConfiguration('map').perform(context).strip()
+    map_name = LaunchConfiguration('map_name').perform(context).strip()
+    params_file = LaunchConfiguration('params_file').perform(context).strip()
+    use_sim_time = LaunchConfiguration('use_sim_time').perform(context).strip()
+    autostart = LaunchConfiguration('autostart').perform(context).strip()
+
+    map_yaml = map_override or _map_path_from_name(map_name)
+    return [
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(nav2_bringup_launch),
+            launch_arguments={
+                'map': map_yaml,
+                'params_file': params_file or default_params_file,
+                'use_sim_time': use_sim_time,
+                'autostart': autostart,
+            }.items(),
+        )
+    ]
+
 
 def generate_launch_description():
     # === User-editable paths ===
@@ -15,34 +48,29 @@ def generate_launch_description():
         'config',
         'nav2_coverage_params.yaml',
     )
-    default_map_path = '/home/akhila-wedamestrige/SweePi/maps/swepi_exploration_map_20260418_021201.yaml'
-    rviz_config_path = os.path.join(pkg_nav2_bringup, 'rviz', 'nav2_default_view.rviz')  # Change as needed
-
-    # === Launch configurations (for CLI override) ===
-    map_yaml = LaunchConfiguration('map', default=default_map_path)
-    params_file = LaunchConfiguration('params_file', default=pkg_nav2_params)
-    use_sim_time = LaunchConfiguration('use_sim_time', default='true')
-    autostart = LaunchConfiguration('autostart', default='true')
 
     # === Main bringup file from nav2_bringup, includes everything needed ===
     nav2_bringup_launch = os.path.join(pkg_nav2_bringup, 'launch', 'bringup_launch.py')
 
     return LaunchDescription([
         # -- Command-line args for flexibility --
-        DeclareLaunchArgument('map', default_value=default_map_path, description='Full path to map yaml'),
+        DeclareLaunchArgument(
+            'map_name',
+            description='Required saved map name in ~/SweePi/maps, without .yaml',
+        ),
+        DeclareLaunchArgument(
+            'map',
+            default_value='',
+            description='Optional full path to map yaml. Overrides map_name when set.',
+        ),
         DeclareLaunchArgument('params_file', default_value=pkg_nav2_params, description='Full path to params.yaml'),
         DeclareLaunchArgument('use_sim_time', default_value='true', description='Use simulation (Gazebo) clock'),
         DeclareLaunchArgument('autostart', default_value='true', description='Autostart the nav2 stack'),
 
         # -- Include the Nav2 bringup stack --
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(nav2_bringup_launch),
-            launch_arguments={
-                'map': map_yaml,
-                'params_file': params_file,
-                'use_sim_time': use_sim_time,
-                'autostart': autostart,
-            }.items(),
+        OpaqueFunction(
+            function=_include_nav2_bringup,
+            args=[nav2_bringup_launch, pkg_nav2_params],
         ),
 
         # -- Optionally bring up RViz2 automatically --

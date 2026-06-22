@@ -8,8 +8,8 @@ import time
 
 import rclpy
 from action_msgs.msg import GoalStatus
-from geometry_msgs.msg import Point, PoseStamped
-from nav2_msgs.action import ComputePathToPose, FollowPath, SmoothPath
+from geometry_msgs.msg import Point, PoseStamped, Twist
+from nav2_msgs.action import ComputePathToPose, FollowPath, NavigateToPose, SmoothPath
 from nav_msgs.msg import OccupancyGrid, Path
 from rclpy.action import ActionClient
 from rclpy.duration import Duration
@@ -41,6 +41,10 @@ class CoverageFollowPathExecutorNode(Node):
     STATUS_BLOCKED_DYNAMIC_OBJECT = 'BLOCKED_DYNAMIC_OBJECT'
     STATUS_FAILED = 'FAILED'
     STATUS_CANCELED = 'CANCELED'
+    STATUS_PAUSED = 'PAUSED'
+    STATUS_STOPPED = 'STOPPED'
+    STATUS_RETURNING_HOME = 'RETURNING_HOME'
+    STATUS_RETURNED_HOME = 'RETURNED_HOME'
 
     FOLLOW_PATH_ERROR_CODES = {
         0: 'NONE',
@@ -152,6 +156,12 @@ class CoverageFollowPathExecutorNode(Node):
         self.pending_start_report = None
         self.pending_custom_smoothed_length = 0.0
         self.pending_smoothing_start_monotonic = None
+        self.coverage_stopped = False
+        self.coverage_pause_requested = False
+        self.coverage_control_cancel_reason = None
+        self.home_pose = None
+        self.return_home_goal_handle = None
+        self.return_home_in_flight = False
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
@@ -170,6 +180,11 @@ class CoverageFollowPathExecutorNode(Node):
             self,
             ComputePathToPose,
             self.compute_path_to_pose_action_name,
+        )
+        self.navigate_to_pose_client = ActionClient(
+            self,
+            NavigateToPose,
+            self.navigate_to_pose_action_name,
         )
 
         self.coverage_path_sub = self.create_subscription(
@@ -239,6 +254,11 @@ class CoverageFollowPathExecutorNode(Node):
             self.dynamic_skip_status_topic,
             qos,
         )
+        self.cmd_vel_pub = self.create_publisher(
+            Twist,
+            self.cmd_vel_topic,
+            10,
+        )
 
         self.start_service = self.create_service(
             Trigger,
@@ -249,6 +269,26 @@ class CoverageFollowPathExecutorNode(Node):
             Trigger,
             '/cancel_coverage_follow_path',
             self.cancel_service_callback,
+        )
+        self.pause_service = self.create_service(
+            Trigger,
+            '/pause_coverage_follow_path',
+            self.pause_service_callback,
+        )
+        self.continue_service = self.create_service(
+            Trigger,
+            '/continue_coverage_follow_path',
+            self.continue_service_callback,
+        )
+        self.stop_service = self.create_service(
+            Trigger,
+            '/stop_coverage_follow_path',
+            self.stop_service_callback,
+        )
+        self.return_home_service = self.create_service(
+            Trigger,
+            '/return_home_coverage_follow_path',
+            self.return_home_service_callback,
         )
         self.validate_service = self.create_service(
             Trigger,
@@ -308,7 +348,9 @@ class CoverageFollowPathExecutorNode(Node):
             'path_markers_topic': '/coverage_path_markers',
             'skipped_segments_topic': '/coverage_skipped_segments',
             'dynamic_skip_status_topic': '/coverage_dynamic_skip_status',
+            'cmd_vel_topic': '/cmd_vel',
             'follow_path_action_name': '/follow_path',
+            'navigate_to_pose_action_name': '/navigate_to_pose',
             'controller_id': 'FollowPath',
             'goal_checker_id': '',
             'progress_checker_id': '',
@@ -425,7 +467,11 @@ class CoverageFollowPathExecutorNode(Node):
         self.dynamic_skip_status_topic = self._string_param(
             'dynamic_skip_status_topic'
         )
+        self.cmd_vel_topic = self._string_param('cmd_vel_topic')
         self.follow_path_action_name = self._string_param('follow_path_action_name')
+        self.navigate_to_pose_action_name = self._string_param(
+            'navigate_to_pose_action_name'
+        )
         self.controller_id = self._string_param('controller_id')
         self.goal_checker_id = self._string_param('goal_checker_id')
         self.progress_checker_id = self._string_param('progress_checker_id')
@@ -954,24 +1000,159 @@ class CoverageFollowPathExecutorNode(Node):
 
     def cancel_service_callback(self, request, response):
         del request
+        return self._cancel_active_motion_service_response(
+            response,
+            reason='cancel',
+            status=self.STATUS_CANCELED,
+            no_active_message='No active SmoothPath or FollowPath goal to cancel',
+        )
+
+    def pause_service_callback(self, request, response):
+        del request
+        if self.execution_status == self.STATUS_PAUSED:
+            self._publish_zero_velocity()
+            response.success = True
+            response.message = 'Coverage is already paused'
+            return response
+
+        self.coverage_pause_requested = True
+        self.coverage_stopped = False
+        canceled, message = self._request_cancel_active_motion('pause')
+        self._publish_zero_velocity()
+        self._set_status(self.STATUS_PAUSED)
+        response.success = True
+        response.message = (
+            'Coverage paused; robot stopped at current location'
+            if canceled
+            else 'Coverage paused; %s' % message
+        )
+        return response
+
+    def continue_service_callback(self, request, response):
+        del request
+        if self.coverage_stopped:
+            response.success = False
+            response.message = (
+                'Coverage was stopped. Call /reset_coverage_follow_path before '
+                'starting a new coverage run.'
+            )
+            return response
+        if self.goal_in_flight or self.smoothing_in_flight:
+            response.success = False
+            response.message = 'Coverage is already active'
+            return response
+        if self.return_home_in_flight:
+            response.success = False
+            response.message = 'Return-home goal is active; wait or stop it first'
+            return response
+
+        self.coverage_pause_requested = False
+        self.coverage_control_cancel_reason = None
+        if self._request_execution('continue_after_pause'):
+            response.success = True
+            response.message = 'Coverage continuation requested'
+        else:
+            response.success = False
+            response.message = self.latest_path_error
+        return response
+
+    def stop_service_callback(self, request, response):
+        del request
+        self.coverage_stopped = True
+        self.coverage_pause_requested = False
+        self._request_cancel_return_home()
+        canceled, message = self._request_cancel_active_motion('stop')
+        self._publish_zero_velocity()
+        self._set_status(self.STATUS_STOPPED)
+        response.success = True
+        response.message = (
+            'Coverage stopped; no further coverage will run until reset'
+            if canceled
+            else 'Coverage stopped; %s' % message
+        )
+        return response
+
+    def return_home_service_callback(self, request, response):
+        del request
+        if self.home_pose is None:
+            response.success = False
+            response.message = (
+                'Initial coverage pose is not available yet. Start coverage once '
+                'before requesting return home.'
+            )
+            return response
+
+        self.coverage_stopped = True
+        self.coverage_pause_requested = False
+        self._request_cancel_active_motion('return_home')
+        self._publish_zero_velocity()
+
+        if self.return_home_in_flight:
+            response.success = True
+            response.message = 'Return-home goal is already active'
+            return response
+
+        if not self.navigate_to_pose_client.wait_for_server(
+            timeout_sec=self.wait_for_nav2_timeout_sec
+        ):
+            response.success = False
+            response.message = (
+                'NavigateToPose action server %s is not available'
+                % self.navigate_to_pose_action_name
+            )
+            self._set_status(self.STATUS_STOPPED)
+            return response
+
+        goal_msg = NavigateToPose.Goal()
+        goal_msg.pose = copy.deepcopy(self.home_pose)
+        goal_msg.pose.header.stamp = self.get_clock().now().to_msg()
+        goal_msg.behavior_tree = ''
+
+        self.return_home_in_flight = True
+        self.return_home_goal_handle = None
+        self._set_status(self.STATUS_RETURNING_HOME)
+        send_future = self.navigate_to_pose_client.send_goal_async(goal_msg)
+        send_future.add_done_callback(self._return_home_goal_response_callback)
+        response.success = True
+        response.message = 'Return-home goal requested'
+        return response
+
+    def _cancel_active_motion_service_response(
+        self,
+        response,
+        reason,
+        status,
+        no_active_message,
+    ):
+        canceled, message = self._request_cancel_active_motion(reason)
+        if canceled:
+            response.success = True
+            response.message = message
+        else:
+            response.success = False
+            response.message = no_active_message
+        if status is not None and canceled:
+            self._set_status(status)
+        return response
+
+    def _request_cancel_active_motion(self, reason):
         if self.smoothing_in_flight and self.current_smoothing_goal_handle is not None:
             self.cancel_requested = True
+            self.coverage_control_cancel_reason = reason
             self.current_smoothing_goal_handle.cancel_goal_async()
-            self._set_status(self.STATUS_CANCELED)
-            response.success = True
-            response.message = 'Cancel request sent to active SmoothPath goal'
-            return response
+            return True, 'Cancel request sent to active SmoothPath goal'
 
         if self.goal_in_flight and self.current_goal_handle is not None:
             self.cancel_requested = True
+            self.coverage_control_cancel_reason = reason
             self.current_goal_handle.cancel_goal_async()
-            response.success = True
-            response.message = 'Cancel request sent to active FollowPath goal'
-            return response
+            return True, 'Cancel request sent to active FollowPath goal'
 
-        response.success = False
-        response.message = 'No active SmoothPath or FollowPath goal to cancel'
-        return response
+        self.smoothing_in_flight = False
+        self.goal_in_flight = False
+        self.current_smoothing_goal_handle = None
+        self.current_goal_handle = None
+        return False, 'No active SmoothPath or FollowPath goal to cancel'
 
     def validate_service_callback(self, request, response):
         del request
@@ -1035,6 +1216,10 @@ class CoverageFollowPathExecutorNode(Node):
         self.selected_start_index = 0
         self._set_status(self.STATUS_WAITING_FOR_PATH)
         self._publish_empty_paths_and_markers()
+        self.home_pose = None
+        self.coverage_stopped = False
+        self.coverage_pause_requested = False
+        self.coverage_control_cancel_reason = None
         response.success = True
         response.message = 'Coverage FollowPath cache reset; waiting for /coverage_path'
         return response
@@ -1065,6 +1250,13 @@ class CoverageFollowPathExecutorNode(Node):
         self._dynamic_obstacle_monitor_tick()
 
     def _request_execution(self, reason):
+        if self.coverage_stopped:
+            self.latest_path_error = (
+                'Coverage has been stopped. Call /reset_coverage_follow_path '
+                'before starting a new coverage run.'
+            )
+            return False
+
         if self.goal_in_flight or self.smoothing_in_flight:
             self.latest_path_error = 'Coverage FollowPath is already active'
             return False
@@ -1074,6 +1266,14 @@ class CoverageFollowPathExecutorNode(Node):
             self.latest_path_error = self.latest_path_error or 'No coverage path cached'
             return False
 
+        if not self._remember_home_pose_if_needed():
+            self.latest_path_error = (
+                'Cannot start coverage because initial robot pose is unavailable'
+            )
+            return False
+
+        self.coverage_pause_requested = False
+        self.coverage_control_cancel_reason = None
         self.skipped_segments = []
         self.dynamic_detection_candidate = None
         self.dynamic_confirmed_marker_report = None
@@ -1248,6 +1448,14 @@ class CoverageFollowPathExecutorNode(Node):
             wrapped_result = future.result()
         except Exception as exc:
             self._handle_smoothing_failure('SmoothPath result failed: %s' % exc)
+            return
+
+        if self.coverage_control_cancel_reason in ('pause', 'stop', 'return_home'):
+            self.get_logger().info(
+                'Ignoring SmoothPath result after %s request'
+                % self.coverage_control_cancel_reason
+            )
+            self.coverage_control_cancel_reason = None
             return
 
         result = wrapped_result.result
@@ -1508,6 +1716,21 @@ class CoverageFollowPathExecutorNode(Node):
             )
             return
 
+        if self.coverage_control_cancel_reason in ('pause', 'stop', 'return_home'):
+            reason = self.coverage_control_cancel_reason
+            self.get_logger().info(
+                'Ignoring FollowPath terminal result after %s request' % reason
+            )
+            self.goal_in_flight = False
+            self.current_goal_handle = None
+            self.cancel_requested = False
+            self.coverage_control_cancel_reason = None
+            if reason == 'pause':
+                self._set_status(self.STATUS_PAUSED)
+            elif reason == 'stop':
+                self._set_status(self.STATUS_STOPPED)
+            return
+
         if status == GoalStatus.STATUS_SUCCEEDED and error_code == 0:
             self._finish_execution(self.STATUS_SUCCEEDED)
             return
@@ -1637,6 +1860,81 @@ class CoverageFollowPathExecutorNode(Node):
             self._publish_debug_info(
                 '[COVERAGE_DONE] SUCCEEDED %s'
                 % self._skipped_summary_text(completed_with_skips=False)
+            )
+
+    def _remember_home_pose_if_needed(self):
+        if self.home_pose is not None:
+            return True
+        pose = self._lookup_robot_pose(self.global_frame)
+        if pose is None:
+            return False
+        self.home_pose = copy.deepcopy(pose)
+        self.home_pose.header.frame_id = self.global_frame
+        self.home_pose.header.stamp = self.get_clock().now().to_msg()
+        self.get_logger().info(
+            'Coverage home pose recorded at x=%.3f y=%.3f'
+            % (
+                self.home_pose.pose.position.x,
+                self.home_pose.pose.position.y,
+            )
+        )
+        return True
+
+    def _publish_zero_velocity(self):
+        if hasattr(self, 'cmd_vel_pub'):
+            self.cmd_vel_pub.publish(Twist())
+
+    def _request_cancel_return_home(self):
+        if self.return_home_in_flight and self.return_home_goal_handle is not None:
+            self.return_home_goal_handle.cancel_goal_async()
+            return True
+        return False
+
+    def _return_home_goal_response_callback(self, future):
+        try:
+            goal_handle = future.result()
+        except Exception as exc:
+            self.return_home_in_flight = False
+            self.return_home_goal_handle = None
+            self.get_logger().error('Return-home goal response failed: %s' % exc)
+            self._set_status(self.STATUS_FAILED)
+            return
+
+        if not goal_handle.accepted:
+            self.return_home_in_flight = False
+            self.return_home_goal_handle = None
+            self.get_logger().warn('Return-home goal was rejected by Nav2')
+            self._set_status(self.STATUS_FAILED)
+            return
+
+        self.return_home_goal_handle = goal_handle
+        self.get_logger().info('Return-home goal accepted by Nav2')
+        result_future = goal_handle.get_result_async()
+        result_future.add_done_callback(self._return_home_result_callback)
+
+    def _return_home_result_callback(self, future):
+        self.return_home_in_flight = False
+        self.return_home_goal_handle = None
+        try:
+            wrapped_result = future.result()
+        except Exception as exc:
+            self.get_logger().error('Return-home result failed: %s' % exc)
+            self._set_status(self.STATUS_FAILED)
+            return
+
+        if wrapped_result.status == GoalStatus.STATUS_SUCCEEDED:
+            self._publish_zero_velocity()
+            self._set_status(self.STATUS_RETURNED_HOME)
+            self.get_logger().info('Return-home completed')
+        elif wrapped_result.status == GoalStatus.STATUS_CANCELED:
+            self._publish_zero_velocity()
+            self._set_status(self.STATUS_STOPPED)
+            self.get_logger().info('Return-home canceled')
+        else:
+            self._publish_zero_velocity()
+            self._set_status(self.STATUS_FAILED)
+            self.get_logger().warn(
+                'Return-home failed with status=%d' % wrapped_result.status
             )
 
     def _run_preflight_validation(self, path, check_costmap=True):
