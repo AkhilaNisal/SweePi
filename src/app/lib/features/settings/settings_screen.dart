@@ -43,6 +43,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
+                  'Appearance',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: SegmentedButton<ThemeMode>(
+                    segments: const [
+                      ButtonSegment(
+                        value: ThemeMode.light,
+                        icon: Icon(Icons.light_mode_outlined),
+                        label: Text('Light'),
+                      ),
+                      ButtonSegment(
+                        value: ThemeMode.dark,
+                        icon: Icon(Icons.dark_mode_outlined),
+                        label: Text('Dark'),
+                      ),
+                    ],
+                    selected: {widget.controller.themeMode},
+                    onSelectionChanged: (values) {
+                      widget.controller.setThemeMode(values.first);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
                   'Mock API Connection',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
@@ -113,7 +150,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const Text('Android emulator: 10.0.2.2'),
                 const Text('Real phone on Wi-Fi: use the laptop IP address'),
                 const SizedBox(height: 8),
-                Text('Current base URL: http://${widget.controller.host}:${widget.controller.apiPort}'),
+                Text(
+                  'Current base URL: http://${widget.controller.host}:${widget.controller.apiPort}',
+                ),
               ],
             ),
           ),

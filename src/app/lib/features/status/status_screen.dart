@@ -102,7 +102,9 @@ class StatusScreen extends StatelessWidget {
                     for (final error in status.errors)
                       Text(
                         'Error: $error',
-                        style: const TextStyle(color: Colors.red),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
                       ),
                     for (final warning in status.warnings)
                       Text('Warning: $warning'),
@@ -157,14 +159,19 @@ class _MessagePanel extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Card(
-        color: error != null ? const Color(0xFFFFF0EE) : null,
+        color: error != null ? colorScheme.errorContainer : null,
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Text(
             controller.isBusy ? 'Working...' : error ?? message ?? '',
+            style: error != null
+                ? TextStyle(color: colorScheme.onErrorContainer)
+                : null,
           ),
         ),
       ),

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/models/exploration_models.dart';
 import '../../core/models/map_models.dart';
@@ -8,8 +9,11 @@ import '../../core/models/robot_models.dart';
 import '../../core/network/robot_api_client.dart';
 
 class AppController extends ChangeNotifier {
+  static const _themeModePreferenceKey = 'theme_mode';
+
   String host = robotIp;
   int apiPort = robotPort;
+  ThemeMode themeMode = ThemeMode.light;
 
   bool isConnected = false;
   bool isBusy = false;
@@ -26,6 +30,36 @@ class AppController extends ChangeNotifier {
   RectSelection? pendingSelection;
 
   RobotApiClient? _client;
+
+  bool get isDarkMode => themeMode == ThemeMode.dark;
+
+  Future<void> loadThemeMode() async {
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      final savedThemeMode = preferences.getString(_themeModePreferenceKey);
+      themeMode = savedThemeMode == ThemeMode.dark.name
+          ? ThemeMode.dark
+          : ThemeMode.light;
+    } catch (error) {
+      debugPrint('[AppController] Failed to load theme mode: $error');
+      themeMode = ThemeMode.light;
+    }
+  }
+
+  Future<void> setThemeMode(ThemeMode mode) async {
+    if (themeMode == mode) {
+      return;
+    }
+    themeMode = mode;
+    notifyListeners();
+
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setString(_themeModePreferenceKey, mode.name);
+    } catch (error) {
+      debugPrint('[AppController] Failed to save theme mode: $error');
+    }
+  }
 
   bool get isExploring {
     final explorationState = explorationStatus.state.toLowerCase();

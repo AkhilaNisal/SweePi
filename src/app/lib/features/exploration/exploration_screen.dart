@@ -145,7 +145,7 @@ class _ExplorationScreenState extends State<ExplorationScreen> {
           const SizedBox(height: 12),
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -165,41 +165,9 @@ class _ExplorationScreenState extends State<ExplorationScreen> {
                         ? null
                         : (value) => setState(() => _speed = value),
                   ),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      _DriveButton(
-                        label: 'Forward',
-                        command: 'forward',
-                        controller: controller,
-                        speed: _speed,
-                      ),
-                      _DriveButton(
-                        label: 'Backward',
-                        command: 'backward',
-                        controller: controller,
-                        speed: _speed,
-                      ),
-                      _DriveButton(
-                        label: 'Rotate Left',
-                        command: 'rotate_left',
-                        controller: controller,
-                        speed: _speed,
-                      ),
-                      _DriveButton(
-                        label: 'Rotate Right',
-                        command: 'rotate_right',
-                        controller: controller,
-                        speed: _speed,
-                      ),
-                      _DriveButton(
-                        label: 'Stop',
-                        command: 'stop',
-                        controller: controller,
-                        speed: _speed,
-                      ),
-                    ],
+                  const SizedBox(height: 8),
+                  Center(
+                    child: _RcController(controller: controller, speed: _speed),
                   ),
                 ],
               ),
@@ -211,26 +179,131 @@ class _ExplorationScreenState extends State<ExplorationScreen> {
   }
 }
 
-class _DriveButton extends StatelessWidget {
-  const _DriveButton({
-    required this.label,
-    required this.command,
-    required this.controller,
-    required this.speed,
-  });
+class _RcController extends StatelessWidget {
+  const _RcController({required this.controller, required this.speed});
 
-  final String label;
-  final String command;
   final AppController controller;
   final double speed;
 
   @override
   Widget build(BuildContext context) {
-    return FilledButton.tonal(
-      onPressed: controller.isBusy
-          ? null
-          : () => controller.sendManualDrive(command, speed),
-      child: Text(label),
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 340),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 168,
+            height: 84,
+            child: _DriveButton(
+              tooltip: 'Forward',
+              command: 'forward',
+              controller: controller,
+              speed: speed,
+              icon: Icons.arrow_upward_rounded,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox.square(
+                dimension: 88,
+                child: _DriveButton(
+                  tooltip: 'Rotate left',
+                  command: 'rotate_left',
+                  controller: controller,
+                  speed: speed,
+                  icon: Icons.rotate_left_rounded,
+                ),
+              ),
+              const SizedBox(width: 14),
+              SizedBox.square(
+                dimension: 92,
+                child: _DriveButton(
+                  tooltip: 'Stop',
+                  command: 'stop',
+                  controller: controller,
+                  speed: speed,
+                  icon: Icons.stop_rounded,
+                  backgroundColor: colorScheme.errorContainer,
+                  foregroundColor: colorScheme.onErrorContainer,
+                ),
+              ),
+              const SizedBox(width: 14),
+              SizedBox.square(
+                dimension: 88,
+                child: _DriveButton(
+                  tooltip: 'Rotate right',
+                  command: 'rotate_right',
+                  controller: controller,
+                  speed: speed,
+                  icon: Icons.rotate_right_rounded,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: 168,
+            height: 84,
+            child: _DriveButton(
+              tooltip: 'Backward',
+              command: 'backward',
+              controller: controller,
+              speed: speed,
+              icon: Icons.arrow_downward_rounded,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DriveButton extends StatelessWidget {
+  const _DriveButton({
+    required this.tooltip,
+    required this.command,
+    required this.controller,
+    required this.speed,
+    required this.icon,
+    this.backgroundColor,
+    this.foregroundColor,
+  });
+
+  final String tooltip;
+  final String command;
+  final AppController controller;
+  final double speed;
+  final IconData icon;
+  final Color? backgroundColor;
+  final Color? foregroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Tooltip(
+      message: tooltip,
+      child: FilledButton(
+        style: FilledButton.styleFrom(
+          backgroundColor: backgroundColor ?? colorScheme.primaryContainer,
+          foregroundColor: foregroundColor ?? colorScheme.onPrimaryContainer,
+          disabledBackgroundColor: colorScheme.surfaceContainerHighest,
+          disabledForegroundColor: colorScheme.onSurfaceVariant,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(26),
+          ),
+          padding: EdgeInsets.zero,
+        ),
+        onPressed: controller.isBusy
+            ? null
+            : () => controller.sendManualDrive(command, speed),
+        child: Icon(icon, size: 38),
+      ),
     );
   }
 }
