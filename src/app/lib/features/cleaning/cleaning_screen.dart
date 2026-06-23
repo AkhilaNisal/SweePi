@@ -20,6 +20,8 @@ class _CleaningScreenState extends State<CleaningScreen> {
     final controller = widget.controller;
     final metadata = controller.selectedMapMetadata;
     final cleaning = controller.robotStatus.cleaning;
+    final isCleaningActive = controller.isCleaningActive;
+    final isPaused = controller.isCleaningPaused;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -36,7 +38,7 @@ class _CleaningScreenState extends State<CleaningScreen> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: metadata?.mapId,
+                  initialValue: metadata?.mapId,
                   decoration: const InputDecoration(
                     labelText: 'Map',
                     border: OutlineInputBorder(),
@@ -66,34 +68,77 @@ class _CleaningScreenState extends State<CleaningScreen> {
                 ),
                 if (!_fullMap) _SectionChecklist(controller: controller),
                 const SizedBox(height: 12),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
+                Row(
                   children: [
-                    FilledButton.icon(
-                      onPressed: controller.isBusy || metadata == null
-                          ? null
-                          : () => controller.startCleaning(fullMap: _fullMap),
-                      icon: const Icon(Icons.play_arrow),
-                      label: const Text('Start Cleaning'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed:
-                          controller.isBusy ? null : controller.pauseCleaning,
-                      icon: const Icon(Icons.pause),
-                      label: const Text('Pause'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed:
-                          controller.isBusy ? null : controller.resumeCleaning,
-                      icon: const Icon(Icons.play_circle_outline),
-                      label: const Text('Resume'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed:
-                          controller.isBusy ? null : controller.stopCleaning,
-                      icon: const Icon(Icons.stop),
-                      label: const Text('Stop'),
+                    if (!isCleaningActive)
+                      Expanded(
+                        child: SizedBox(
+                          height: 52,
+                          child: FilledButton.icon(
+                            onPressed: controller.isBusy || metadata == null
+                                ? null
+                                : () => controller.startCleaning(
+                                    fullMap: _fullMap,
+                                  ),
+                            icon: const Icon(Icons.play_arrow_rounded),
+                            label: const Text('Start'),
+                          ),
+                        ),
+                      )
+                    else ...[
+                      Expanded(
+                        child: SizedBox(
+                          height: 52,
+                          child: FilledButton.tonal(
+                            onPressed: controller.isBusy
+                                ? null
+                                : () {
+                                    if (isPaused) {
+                                      controller.resumeCleaning();
+                                    } else {
+                                      controller.pauseCleaning();
+                                    }
+                                  },
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  isPaused
+                                      ? Icons.play_arrow_rounded
+                                      : Icons.pause_rounded,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(isPaused ? 'Resume' : 'Pause'),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: SizedBox(
+                          height: 52,
+                          child: FilledButton.icon(
+                            onPressed: controller.isBusy
+                                ? null
+                                : controller.stopCleaning,
+                            icon: const Icon(Icons.stop_rounded),
+                            label: const Text('Stop'),
+                          ),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(width: 12),
+                    SizedBox(
+                      width: 56,
+                      height: 52,
+                      child: IconButton.filledTonal(
+                        tooltip: 'Refresh state',
+                        onPressed: controller.isBusy
+                            ? null
+                            : controller.refreshRobotStatus,
+                        icon: const Icon(Icons.refresh_rounded),
+                      ),
                     ),
                   ],
                 ),
@@ -119,7 +164,9 @@ class _CleaningScreenState extends State<CleaningScreen> {
                 Text(
                   'Progress: ${cleaning.progressPercent.toStringAsFixed(1)}%',
                 ),
-                Text('Navigation: ${controller.robotStatus.nav.executionStatus}'),
+                Text(
+                  'Navigation: ${controller.robotStatus.nav.executionStatus}',
+                ),
               ],
             ),
           ),
@@ -136,7 +183,8 @@ class _SectionChecklist extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sections = controller.selectedMapMetadata?.sections ?? const <MapSection>[];
+    final sections =
+        controller.selectedMapMetadata?.sections ?? const <MapSection>[];
     if (sections.isEmpty) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 8),

@@ -12,8 +12,9 @@ class ExplorationScreen extends StatefulWidget {
 }
 
 class _ExplorationScreenState extends State<ExplorationScreen> {
-  final TextEditingController _mapNameController =
-      TextEditingController(text: 'bedroom');
+  final TextEditingController _mapNameController = TextEditingController(
+    text: 'bedroom',
+  );
   String _mode = 'automatic';
   double _speed = 0.2;
 
@@ -28,6 +29,7 @@ class _ExplorationScreenState extends State<ExplorationScreen> {
     final controller = widget.controller;
     final status = controller.explorationStatus;
     final isManual = _mode == 'manual' || status.mode == 'manual';
+    final isExploring = controller.isExploring;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -70,32 +72,44 @@ class _ExplorationScreenState extends State<ExplorationScreen> {
                       : (values) => setState(() => _mode = values.first),
                 ),
                 const SizedBox(height: 16),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
+                Row(
                   children: [
-                    FilledButton.icon(
-                      onPressed: controller.isBusy
-                          ? null
-                          : () => controller.startExploration(
-                                _mapNameController.text,
-                                _mode,
-                              ),
-                      icon: const Icon(Icons.play_arrow),
-                      label: const Text('Start'),
+                    Expanded(
+                      child: SizedBox(
+                        height: 52,
+                        child: FilledButton.icon(
+                          onPressed: controller.isBusy
+                              ? null
+                              : () {
+                                  if (isExploring) {
+                                    controller.stopExploration();
+                                  } else {
+                                    controller.startExploration(
+                                      _mapNameController.text,
+                                      _mode,
+                                    );
+                                  }
+                                },
+                          icon: Icon(
+                            isExploring
+                                ? Icons.stop_rounded
+                                : Icons.play_arrow_rounded,
+                          ),
+                          label: Text(isExploring ? 'Stop' : 'Start'),
+                        ),
+                      ),
                     ),
-                    OutlinedButton.icon(
-                      onPressed: controller.isBusy
-                          ? null
-                          : controller.refreshExplorationStatus,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Refresh Status'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed:
-                          controller.isBusy ? null : controller.stopExploration,
-                      icon: const Icon(Icons.stop),
-                      label: const Text('Stop'),
+                    const SizedBox(width: 12),
+                    SizedBox(
+                      width: 56,
+                      height: 52,
+                      child: IconButton.filledTonal(
+                        tooltip: 'Refresh state',
+                        onPressed: controller.isBusy
+                            ? null
+                            : controller.refreshExplorationStatus,
+                        icon: const Icon(Icons.refresh_rounded),
+                      ),
                     ),
                   ],
                 ),
@@ -120,7 +134,9 @@ class _ExplorationScreenState extends State<ExplorationScreen> {
                 Text('Map name: ${status.mapName ?? 'None'}'),
                 Text('Map available: ${status.mapAvailable ? 'Yes' : 'No'}'),
                 Text('Message: ${status.message}'),
-                Text('Last saved map ID: ${controller.lastSavedMapId ?? 'None'}'),
+                Text(
+                  'Last saved map ID: ${controller.lastSavedMapId ?? 'None'}',
+                ),
               ],
             ),
           ),

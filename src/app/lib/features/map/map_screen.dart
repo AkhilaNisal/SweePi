@@ -4,13 +4,19 @@ import '../../core/models/map_models.dart';
 import '../app/app_controller.dart';
 import 'map_canvas.dart';
 
-class MapScreen extends StatelessWidget {
+class MapScreen extends StatefulWidget {
   const MapScreen({super.key, required this.controller});
 
   final AppController controller;
 
   @override
+  State<MapScreen> createState() => _MapScreenState();
+}
+
+class _MapScreenState extends State<MapScreen> {
+  @override
   Widget build(BuildContext context) {
+    final controller = widget.controller;
     final metadata = controller.selectedMapMetadata;
     final mapData = controller.selectedMapData ?? SweePiMapData.empty;
     final selection = controller.pendingSelection;
@@ -24,7 +30,7 @@ class MapScreen extends StatelessWidget {
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: metadata?.mapId,
+                  initialValue: metadata?.mapId,
                   decoration: const InputDecoration(
                     labelText: 'Saved maps',
                     border: OutlineInputBorder(),
@@ -75,15 +81,17 @@ class MapScreen extends StatelessWidget {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               FilledButton.icon(
-                onPressed: selection == null || metadata == null || controller.isBusy
+                onPressed:
+                    selection == null || metadata == null || controller.isBusy
                     ? null
                     : () => _addSection(context, mapData, selection),
                 icon: const Icon(Icons.add),
                 label: const Text('Add Section'),
               ),
               FilledButton.icon(
-                onPressed:
-                    metadata == null || controller.isBusy ? null : controller.saveSelectedMapMetadata,
+                onPressed: metadata == null || controller.isBusy
+                    ? null
+                    : controller.saveSelectedMapMetadata,
                 icon: const Icon(Icons.save_outlined),
                 label: const Text('Save Metadata'),
               ),
@@ -107,41 +115,46 @@ class MapScreen extends StatelessWidget {
     RectSelection selection,
   ) async {
     final nameController = TextEditingController();
-    final sectionName = await showDialog<String>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Name section'),
-          content: TextField(
-            controller: nameController,
-            autofocus: true,
-            decoration: const InputDecoration(
-              labelText: 'Section name',
-              border: OutlineInputBorder(),
+    try {
+      final sectionName = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: const Text('Name section'),
+            content: TextField(
+              controller: nameController,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Section name',
+                border: OutlineInputBorder(),
+              ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(nameController.text),
-              child: const Text('Add'),
-            ),
-          ],
-        );
-      },
-    );
-    nameController.dispose();
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop(nameController.text);
+                },
+                child: const Text('Add'),
+              ),
+            ],
+          );
+        },
+      );
 
-    if (sectionName == null) {
-      return;
+      if (!mounted || sectionName == null) {
+        return;
+      }
+      await widget.controller.addSectionFromPolygon(
+        sectionName,
+        selection.toWorldPolygon(mapData),
+      );
+    } finally {
+      nameController.dispose();
     }
-    await controller.addSectionFromPolygon(
-      sectionName,
-      selection.toWorldPolygon(mapData),
-    );
   }
 }
 
@@ -169,9 +182,12 @@ class _MetadataAndSections extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'Size: ${metadata.width ?? '--'} x ${metadata.height ?? '--'} | Resolution: ${metadata.resolution}',
+              'Size: ${metadata.width ?? '--'} x ${metadata.height ?? '--'} | '
+              'Resolution: ${metadata.resolution}',
             ),
-            Text('Updated: ${metadata.updatedAt.isEmpty ? '--' : metadata.updatedAt}'),
+            Text(
+              'Updated: ${metadata.updatedAt.isEmpty ? '--' : metadata.updatedAt}',
+            ),
             const Divider(),
             if (metadata.sections.isEmpty)
               const Text('No sections saved yet.')
@@ -183,7 +199,9 @@ class _MetadataAndSections extends StatelessWidget {
                   value: controller.selectedSections.any(
                     (item) => item.sectionId == section.sectionId,
                   ),
-                  onChanged: (_) => controller.toggleSectionForCleaning(section),
+                  onChanged: (_) {
+                    controller.toggleSectionForCleaning(section);
+                  },
                   title: Text(section.name),
                   subtitle: Text(section.sectionId),
                 ),

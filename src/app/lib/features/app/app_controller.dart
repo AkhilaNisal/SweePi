@@ -8,8 +8,8 @@ import '../../core/models/robot_models.dart';
 import '../../core/network/robot_api_client.dart';
 
 class AppController extends ChangeNotifier {
-  String host = '10.0.2.2';
-  int apiPort = 8080;
+  String host = robotIp;
+  int apiPort = robotPort;
 
   bool isConnected = false;
   bool isBusy = false;
@@ -26,6 +26,26 @@ class AppController extends ChangeNotifier {
   RectSelection? pendingSelection;
 
   RobotApiClient? _client;
+
+  bool get isExploring {
+    final explorationState = explorationStatus.state.toLowerCase();
+    final robotState = robotStatus.state.toLowerCase();
+    return explorationState == 'exploring' || robotState == 'exploring';
+  }
+
+  bool get isCleaningRunning {
+    final robotState = robotStatus.state.toLowerCase();
+    final navState = robotStatus.nav.executionStatus.toUpperCase();
+    return robotState == 'cleaning' || navState == 'CLEANING';
+  }
+
+  bool get isCleaningPaused {
+    final robotState = robotStatus.state.toLowerCase();
+    final navState = robotStatus.nav.executionStatus.toUpperCase();
+    return robotState == 'paused' || navState == 'PAUSED';
+  }
+
+  bool get isCleaningActive => isCleaningRunning || isCleaningPaused;
 
   Future<void> connect() async {
     await disconnect(notify: false);
@@ -70,16 +90,19 @@ class AppController extends ChangeNotifier {
     });
   }
 
-  Future<void> startExploration(String mapName, String mode) async {
+  Future<bool> startExploration(String mapName, String mode) async {
+    var accepted = false;
     await _runBusy(() async {
       final client = _requireClient();
       final response = await client.startExploration(
         mapName: mapName.trim().isEmpty ? 'new_mock_map' : mapName.trim(),
         mode: mode,
       );
+      accepted = response.accepted;
       lastMessage = response.message;
       if (!response.accepted) {
         errorMessage = response.message;
+        return;
       }
       explorationStatus = ExplorationStatus(
         state: response.state,
@@ -90,21 +113,26 @@ class AppController extends ChangeNotifier {
       );
       await _refreshRobotStatusOnly();
     });
+    return accepted;
   }
 
   Future<void> refreshExplorationStatus() async {
     await _runBusy(() async {
+      await _refreshRobotStatusOnly();
       explorationStatus = await _requireClient().fetchExplorationStatus();
     });
   }
 
-  Future<void> stopExploration() async {
+  Future<bool> stopExploration() async {
+    var accepted = false;
     await _runBusy(() async {
       final client = _requireClient();
       final response = await client.stopExploration();
+      accepted = response.accepted;
       lastMessage = response.message;
       if (!response.accepted) {
         errorMessage = response.message;
+        return;
       }
       lastSavedMapId = response.mapId;
       await _refreshRobotStatusOnly();
@@ -114,6 +142,7 @@ class AppController extends ChangeNotifier {
       }
       explorationStatus = await client.fetchExplorationStatus();
     });
+    return accepted;
   }
 
   Future<void> sendManualDrive(String command, double speed) async {
@@ -158,38 +187,46 @@ class AppController extends ChangeNotifier {
       sections: [...metadata.sections, section],
     );
     selectedSections = [...selectedSections, section];
-    pendingSelection = null;
     lastMessage = 'Section "${section.name}" added locally.';
     notifyListeners();
   }
 
-  Future<void> saveSelectedMapMetadata() async {
+  Future<bool> saveSelectedMapMetadata() async {
+    var saved = false;
     await _runBusy(() async {
       final metadata = selectedMapMetadata;
       if (metadata == null) {
         throw const ApiException('Select a map before saving metadata.');
       }
+      debugPrint('[AppController] Saving metadata for ${metadata.mapId}');
       selectedMapMetadata = await _requireClient().updateMapMetadata(
         mapId: metadata.mapId,
         name: metadata.name,
         sections: metadata.sections,
       );
+      pendingSelection = null;
       await _refreshMapsOnly();
       lastMessage = 'Map metadata saved.';
+      saved = true;
+      debugPrint('[AppController] Metadata saved for ${metadata.mapId}');
     });
+    return saved;
   }
 
   void toggleSectionForCleaning(MapSection section) {
-    final exists = selectedSections.any((item) => item.sectionId == section.sectionId);
+    final exists = selectedSections.any(
+      (item) => item.sectionId == section.sectionId,
+    );
     selectedSections = exists
         ? selectedSections
-            .where((item) => item.sectionId != section.sectionId)
-            .toList()
+              .where((item) => item.sectionId != section.sectionId)
+              .toList()
         : [...selectedSections, section];
     notifyListeners();
   }
 
-  Future<void> startCleaning({required bool fullMap}) async {
+  Future<bool> startCleaning({required bool fullMap}) async {
+    var accepted = false;
     await _runBusy(() async {
       final metadata = selectedMapMetadata;
       if (metadata == null) {
@@ -199,51 +236,69 @@ class AppController extends ChangeNotifier {
         mapId: metadata.mapId,
         sections: fullMap ? const [] : selectedSections,
       );
+      accepted = response.accepted;
       lastMessage = response.message;
       if (!response.accepted) {
         errorMessage = response.message;
+        return;
       }
       await _refreshRobotStatusOnly();
     });
+    return accepted;
   }
 
-  Future<void> pauseCleaning() async {
+  Future<bool> pauseCleaning() async {
+    var accepted = false;
     await _runBusy(() async {
       final response = await _requireClient().pauseCleaning();
-      lastMessage = response.message.isEmpty ? 'Cleaning paused.' : response.message;
+      accepted = response.accepted;
+      lastMessage = response.message.isEmpty
+          ? 'Cleaning paused.'
+          : response.message;
       if (!response.accepted) {
         errorMessage = response.message;
+        return;
       }
       await _refreshRobotStatusOnly();
     });
+    return accepted;
   }
 
-  Future<void> resumeCleaning() async {
+  Future<bool> resumeCleaning() async {
+    var accepted = false;
     await _runBusy(() async {
       final response = await _requireClient().resumeCleaning();
-      lastMessage = response.message.isEmpty ? 'Cleaning resumed.' : response.message;
+      accepted = response.accepted;
+      lastMessage = response.message.isEmpty
+          ? 'Cleaning resumed.'
+          : response.message;
       if (!response.accepted) {
         errorMessage = response.message;
+        return;
       }
       await _refreshRobotStatusOnly();
     });
+    return accepted;
   }
 
-  Future<void> stopCleaning() async {
+  Future<bool> stopCleaning() async {
+    var accepted = false;
     await _runBusy(() async {
       final response = await _requireClient().stopCleaning();
-      lastMessage = response.message.isEmpty ? 'Cleaning stopped.' : response.message;
+      accepted = response.accepted;
+      lastMessage = response.message.isEmpty
+          ? 'Cleaning stopped.'
+          : response.message;
       if (!response.accepted) {
         errorMessage = response.message;
+        return;
       }
       await _refreshRobotStatusOnly();
     });
+    return accepted;
   }
 
-  void updateConnectionSettings({
-    required String host,
-    required int apiPort,
-  }) {
+  void updateConnectionSettings({required String host, required int apiPort}) {
     this.host = host;
     this.apiPort = apiPort;
     notifyListeners();
@@ -344,13 +399,21 @@ class RectSelection {
   List<List<double>> toWorldPolygon(SweePiMapData map) {
     final normalizedRect = normalized();
     final topLeft = _toWorldPoint(map, normalizedRect.left, normalizedRect.top);
-    final topRight = _toWorldPoint(map, normalizedRect.right, normalizedRect.top);
+    final topRight = _toWorldPoint(
+      map,
+      normalizedRect.right,
+      normalizedRect.top,
+    );
     final bottomRight = _toWorldPoint(
       map,
       normalizedRect.right,
       normalizedRect.bottom,
     );
-    final bottomLeft = _toWorldPoint(map, normalizedRect.left, normalizedRect.bottom);
+    final bottomLeft = _toWorldPoint(
+      map,
+      normalizedRect.left,
+      normalizedRect.bottom,
+    );
     return [topLeft, topRight, bottomRight, bottomLeft];
   }
 
