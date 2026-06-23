@@ -401,6 +401,7 @@ class CoverageFollowPathExecutorNode(Node):
             'fallback_to_raw_path_on_smoothing_failure': True,
             'publish_raw_and_smoothed_paths': True,
             'publish_debug_markers': True,
+            'log_dynamic_detection_debug': False,
             'enable_dynamic_obstacle_skip': True,
             'local_costmap_topic': '/local_costmap/costmap',
             'static_map_topic': '/map',
@@ -565,6 +566,9 @@ class CoverageFollowPathExecutorNode(Node):
             'publish_raw_and_smoothed_paths'
         )
         self.publish_debug_markers = self._bool_param('publish_debug_markers')
+        self.log_dynamic_detection_debug = self._bool_param(
+            'log_dynamic_detection_debug'
+        )
         self.enable_dynamic_obstacle_skip = self._bool_param(
             'enable_dynamic_obstacle_skip'
         )
@@ -5908,7 +5912,8 @@ class CoverageFollowPathExecutorNode(Node):
                 report.get('consecutive_count', 0),
             )
         )
-        self.get_logger().info(text, throttle_duration_sec=1.0)
+        if self.log_dynamic_detection_debug:
+            self.get_logger().info(text, throttle_duration_sec=5.0)
         self._publish_dynamic_skip_status(text)
 
     def _reset_dynamic_detection_candidate(self):

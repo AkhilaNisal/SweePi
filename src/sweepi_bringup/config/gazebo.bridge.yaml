@@ -12,12 +12,9 @@
   gz_type_name: "gz.msgs.Model"
   direction: GZ_TO_ROS
 
-# TF
-- ros_topic_name: "/tf"
-  gz_topic_name: "/model/sweepi/tf"
-  ros_type_name: "tf2_msgs/msg/TFMessage"
-  gz_type_name: "gz.msgs.Pose_V"
-  direction: GZ_TO_ROS
+# TF is published from /odom by sweepi_bringup/odom_tf_broadcaster.py.
+# Bridging /model/sweepi/tf directly can deliver out-of-order base_footprint
+# transforms and cause TF_OLD_DATA floods in Nav2.
 
 # Cmd Vel
 - ros_topic_name: "/cmd_vel"

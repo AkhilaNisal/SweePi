@@ -70,11 +70,11 @@ sweepi_bringup/
 
 | File | Purpose | Key Content |
 |------|---------|------------|
-| `gazebo.launch.xml` | Main launch file | Starts Gazebo, spawns robot, launches RViz and SLAM |
+| `gazebo.launch.xml` | Main launch file | Starts Gazebo, RViz, bridge, and robot TF support |
 | `rviz.launch.xml` | Standalone RViz launcher | Displays robot model in RViz |
 | `gazebo.bridge.yaml` | ROS-Gazebo bridge config | Bidirectional topic bridging |
 | `sweepi_controller.yaml` | Differential drive config | Wheel parameters and velocity limits |
-| `sweepi_world.world` | Gazebo world file | Environment setup, physics, models |
+| `world2.sdf` | Gazebo world file | Environment setup, physics, models, and the built-in SweePi robot |
 
 ---
 
@@ -82,14 +82,14 @@ sweepi_bringup/
 
 ### Launch Full Simulation
 ```bash
-# Terminal 1: Start Gazebo simulation with robot, RViz, and SLAM
+# Terminal 1: Start Gazebo simulation with the robot from world2.sdf
 ros2 launch sweepi_bringup gazebo.launch.xml
 ```
 
 ### Launch with Custom Parameters
 ```bash
-# Spawn robot at custom position
-ros2 launch sweepi_bringup gazebo.launch.xml x_pose:=1.0 y_pose:=2.0
+# Spawn robot at custom position only when using an empty world
+ros2 launch sweepi_bringup gazebo.launch.xml spawn_robot:=true x_pose:=1.0 y_pose:=2.0
 
 # Run headless (no GUI)
 ros2 launch sweepi_bringup gazebo.launch.xml headless:=true
@@ -192,7 +192,8 @@ ros2 launch sweepi_bringup gazebo.launch.xml \
   use_sim_time:=true \      # Use Gazebo clock (recommended)
   x_pose:=0.0 \             # Initial X position (meters)
   y_pose:=0.0 \             # Initial Y position (meters)
-  headless:=false           # Run without GUI
+  headless:=false \         # Run without GUI
+  spawn_robot:=false        # world2.sdf already contains the robot
 ```
 
 | Argument | Default | Description |
@@ -201,6 +202,7 @@ ros2 launch sweepi_bringup gazebo.launch.xml \
 | `x_pose` | 0.0 | Robot initial X position in world |
 | `y_pose` | 0.0 | Robot initial Y position in world |
 | `headless` | false | Disable GUI (true = faster, no visual feedback) |
+| `spawn_robot` | false | Spawn robot from `robot_description`; keep false for `world2.sdf` to avoid duplicate `/scan` and `/odom` publishers |
 
 ---
 

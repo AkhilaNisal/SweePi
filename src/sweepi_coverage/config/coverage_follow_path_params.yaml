@@ -106,6 +106,7 @@ coverage_follow_path_executor_node:
     fallback_to_raw_path_on_smoothing_failure: true
     publish_raw_and_smoothed_paths: true
     publish_debug_markers: true
+    log_dynamic_detection_debug: false
     enable_dynamic_obstacle_skip: true
     local_costmap_topic: "/local_costmap/costmap"
     static_map_topic: "/map"

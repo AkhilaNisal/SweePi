@@ -7,6 +7,8 @@
   <arg name="x_pose" default="0.0"/>
   <arg name="y_pose" default="0.0"/>
   <arg name="headless" default="false"/>
+  <!-- world2.sdf already contains the sweepi model. Set true only for empty worlds. -->
+  <arg name="spawn_robot" default="false"/>
 
   <!-- Path Variables -->
   <let name="urdf_path"
@@ -61,12 +63,14 @@
         output="screen"
         args="0 0 0 0 0 0 lidar_link sweepi/base_footprint/gpu_lidar" />
 
-  <!-- Spawn Robot -->
-  <node pkg="ros_gz_sim"
-        exec="create"
-        name="spawn_robot"
-        output="screen"
-        args="-topic robot_description -name sweepi -x $(var x_pose) -y $(var y_pose) -z 0.05" />
+  <!-- Spawn Robot. Disabled by default because world2.sdf already includes sweepi. -->
+  <group if="$(var spawn_robot)">
+    <node pkg="ros_gz_sim"
+          exec="create"
+          name="spawn_robot"
+          output="screen"
+          args="-topic robot_description -name sweepi -x $(var x_pose) -y $(var y_pose) -z 0.05" />
+  </group>
 
   <!-- ROS-Gazebo Bridge -->
   <node pkg="ros_gz_bridge"
@@ -76,6 +80,14 @@
     <param name="config_file" value="$(var gazebo_bridge_config)" />
     <param name="use_sim_time" value="$(var use_sim_time)" />
     <param name="lazy_subscribers" value="false" />
+  </node>
+
+  <!-- Publish odom -> base_footprint from /odom with monotonic timestamp filtering. -->
+  <node pkg="sweepi_bringup"
+        exec="odom_tf_broadcaster.py"
+        name="odom_tf_broadcaster"
+        output="screen">
+    <param name="use_sim_time" value="$(var use_sim_time)" />
   </node>
 
   <!-- RViz -->
