@@ -9,9 +9,9 @@ echo Folder: %cd%
 echo ==========================================
 echo.
 
-if not exist mock_server.py (
-    echo ERROR: mock_server.py not found in this folder.
-    echo Put this .bat file in the same folder as mock_server.py
+if not exist app\main.py (
+    echo ERROR: app\main.py not found.
+    echo Make sure this .bat file is in the mock_api_server root folder.
     pause
     exit /b 1
 )
@@ -25,6 +25,7 @@ if errorlevel 1 (
 )
 
 echo Checking required Python packages...
+
 python -m pip show fastapi >nul 2>nul
 if errorlevel 1 (
     echo Installing fastapi...
@@ -44,9 +45,12 @@ echo.
 echo API docs:
 echo http://localhost:8080/docs
 echo.
+echo Test status endpoint:
+echo http://localhost:8080/api/robot/status
+echo.
 echo Press CTRL + C to stop the server.
 echo.
 
-python -m uvicorn mock_server:app --host 0.0.0.0 --port 8080 --reload
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 
 pause
