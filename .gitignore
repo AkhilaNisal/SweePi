@@ -6,3 +6,11 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.idea/
+
+# Ignore all generated map files
+development/mock_api_server/maps/*
+
+# Keep only this saved map
+!development/mock_api_server/maps/my_room_map.meta.json
+!development/mock_api_server/maps/my_room_map.pgm
+!development/mock_api_server/maps/my_room_map.yaml

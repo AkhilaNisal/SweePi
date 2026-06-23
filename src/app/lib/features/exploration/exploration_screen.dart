@@ -1,6 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../app/app_controller.dart';
+
+const _manualDriveRepeatInterval = Duration(milliseconds: 200);
+const _holdMovementCommands = {
+  'forward',
+  'backward',
+  'rotate_left',
+  'rotate_right',
+};
 
 class ExplorationScreen extends StatefulWidget {
   const ExplorationScreen({super.key, required this.controller});
@@ -179,15 +189,87 @@ class _ExplorationScreenState extends State<ExplorationScreen> {
   }
 }
 
-class _RcController extends StatelessWidget {
+class _RcController extends StatefulWidget {
   const _RcController({required this.controller, required this.speed});
 
   final AppController controller;
   final double speed;
 
   @override
+  State<_RcController> createState() => _RcControllerState();
+}
+
+class _RcControllerState extends State<_RcController> {
+  Timer? _repeatTimer;
+  String? _heldCommand;
+  bool _requestInFlight = false;
+
+  @override
+  void dispose() {
+    _repeatTimer?.cancel();
+    _repeatTimer = null;
+    _heldCommand = null;
+    super.dispose();
+  }
+
+  void _startHolding(String command) {
+    if (!_holdMovementCommands.contains(command) ||
+        _heldCommand != null ||
+        widget.controller.isBusy) {
+      return;
+    }
+
+    setState(() => _heldCommand = command);
+    _sendHeldCommand(command);
+    _repeatTimer = Timer.periodic(
+      _manualDriveRepeatInterval,
+      (_) => _sendHeldCommand(command),
+    );
+  }
+
+  void _stopHolding() {
+    _repeatTimer?.cancel();
+    _repeatTimer = null;
+
+    if (!mounted || _heldCommand == null) {
+      _heldCommand = null;
+      return;
+    }
+
+    setState(() => _heldCommand = null);
+  }
+
+  Future<void> _sendHeldCommand(String command) async {
+    if (_requestInFlight || _heldCommand != command) {
+      return;
+    }
+
+    _requestInFlight = true;
+    try {
+      await widget.controller.sendManualDrive(command, widget.speed);
+    } finally {
+      _requestInFlight = false;
+    }
+  }
+
+  Future<void> _sendStop() async {
+    if (_heldCommand != null || widget.controller.isBusy) {
+      return;
+    }
+    await widget.controller.sendManualDrive('stop', widget.speed);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final heldCommand = _heldCommand;
+
+    bool enabledFor(String command) {
+      if (widget.controller.isBusy) {
+        return false;
+      }
+      return heldCommand == null || heldCommand == command;
+    }
 
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 340),
@@ -199,10 +281,11 @@ class _RcController extends StatelessWidget {
             height: 84,
             child: _DriveButton(
               tooltip: 'Forward',
-              command: 'forward',
-              controller: controller,
-              speed: speed,
               icon: Icons.arrow_upward_rounded,
+              enabled: enabledFor('forward'),
+              active: heldCommand == 'forward',
+              onHoldStart: () => _startHolding('forward'),
+              onHoldEnd: _stopHolding,
             ),
           ),
           const SizedBox(height: 14),
@@ -213,10 +296,11 @@ class _RcController extends StatelessWidget {
                 dimension: 88,
                 child: _DriveButton(
                   tooltip: 'Rotate left',
-                  command: 'rotate_left',
-                  controller: controller,
-                  speed: speed,
                   icon: Icons.rotate_left_rounded,
+                  enabled: enabledFor('rotate_left'),
+                  active: heldCommand == 'rotate_left',
+                  onHoldStart: () => _startHolding('rotate_left'),
+                  onHoldEnd: _stopHolding,
                 ),
               ),
               const SizedBox(width: 14),
@@ -224,12 +308,12 @@ class _RcController extends StatelessWidget {
                 dimension: 92,
                 child: _DriveButton(
                   tooltip: 'Stop',
-                  command: 'stop',
-                  controller: controller,
-                  speed: speed,
                   icon: Icons.stop_rounded,
+                  enabled: enabledFor('stop'),
+                  active: false,
                   backgroundColor: colorScheme.errorContainer,
                   foregroundColor: colorScheme.onErrorContainer,
+                  onTap: _sendStop,
                 ),
               ),
               const SizedBox(width: 14),
@@ -237,10 +321,11 @@ class _RcController extends StatelessWidget {
                 dimension: 88,
                 child: _DriveButton(
                   tooltip: 'Rotate right',
-                  command: 'rotate_right',
-                  controller: controller,
-                  speed: speed,
                   icon: Icons.rotate_right_rounded,
+                  enabled: enabledFor('rotate_right'),
+                  active: heldCommand == 'rotate_right',
+                  onHoldStart: () => _startHolding('rotate_right'),
+                  onHoldEnd: _stopHolding,
                 ),
               ),
             ],
@@ -251,10 +336,11 @@ class _RcController extends StatelessWidget {
             height: 84,
             child: _DriveButton(
               tooltip: 'Backward',
-              command: 'backward',
-              controller: controller,
-              speed: speed,
               icon: Icons.arrow_downward_rounded,
+              enabled: enabledFor('backward'),
+              active: heldCommand == 'backward',
+              onHoldStart: () => _startHolding('backward'),
+              onHoldEnd: _stopHolding,
             ),
           ),
         ],
@@ -266,43 +352,81 @@ class _RcController extends StatelessWidget {
 class _DriveButton extends StatelessWidget {
   const _DriveButton({
     required this.tooltip,
-    required this.command,
-    required this.controller,
-    required this.speed,
     required this.icon,
+    required this.enabled,
+    required this.active,
     this.backgroundColor,
     this.foregroundColor,
+    this.onTap,
+    this.onHoldStart,
+    this.onHoldEnd,
   });
 
   final String tooltip;
-  final String command;
-  final AppController controller;
-  final double speed;
   final IconData icon;
+  final bool enabled;
+  final bool active;
   final Color? backgroundColor;
   final Color? foregroundColor;
+  final VoidCallback? onTap;
+  final VoidCallback? onHoldStart;
+  final VoidCallback? onHoldEnd;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(26),
+    );
+    final isHoldButton = onHoldStart != null && onHoldEnd != null;
+    final effectiveBackground = !enabled
+        ? colorScheme.surfaceContainerHighest
+        : active
+        ? colorScheme.primary
+        : backgroundColor ?? colorScheme.primaryContainer;
+    final effectiveForeground = !enabled
+        ? colorScheme.onSurfaceVariant.withValues(alpha: 0.54)
+        : active
+        ? colorScheme.onPrimary
+        : foregroundColor ?? colorScheme.onPrimaryContainer;
 
     return Tooltip(
       message: tooltip,
-      child: FilledButton(
-        style: FilledButton.styleFrom(
-          backgroundColor: backgroundColor ?? colorScheme.primaryContainer,
-          foregroundColor: foregroundColor ?? colorScheme.onPrimaryContainer,
-          disabledBackgroundColor: colorScheme.surfaceContainerHighest,
-          disabledForegroundColor: colorScheme.onSurfaceVariant,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(26),
+      child: Listener(
+        onPointerDown: enabled && isHoldButton ? (_) => onHoldStart!() : null,
+        onPointerUp: isHoldButton ? (_) => onHoldEnd!() : null,
+        onPointerCancel: isHoldButton ? (_) => onHoldEnd!() : null,
+        child: Material(
+          color: effectiveBackground,
+          shape: shape,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: enabled && !isHoldButton ? onTap : null,
+            customBorder: shape,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 110),
+              curve: Curves.easeOut,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(26),
+                border: active
+                    ? Border.all(color: colorScheme.primary, width: 2)
+                    : null,
+                boxShadow: active
+                    ? [
+                        BoxShadow(
+                          color: colorScheme.primary.withValues(alpha: 0.24),
+                          blurRadius: 14,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Center(
+                child: Icon(icon, size: 38, color: effectiveForeground),
+              ),
+            ),
           ),
-          padding: EdgeInsets.zero,
         ),
-        onPressed: controller.isBusy
-            ? null
-            : () => controller.sendManualDrive(command, speed),
-        child: Icon(icon, size: 38),
       ),
     );
   }
