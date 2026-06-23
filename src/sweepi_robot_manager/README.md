@@ -80,6 +80,11 @@ ros2 service call /sweepi_robot_manager/exploration/stop std_srvs/srv/Trigger {}
 ros2 service call /sweepi_robot_manager/exploration/stop_and_save std_srvs/srv/Trigger {}
 ```
 
+`exploration/stop`, `exploration/stop_and_save`, and automatic exploration
+completion close the exploration launch stack after the explorer reports
+`/exploration/mode: stopped`. The manager then returns to `idle` so coverage or
+another exploration session can be started.
+
 Coverage controls:
 
 ```bash
@@ -91,6 +96,14 @@ ros2 service call /sweepi_robot_manager/coverage/stop std_srvs/srv/Trigger {}
 ros2 service call /sweepi_robot_manager/coverage/return_home std_srvs/srv/Trigger {}
 ros2 service call /sweepi_robot_manager/coverage/reset std_srvs/srv/Trigger {}
 ```
+
+`coverage/stop` stops coverage motion, closes the active coverage launch, and
+returns the manager to `idle`, so exploration or coverage can be started again.
+
+`coverage/reset` clears the coverage tracker map, planner path/markers, and
+FollowPath cache, then closes the active coverage launch and returns the manager
+to `idle`. A new coverage run must start again with
+`/sweepi_robot_manager/start_coverage`, followed by validate and start.
 
 Status:
 
@@ -117,5 +130,5 @@ ros2 service call /sweepi_robot_manager/coverage/last_summary std_srvs/srv/Trigg
 
 - `/sweepi_robot_manager/start_exploration` starts Nav2 navigation, SLAM Toolbox through `sweepi_exploration`, and the wavefront explorer.
 - `/sweepi_robot_manager/start_coverage` starts Nav2 with the coverage package config and the FollowPath coverage stack. It can transition directly from an active exploration launch.
-- `/sweepi_robot_manager/stop_task` shuts down the active exploration or coverage launch stack. Completed coverage tasks are shut down automatically after the final status settles.
+- `/sweepi_robot_manager/stop_task` shuts down the active exploration or coverage launch stack and waits for its child processes to exit. Completed coverage and exploration tasks are shut down automatically after the final status settles.
 - The task control services forward stable API-facing commands to the lower-level package services.

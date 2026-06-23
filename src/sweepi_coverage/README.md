@@ -127,6 +127,20 @@ Stop coverage and prevent further coverage execution until reset:
 ros2 service call /stop_coverage_follow_path std_srvs/srv/Trigger {}
 ```
 
+Clear the FollowPath executor cache while the coverage stack is still active:
+
+```bash
+ros2 service call /reset_coverage_follow_path std_srvs/srv/Trigger {}
+```
+
+When running through `sweepi_robot_manager`, prefer the manager reset service.
+It clears `/coverage_map`, `/coverage_path`, planner markers, and executor cache,
+then returns the manager to `idle`:
+
+```bash
+ros2 service call /sweepi_robot_manager/coverage/reset std_srvs/srv/Trigger {}
+```
+
 Return home. The home pose is recorded from the robot pose when coverage first
 starts. Return home stops coverage, cancels the active FollowPath goal, and sends
 Nav2 `NavigateToPose` back to that initial pose:

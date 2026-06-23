@@ -11,6 +11,7 @@ from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from rclpy.time import Time
+from std_srvs.srv import Trigger
 from tf2_ros import Buffer, TransformException, TransformListener
 
 from sweepi_coverage.coverage_utils import (
@@ -83,6 +84,11 @@ class CoverageTrackerNode(Node):
             self.coverage_topic,
             map_qos,
         )
+        self.reset_service = self.create_service(
+            Trigger,
+            '/reset_coverage_tracker',
+            self.reset_service_callback,
+        )
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
@@ -94,6 +100,23 @@ class CoverageTrackerNode(Node):
             'Coverage tracker started: map=/map, coverage=%s, TF=%s -> %s'
             % (self.coverage_topic, self.global_frame, self.robot_base_frame)
         )
+
+    def reset_service_callback(self, request, response):
+        del request
+        self.map_info = None
+        self.coverage_frame = self.global_frame
+        self.coverage_data = None
+        self.coverage_msg = None
+
+        empty = OccupancyGrid()
+        empty.header.frame_id = self.global_frame
+        empty.header.stamp = self.get_clock().now().to_msg()
+        self.coverage_pub.publish(empty)
+
+        response.success = True
+        response.message = 'Coverage tracker reset; /coverage_map cleared'
+        self.get_logger().info(response.message)
+        return response
 
     def map_callback(self, msg):
         """Initialize or refresh coverage data from the source occupancy map."""

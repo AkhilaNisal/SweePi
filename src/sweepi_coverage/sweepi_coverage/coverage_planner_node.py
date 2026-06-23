@@ -14,6 +14,7 @@ from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from rclpy.time import Time
 from std_msgs.msg import Float32, String
+from std_srvs.srv import Trigger
 from tf2_ros import Buffer, TransformException, TransformListener
 from visualization_msgs.msg import Marker, MarkerArray
 
@@ -332,6 +333,11 @@ class CoveragePlannerNode(Node):
             self.coverage_stats_topic,
             path_qos,
         )
+        self.reset_service = self.create_service(
+            Trigger,
+            '/reset_coverage_planner',
+            self.reset_service_callback,
+        )
 
         publish_period = 1.0 / self.path_publish_rate_hz
         self.timer = self.create_timer(publish_period, self.publish_outputs)
@@ -355,6 +361,47 @@ class CoveragePlannerNode(Node):
                 self.inflation_radius_m,
             )
         )
+
+    def reset_service_callback(self, request, response):
+        del request
+        self.coverage_map = None
+        self.coverage_map_checksum = None
+        self.plan_dirty = False
+        self.path_frozen = False
+        self.latest_path = self._make_empty_path()
+        self.latest_debug_mask = None
+        self.latest_markers = self._make_delete_markers()
+        self.latest_percentage_msg = Float32()
+        self.latest_stats_msg = String()
+        self.latest_stats_msg.data = self._format_coverage_stats(
+            self._make_empty_stats()
+        )
+        self.latest_plan_stats = self._make_empty_stats()
+        self.connector_count = 0
+        self.connector_pose_count = 0
+        self.connector_failure_count = 0
+        self.cleanup_pass_count = 0
+        self.last_execution_status = ''
+
+        stamp = self.get_clock().now().to_msg()
+        self.latest_path.header.stamp = stamp
+        self.coverage_path_pub.publish(self.latest_path)
+
+        empty_mask = OccupancyGrid()
+        empty_mask.header.frame_id = 'map'
+        empty_mask.header.stamp = stamp
+        self.planning_mask_pub.publish(empty_mask)
+
+        for marker in self.latest_markers.markers:
+            marker.header.stamp = stamp
+        self.marker_pub.publish(self.latest_markers)
+        self.coverage_percentage_pub.publish(self.latest_percentage_msg)
+        self.coverage_stats_pub.publish(self.latest_stats_msg)
+
+        response.success = True
+        response.message = 'Coverage planner reset; /coverage_path cleared'
+        self.get_logger().info(response.message)
+        return response
 
     def coverage_map_callback(self, msg):
         """Store the latest coverage map and regenerate visualization outputs."""

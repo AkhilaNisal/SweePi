@@ -49,6 +49,11 @@ class SweePiRobotManager(Node):
         self.latest_coverage_stats = ''
         self.latest_coverage_map_summary = ''
         self.last_coverage_summary = 'No coverage task has completed yet.'
+        self.coverage_reset_shutdown_deadline = 0.0
+        self.latest_exploration_mode = ''
+        self.exploration_stop_candidate_time = 0.0
+        self.exploration_stop_grace_sec = 2.0
+        self.exploration_stop_handled = False
 
         self.status_pub = self.create_publisher(
             String,
@@ -89,6 +94,12 @@ class SweePiRobotManager(Node):
             self._coverage_map_callback,
             map_qos,
         )
+        self.exploration_mode_sub = self.create_subscription(
+            String,
+            '/exploration/mode',
+            self._exploration_mode_callback,
+            10,
+        )
 
         self._trigger_clients = {}
         self._save_map_clients = {}
@@ -126,11 +137,10 @@ class SweePiRobotManager(Node):
             'Exploration manual mode requested',
             required_task='exploration',
         )
-        self._create_trigger_service(
+        self.create_service(
+            Trigger,
             '/sweepi_robot_manager/exploration/stop',
-            '/stop_exploration',
-            'Exploration stop requested',
-            required_task='exploration',
+            self._exploration_stop_callback,
         )
         self.create_service(
             Trigger,
@@ -162,11 +172,10 @@ class SweePiRobotManager(Node):
             'Coverage continue requested',
             required_task='coverage',
         )
-        self._create_trigger_service(
+        self.create_service(
+            Trigger,
             '/sweepi_robot_manager/coverage/stop',
-            '/stop_coverage_follow_path',
-            'Coverage stop requested',
-            required_task='coverage',
+            self._coverage_stop_callback,
         )
         self._create_trigger_service(
             '/sweepi_robot_manager/coverage/return_home',
@@ -174,11 +183,10 @@ class SweePiRobotManager(Node):
             'Coverage return-home requested',
             required_task='coverage',
         )
-        self._create_trigger_service(
+        self.create_service(
+            Trigger,
             '/sweepi_robot_manager/coverage/reset',
-            '/reset_coverage_follow_path',
-            'Coverage reset requested',
-            required_task='coverage',
+            self._coverage_reset_callback,
         )
 
         self.timer = self.create_timer(1.0, self._timer_callback)
@@ -212,6 +220,7 @@ class SweePiRobotManager(Node):
                 'start_mode:=%s' % mode,
                 'use_sim_time:=%s' % self._use_sim_time_value(),
             ],
+            initial_mode=mode,
         )
 
     def _start_coverage_callback(self, request, response):
@@ -252,6 +261,7 @@ class SweePiRobotManager(Node):
         command,
         transition_from_task=None,
         start_coverage_when_ready=False,
+        initial_mode='',
     ):
         self._refresh_active_process()
         if self.active_process is not None:
@@ -303,6 +313,8 @@ class SweePiRobotManager(Node):
         self.active_task_start_wall = time.strftime('%Y-%m-%d %H:%M:%S')
         if task == 'coverage':
             self._reset_active_coverage_tracking()
+        elif task == 'exploration':
+            self._reset_active_exploration_tracking(initial_mode)
         if start_coverage_when_ready:
             self._schedule_coverage_start()
         response.success = True
@@ -351,26 +363,41 @@ class SweePiRobotManager(Node):
 
         process = self.active_process
         task = self.active_task
+        pgid = self._process_group_id(process)
         self.get_logger().info('Stopping active %s launch' % task)
 
         try:
-            os.killpg(os.getpgid(process.pid), signal.SIGINT)
+            self._signal_process_tree(process, pgid, signal.SIGINT)
             process.wait(timeout=8.0)
         except subprocess.TimeoutExpired:
             self.get_logger().warn(
                 '%s launch did not exit after SIGINT; sending SIGTERM' % task
             )
-            os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+            self._signal_process_tree(process, pgid, signal.SIGTERM)
             try:
                 process.wait(timeout=5.0)
             except subprocess.TimeoutExpired:
                 self.get_logger().error(
                     '%s launch did not exit after SIGTERM; sending SIGKILL' % task
                 )
-                os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+                self._signal_process_tree(process, pgid, signal.SIGKILL)
                 process.wait(timeout=3.0)
         except ProcessLookupError:
             pass
+
+        if pgid is not None and not self._wait_process_group_exit(pgid, 3.0):
+            self.get_logger().warn(
+                '%s child processes still exist after SIGINT; sending SIGTERM'
+                % task
+            )
+            self._signal_process_tree(process, pgid, signal.SIGTERM)
+            if not self._wait_process_group_exit(pgid, 3.0):
+                self.get_logger().warn(
+                    '%s child processes still exist after SIGTERM; sending SIGKILL'
+                    % task
+                )
+                self._signal_process_tree(process, pgid, signal.SIGKILL)
+                self._wait_process_group_exit(pgid, 2.0)
 
         self.active_process = None
         self.active_task = 'idle'
@@ -380,8 +407,38 @@ class SweePiRobotManager(Node):
         self.pending_coverage_start = False
         self.pending_coverage_start_deadline = 0.0
         self.last_coverage_start_attempt = 0.0
+        self.coverage_reset_shutdown_deadline = 0.0
         self._publish_status()
         return True
+
+    def _process_group_id(self, process):
+        try:
+            return os.getpgid(process.pid)
+        except ProcessLookupError:
+            return None
+
+    def _signal_process_tree(self, process, pgid, sig):
+        if pgid is not None:
+            os.killpg(pgid, sig)
+            return
+        process.send_signal(sig)
+
+    def _process_group_exists(self, pgid):
+        try:
+            os.killpg(pgid, 0)
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            return True
+        return True
+
+    def _wait_process_group_exit(self, pgid, timeout_sec):
+        deadline = time.monotonic() + timeout_sec
+        while time.monotonic() < deadline:
+            if not self._process_group_exists(pgid):
+                return True
+            time.sleep(0.1)
+        return not self._process_group_exists(pgid)
 
     def _schedule_coverage_start(self):
         self.pending_coverage_start = True
@@ -432,6 +489,110 @@ class SweePiRobotManager(Node):
         response.message = success_text
         return response
 
+    def _coverage_reset_callback(self, request, response):
+        del request
+        if not self._task_is_active('coverage'):
+            response.success = False
+            response.message = 'coverage is not active'
+            return response
+
+        unavailable = self._request_coverage_reset_services(timeout_sec=0.5)
+
+        if unavailable:
+            response.success = False
+            response.message = (
+                'Coverage reset partially requested; unavailable services: %s'
+                % ', '.join(unavailable)
+            )
+            return response
+
+        self._reset_active_coverage_tracking()
+        self.coverage_reset_shutdown_deadline = time.monotonic() + 1.0
+        response.success = True
+        response.message = (
+            'Coverage reset requested; coverage map, planner path, and FollowPath '
+            'cache will be cleared. Manager will return to idle; start coverage '
+            'again from /start_coverage.'
+        )
+        return response
+
+    def _coverage_stop_callback(self, request, response):
+        del request
+        if not self._task_is_active('coverage'):
+            response.success = False
+            response.message = 'coverage is not active'
+            return response
+
+        target_service = '/stop_coverage_follow_path'
+        client = self._trigger_clients.get(target_service)
+        if client is None:
+            client = self.create_client(Trigger, target_service)
+            self._trigger_clients[target_service] = client
+
+        if client.wait_for_service(timeout_sec=1.0):
+            future = client.call_async(Trigger.Request())
+            future.add_done_callback(self._coverage_stop_done)
+        else:
+            self.get_logger().warn(
+                'Target service unavailable: %s; closing coverage launch anyway'
+                % target_service
+            )
+            self.coverage_reset_shutdown_deadline = time.monotonic() + 0.5
+
+        response.success = True
+        response.message = (
+            'Coverage stop requested. Manager will close the coverage launch '
+            'stack and return to idle.'
+        )
+        return response
+
+    def _coverage_stop_done(self, future):
+        self._log_trigger_result('/stop_coverage_follow_path', future)
+        if self.active_task == 'coverage':
+            self.coverage_reset_shutdown_deadline = time.monotonic() + 0.5
+
+    def _exploration_stop_callback(self, request, response):
+        del request
+        if not self._task_is_active('exploration'):
+            response.success = False
+            response.message = 'exploration is not active'
+            return response
+
+        target_service = '/stop_exploration'
+        client = self._trigger_clients.get(target_service)
+        if client is None:
+            client = self.create_client(Trigger, target_service)
+            self._trigger_clients[target_service] = client
+
+        if not client.wait_for_service(timeout_sec=1.0):
+            response.success = False
+            response.message = 'Target service unavailable: %s' % target_service
+            return response
+
+        future = client.call_async(Trigger.Request())
+        future.add_done_callback(self._exploration_stop_done)
+        response.success = True
+        response.message = (
+            'Exploration stop requested. Manager will close the exploration '
+            'launch stack and return to idle.'
+        )
+        return response
+
+    def _exploration_stop_done(self, future):
+        try:
+            result = future.result()
+        except Exception as exc:
+            self.get_logger().error('/stop_exploration failed: %s' % exc)
+        else:
+            level = self.get_logger().info if result.success else self.get_logger().warn
+            level('/stop_exploration result: %s' % result.message)
+
+        if self.active_task == 'exploration':
+            self.get_logger().info(
+                'Exploration stopped. Returning manager to idle.'
+            )
+            self._stop_active_task()
+
     def _exploration_stop_and_save_callback(self, request, response):
         del request
         if not self._task_is_active('exploration'):
@@ -464,13 +625,22 @@ class SweePiRobotManager(Node):
         save_request.occupied_thresh = 0.65
 
         future = client.call_async(save_request)
-        future.add_done_callback(self._log_save_map_result)
+        future.add_done_callback(self._exploration_stop_and_save_done)
         response.success = True
         response.message = (
-            'Exploration stop-and-save requested for map_name=%s'
+            'Exploration stop-and-save requested for map_name=%s. Manager will '
+            'close the exploration launch stack and return to idle.'
             % self.active_map_name
         )
         return response
+
+    def _exploration_stop_and_save_done(self, future):
+        self._log_save_map_result(future)
+        if self.active_task == 'exploration':
+            self.get_logger().info(
+                'Exploration stop-and-save finished. Returning manager to idle.'
+            )
+            self._stop_active_task()
 
     def _coverage_last_summary_callback(self, request, response):
         del request
@@ -531,6 +701,23 @@ class SweePiRobotManager(Node):
             )
         )
 
+    def _exploration_mode_callback(self, msg):
+        mode = str(msg.data or '').strip().lower()
+        if not mode:
+            return
+
+        previous_mode = self.latest_exploration_mode
+        self.latest_exploration_mode = mode
+        if self.active_task != 'exploration' or self.exploration_stop_handled:
+            return
+
+        if mode == 'stopped' and previous_mode in ('auto', 'manual'):
+            self.exploration_stop_candidate_time = time.monotonic()
+            self.get_logger().info(
+                'Exploration reported stopped. Waiting briefly before '
+                'returning manager to idle.'
+            )
+
     def _reset_active_coverage_tracking(self):
         self.coverage_terminal_candidate = ''
         self.coverage_terminal_candidate_time = 0.0
@@ -538,6 +725,36 @@ class SweePiRobotManager(Node):
         self.latest_coverage_status = ''
         self.latest_coverage_stats = ''
         self.latest_coverage_map_summary = ''
+
+    def _request_coverage_reset_services(self, timeout_sec=0.2):
+        targets = (
+            '/reset_coverage_tracker',
+            '/reset_coverage_planner',
+            '/reset_coverage_follow_path',
+        )
+        unavailable = []
+        for target_service in targets:
+            client = self._trigger_clients.get(target_service)
+            if client is None:
+                client = self.create_client(Trigger, target_service)
+                self._trigger_clients[target_service] = client
+
+            if not client.wait_for_service(timeout_sec=timeout_sec):
+                unavailable.append(target_service)
+                continue
+
+            future = client.call_async(Trigger.Request())
+            future.add_done_callback(
+                lambda done_future, service=target_service: (
+                    self._log_trigger_result(service, done_future)
+                )
+            )
+        return unavailable
+
+    def _reset_active_exploration_tracking(self, initial_mode=''):
+        self.latest_exploration_mode = str(initial_mode or '').strip().lower()
+        self.exploration_stop_candidate_time = 0.0
+        self.exploration_stop_handled = False
 
     def _finalize_completed_coverage_if_ready(self):
         if self.active_task != 'coverage' or self.active_process is None:
@@ -555,8 +772,33 @@ class SweePiRobotManager(Node):
         self._record_coverage_summary(final_status, publish=True)
         self.coverage_terminal_handled = True
         self.get_logger().info(
-            'Coverage finished with status=%s. Returning manager to idle.'
+            'Coverage finished with status=%s. Clearing coverage visuals before '
+            'returning manager to idle.'
             % final_status
+        )
+        unavailable = self._request_coverage_reset_services(timeout_sec=0.2)
+        if unavailable:
+            self.get_logger().warn(
+                'Coverage finished, but reset services were unavailable: %s'
+                % ', '.join(unavailable)
+            )
+        self.coverage_reset_shutdown_deadline = time.monotonic() + 1.0
+
+    def _finalize_completed_exploration_if_ready(self):
+        if self.active_task != 'exploration' or self.active_process is None:
+            return
+        if self.exploration_stop_handled:
+            return
+        if self.exploration_stop_candidate_time <= 0.0:
+            return
+
+        elapsed = time.monotonic() - self.exploration_stop_candidate_time
+        if elapsed < self.exploration_stop_grace_sec:
+            return
+
+        self.exploration_stop_handled = True
+        self.get_logger().info(
+            'Exploration finished or stopped. Returning manager to idle.'
         )
         self._stop_active_task()
 
@@ -622,13 +864,29 @@ class SweePiRobotManager(Node):
         self.pending_coverage_start = False
         self.pending_coverage_start_deadline = 0.0
         self.last_coverage_start_attempt = 0.0
+        self.coverage_reset_shutdown_deadline = 0.0
         self._publish_status()
 
     def _timer_callback(self):
         self._refresh_active_process()
         self._tick_pending_coverage_start()
+        self._tick_pending_coverage_reset_shutdown()
         self._finalize_completed_coverage_if_ready()
+        self._finalize_completed_exploration_if_ready()
         self._publish_status()
+
+    def _tick_pending_coverage_reset_shutdown(self):
+        if self.coverage_reset_shutdown_deadline <= 0.0:
+            return
+        if time.monotonic() < self.coverage_reset_shutdown_deadline:
+            return
+
+        self.coverage_reset_shutdown_deadline = 0.0
+        if self.active_task == 'coverage' and self.active_process is not None:
+            self.get_logger().info(
+                'Closing coverage launch and returning idle.'
+            )
+            self._stop_active_task()
 
     def _tick_pending_coverage_start(self):
         if not self.pending_coverage_start:
@@ -706,10 +964,14 @@ class SweePiRobotManager(Node):
             return
 
         msg = String()
-        msg.data = 'task=%s map_name=%s latest_coverage_status=%s' % (
+        msg.data = (
+            'task=%s map_name=%s latest_coverage_status=%s '
+            'latest_exploration_mode=%s'
+        ) % (
             self.active_task,
             self.active_map_name or '(unset)',
             self.latest_coverage_status or '(none)',
+            self.latest_exploration_mode or '(none)',
         )
         try:
             self.status_pub.publish(msg)
