@@ -15,12 +15,20 @@ class MapCanvas extends StatefulWidget {
     required this.selection,
     required this.onSelectionChanged,
     this.robotPose,
+    this.sections = const [],
+    this.selectedSectionIds = const {},
+    this.onSectionTap,
+    this.selectionEnabled = true,
   });
 
   final SweePiMapData mapData;
   final RectSelection? selection;
   final ValueChanged<RectSelection?> onSelectionChanged;
   final RobotPose? robotPose;
+  final List<MapSection> sections;
+  final Set<String> selectedSectionIds;
+  final ValueChanged<MapSection?>? onSectionTap;
+  final bool selectionEnabled;
 
   @override
   State<MapCanvas> createState() => _MapCanvasState();
@@ -101,44 +109,118 @@ class _MapCanvasState extends State<MapCanvas> {
         return Center(
           child: AspectRatio(
             aspectRatio: aspectRatio,
-            child: GestureDetector(
-              onPanStart: (details) {
-                widget.onSelectionChanged(
-                  _selectionFrom(
-                    details.localPosition,
-                    details.localPosition,
-                    constraints,
-                  ),
-                );
-              },
-              onPanUpdate: (details) {
-                final current = widget.selection ??
-                    const RectSelection(left: 0, top: 0, right: 0, bottom: 0);
-                widget.onSelectionChanged(
-                  _selectionFrom(
-                    Offset(
-                      current.left * constraints.maxWidth,
-                      current.top * constraints.maxHeight,
+            child: LayoutBuilder(
+              builder: (context, paintConstraints) {
+                return GestureDetector(
+                  onTapUp: widget.onSectionTap == null
+                      ? null
+                      : (details) {
+                          widget.onSectionTap!(
+                            _sectionAt(details.localPosition, paintConstraints),
+                          );
+                        },
+                  onPanStart: widget.selectionEnabled
+                      ? (details) {
+                          widget.onSelectionChanged(
+                            _selectionFrom(
+                              details.localPosition,
+                              details.localPosition,
+                              paintConstraints,
+                            ),
+                          );
+                        }
+                      : null,
+                  onPanUpdate: widget.selectionEnabled
+                      ? (details) {
+                          final current =
+                              widget.selection ??
+                              const RectSelection(
+                                left: 0,
+                                top: 0,
+                                right: 0,
+                                bottom: 0,
+                              );
+                          widget.onSelectionChanged(
+                            _selectionFrom(
+                              Offset(
+                                current.left * paintConstraints.maxWidth,
+                                current.top * paintConstraints.maxHeight,
+                              ),
+                              details.localPosition,
+                              paintConstraints,
+                            ),
+                          );
+                        }
+                      : null,
+                  child: CustomPaint(
+                    painter: _MapPainter(
+                      raster: _raster,
+                      selection: widget.selection,
+                      mapData: widget.mapData,
+                      robotPose: widget.robotPose,
+                      sections: widget.sections,
+                      selectedSectionIds: widget.selectedSectionIds,
                     ),
-                    details.localPosition,
-                    constraints,
+                    child: const SizedBox.expand(),
                   ),
                 );
               },
-              child: CustomPaint(
-                painter: _MapPainter(
-                  raster: _raster,
-                  selection: widget.selection,
-                  mapData: widget.mapData,
-                  robotPose: widget.robotPose,
-                ),
-                child: const SizedBox.expand(),
-              ),
             ),
           ),
         );
       },
     );
+  }
+
+  MapSection? _sectionAt(Offset point, BoxConstraints constraints) {
+    for (final section in widget.sections.reversed) {
+      final polygon = _sectionPolygon(section, constraints.biggest);
+      if (_containsPoint(polygon, point)) {
+        return section;
+      }
+    }
+    return null;
+  }
+
+  List<Offset> _sectionPolygon(MapSection section, Size size) {
+    return [
+      for (final point in section.polygon)
+        if (point.length >= 2) _worldToCanvas(point[0], point[1], size),
+    ];
+  }
+
+  Offset _worldToCanvas(double worldX, double worldY, Size size) {
+    final mapX = (worldX - widget.mapData.originX) / widget.mapData.resolution;
+    final mapY = (worldY - widget.mapData.originY) / widget.mapData.resolution;
+    return Offset(
+      (mapX / widget.mapData.width) * size.width,
+      (1 - (mapY / widget.mapData.height)) * size.height,
+    );
+  }
+
+  bool _containsPoint(List<Offset> polygon, Offset point) {
+    if (polygon.length < 3) {
+      return false;
+    }
+
+    var inside = false;
+    var previous = polygon.length - 1;
+    for (var current = 0; current < polygon.length; current++) {
+      final currentPoint = polygon[current];
+      final previousPoint = polygon[previous];
+      final intersects =
+          (currentPoint.dy > point.dy) != (previousPoint.dy > point.dy) &&
+          point.dx <
+              (previousPoint.dx - currentPoint.dx) *
+                      (point.dy - currentPoint.dy) /
+                      (previousPoint.dy - currentPoint.dy) +
+                  currentPoint.dx;
+      if (intersects) {
+        inside = !inside;
+      }
+      previous = current;
+    }
+    return inside;
   }
 
   RectSelection _selectionFrom(
@@ -161,12 +243,16 @@ class _MapPainter extends CustomPainter {
     required this.selection,
     required this.mapData,
     required this.robotPose,
+    required this.sections,
+    required this.selectedSectionIds,
   });
 
   final ui.Image? raster;
   final RectSelection? selection;
   final SweePiMapData mapData;
   final RobotPose? robotPose;
+  final List<MapSection> sections;
+  final Set<String> selectedSectionIds;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -186,6 +272,7 @@ class _MapPainter extends CustomPainter {
     }
 
     _drawGrid(canvas, size);
+    _drawSections(canvas, size);
 
     if (robotPose != null && mapData.width > 0 && mapData.height > 0) {
       final mapX = (robotPose!.x - mapData.originX) / mapData.resolution;
@@ -207,10 +294,7 @@ class _MapPainter extends CustomPainter {
         rect.right * size.width,
         rect.bottom * size.height,
       );
-      canvas.drawRect(
-        selectionRect,
-        Paint()..color = const Color(0x55288A63),
-      );
+      canvas.drawRect(selectionRect, Paint()..color = const Color(0x55288A63));
       canvas.drawRect(
         selectionRect,
         Paint()
@@ -226,6 +310,52 @@ class _MapPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2
         ..color = const Color(0xFF5A6D63),
+    );
+  }
+
+  void _drawSections(Canvas canvas, Size size) {
+    for (final section in sections) {
+      final points = [
+        for (final point in section.polygon)
+          if (point.length >= 2) _worldToCanvas(point[0], point[1], size),
+      ];
+      if (points.length < 3) {
+        continue;
+      }
+
+      final selected = selectedSectionIds.contains(section.sectionId);
+      final path = Path()..moveTo(points.first.dx, points.first.dy);
+      for (final point in points.skip(1)) {
+        path.lineTo(point.dx, point.dy);
+      }
+      path.close();
+
+      canvas.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.fill
+          ..color = selected
+              ? const Color(0x6639A275)
+              : const Color(0x33288A63),
+      );
+      canvas.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = selected ? 3 : 1.5
+          ..color = selected
+              ? const Color(0xFF0D67B5)
+              : const Color(0xFF288A63),
+      );
+    }
+  }
+
+  Offset _worldToCanvas(double worldX, double worldY, Size size) {
+    final mapX = (worldX - mapData.originX) / mapData.resolution;
+    final mapY = (worldY - mapData.originY) / mapData.resolution;
+    return Offset(
+      (mapX / mapData.width) * size.width,
+      (1 - (mapY / mapData.height)) * size.height,
     );
   }
 
@@ -248,6 +378,8 @@ class _MapPainter extends CustomPainter {
     return oldDelegate.raster != raster ||
         oldDelegate.selection != selection ||
         oldDelegate.mapData.mapId != mapData.mapId ||
-        oldDelegate.robotPose != robotPose;
+        oldDelegate.robotPose != robotPose ||
+        oldDelegate.sections != sections ||
+        oldDelegate.selectedSectionIds != selectedSectionIds;
   }
 }

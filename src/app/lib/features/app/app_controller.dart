@@ -180,7 +180,7 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> sendManualDrive(String command, double speed) async {
-    await _runBusy(() async {
+    try {
       final response = await _requireClient().sendManualDrive(
         command: command,
         speed: speed,
@@ -188,8 +188,12 @@ class AppController extends ChangeNotifier {
       lastMessage = response.message;
       if (!response.accepted) {
         errorMessage = response.message;
+        notifyListeners();
       }
-    });
+    } catch (error) {
+      errorMessage = '$error';
+      notifyListeners();
+    }
   }
 
   Future<void> refreshMaps() async {
@@ -259,6 +263,11 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void selectSectionForCleaning(MapSection? section) {
+    selectedSections = section == null ? const [] : [section];
+    notifyListeners();
+  }
+
   Future<bool> startCleaning({required bool fullMap}) async {
     var accepted = false;
     await _runBusy(() async {
@@ -266,9 +275,16 @@ class AppController extends ChangeNotifier {
       if (metadata == null) {
         throw const ApiException('Select a map before starting cleaning.');
       }
+      if (!fullMap && selectedSections.isEmpty) {
+        errorMessage = 'Select a section before starting section cleaning.';
+        return;
+      }
+      final sectionsToClean = fullMap
+          ? const <MapSection>[]
+          : [selectedSections.first];
       final response = await _requireClient().startCleaning(
         mapId: metadata.mapId,
-        sections: fullMap ? const [] : selectedSections,
+        sections: sectionsToClean,
       );
       accepted = response.accepted;
       lastMessage = response.message;

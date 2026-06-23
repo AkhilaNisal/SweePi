@@ -69,6 +69,7 @@ class _MapScreenState extends State<MapScreen> {
                   mapData: mapData,
                   selection: selection,
                   robotPose: controller.robotStatus.pose,
+                  sections: metadata?.sections ?? const [],
                   onSelectionChanged: controller.setPendingSelection,
                 ),
               ),
@@ -114,47 +115,89 @@ class _MapScreenState extends State<MapScreen> {
     SweePiMapData mapData,
     RectSelection selection,
   ) async {
-    final nameController = TextEditingController();
-    try {
-      final sectionName = await showDialog<String>(
-        context: context,
-        builder: (dialogContext) {
-          return AlertDialog(
-            title: const Text('Name section'),
-            content: TextField(
-              controller: nameController,
-              autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Section name',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () {
-                  Navigator.of(dialogContext).pop(nameController.text);
-                },
-                child: const Text('Add'),
-              ),
-            ],
-          );
-        },
-      );
+    debugPrint('[MapScreen] Add Section dialog opening.');
+    final sectionName = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => const _SectionNameDialog(),
+    );
+    debugPrint('[MapScreen] Add Section dialog closed: "$sectionName".');
 
+    try {
       if (!mounted || sectionName == null) {
+        widget.controller.setPendingSelection(null);
+        debugPrint('[MapScreen] Add Section cancelled; selection cleared.');
         return;
       }
       await widget.controller.addSectionFromPolygon(
         sectionName,
         selection.toWorldPolygon(mapData),
       );
-    } finally {
-      nameController.dispose();
+      widget.controller.setPendingSelection(null);
+      debugPrint('[MapScreen] Added section "$sectionName".');
+    } catch (error, stackTrace) {
+      debugPrint('[MapScreen] Failed to add section: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      widget.controller.setPendingSelection(null);
+      rethrow;
     }
+  }
+}
+
+class _SectionNameDialog extends StatefulWidget {
+  const _SectionNameDialog();
+
+  @override
+  State<_SectionNameDialog> createState() => _SectionNameDialogState();
+}
+
+class _SectionNameDialogState extends State<_SectionNameDialog> {
+  late final TextEditingController _nameController;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Name section'),
+      content: TextField(
+        controller: _nameController,
+        autofocus: true,
+        decoration: const InputDecoration(
+          labelText: 'Section name',
+          border: OutlineInputBorder(),
+        ),
+        onSubmitted: (value) {
+          debugPrint('[MapScreen] Add Section submitted from keyboard.');
+          Navigator.of(context).pop(value);
+        },
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            debugPrint('[MapScreen] Add Section cancelled from dialog.');
+            Navigator.of(context).pop();
+          },
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () {
+            debugPrint('[MapScreen] Add Section confirmed from dialog.');
+            Navigator.of(context).pop(_nameController.text);
+          },
+          child: const Text('Add'),
+        ),
+      ],
+    );
   }
 }
 
