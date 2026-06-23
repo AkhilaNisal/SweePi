@@ -1,179 +1,256 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 
+import '../../core/models/exploration_models.dart';
+import '../../core/models/map_models.dart';
 import '../../core/models/robot_models.dart';
 import '../../core/network/robot_api_client.dart';
 
 class AppController extends ChangeNotifier {
-  String host = '192.168.0.10';
+  String host = '10.0.2.2';
   int apiPort = 8080;
-  int wsPort = 8765;
 
   bool isConnected = false;
   bool isBusy = false;
   String? errorMessage;
-  RobotStatus status = RobotStatus.offline;
-  MapPayload mapPayload = MapPayload.empty;
-  List<ScheduleItem> schedules = const [];
-  List<HistoryItem> history = const [];
+  String? lastMessage;
 
+  RobotStatus robotStatus = RobotStatus.offline;
+  ExplorationStatus explorationStatus = ExplorationStatus.empty;
+  List<SweePiMapMetadata> savedMaps = const [];
+  SweePiMapMetadata? selectedMapMetadata;
+  SweePiMapData? selectedMapData;
+  List<MapSection> selectedSections = const [];
+  String? lastSavedMapId;
   RectSelection? pendingSelection;
 
   RobotApiClient? _client;
-  StreamSubscription<Map<String, dynamic>>? _socketSubscription;
 
   Future<void> connect() async {
-    await disconnect();
+    await disconnect(notify: false);
     isBusy = true;
     errorMessage = null;
+    lastMessage = null;
     notifyListeners();
 
     try {
-      _client = RobotApiClient(host: host, apiPort: apiPort, wsPort: wsPort);
-      await refreshAll();
-      _socketSubscription = _client!.connectWebSocket().listen(_handleSocketEvent);
+      _client = RobotApiClient(host: host, apiPort: apiPort);
+      await _refreshRobotStatusOnly();
+      explorationStatus = await _requireClient().fetchExplorationStatus();
+      await _refreshMapsOnly();
+      if (savedMaps.isNotEmpty && selectedMapMetadata == null) {
+        await _selectMapOnly(savedMaps.first.mapId);
+      }
       isConnected = true;
+      lastMessage = 'Connected to http://$host:$apiPort';
     } catch (error) {
       errorMessage = '$error';
       isConnected = false;
-      status = RobotStatus.offline;
+      robotStatus = RobotStatus.offline;
     } finally {
       isBusy = false;
       notifyListeners();
     }
   }
 
-  Future<void> disconnect() async {
-    await _socketSubscription?.cancel();
-    _socketSubscription = null;
+  Future<void> disconnect({bool notify = true}) async {
     await _client?.close();
     _client = null;
     isConnected = false;
-    notifyListeners();
+    if (notify) {
+      notifyListeners();
+    }
   }
 
-  Future<void> refreshAll() async {
-    if (_client == null) {
-      return;
-    }
-    final statusJson = await _client!.getJson('/api/v1/robot/status');
-    final mapJson = await _client!.getJson('/api/v1/maps/current');
-    final schedulesJson = await _client!.getJson('/api/v1/schedules');
-    final historyJson = await _client!.getJson('/api/v1/history');
-
-    status = RobotStatus.fromJson(statusJson);
-    mapPayload = MapPayload.fromJson(mapJson);
-    schedules = ((schedulesJson['items'] as List?) ?? const [])
-        .map((item) => ScheduleItem.fromJson((item as Map).cast<String, dynamic>()))
-        .toList();
-    history = ((historyJson['items'] as List?) ?? const [])
-        .map((item) => HistoryItem.fromJson((item as Map).cast<String, dynamic>()))
-        .toList();
-    notifyListeners();
+  Future<void> refreshRobotStatus() async {
+    await _runBusy(() async {
+      final client = _requireClient();
+      robotStatus = await client.fetchRobotStatus();
+    });
   }
 
-  Future<void> sendCommand(String path, {Map<String, dynamic>? body}) async {
-    if (_client == null) {
-      return;
-    }
-    isBusy = true;
-    errorMessage = null;
-    notifyListeners();
-    try {
-      final response = await _client!.sendJson('POST', path, body: body);
-      if (response['accepted'] == false) {
-        errorMessage = response['message'] as String? ?? 'Command rejected';
+  Future<void> startExploration(String mapName, String mode) async {
+    await _runBusy(() async {
+      final client = _requireClient();
+      final response = await client.startExploration(
+        mapName: mapName.trim().isEmpty ? 'new_mock_map' : mapName.trim(),
+        mode: mode,
+      );
+      lastMessage = response.message;
+      if (!response.accepted) {
+        errorMessage = response.message;
       }
-      await refreshAll();
-    } catch (error) {
-      errorMessage = '$error';
-    } finally {
-      isBusy = false;
-      notifyListeners();
-    }
+      explorationStatus = ExplorationStatus(
+        state: response.state,
+        mode: response.mode,
+        mapName: response.mapName,
+        mapAvailable: false,
+        message: response.message,
+      );
+      await _refreshRobotStatusOnly();
+    });
   }
 
-  Future<void> saveSelection() async {
-    if (_client == null || pendingSelection == null || !mapPayload.available) {
-      return;
-    }
-    final payload = {
-      'map_id': mapPayload.mapId,
-      'map_revision': mapPayload.revision,
-      'zones': [
-        {
-          'id': 'zone_${DateTime.now().millisecondsSinceEpoch}',
-          'polygon': pendingSelection!.toWorldPolygon(mapPayload),
-        }
-      ],
-      'no_go_zones': const [],
-      'room_ids': const [],
-    };
-    isBusy = true;
-    notifyListeners();
-    try {
-      await _client!.sendJson('PUT', '/api/v1/cleaning/selection', body: payload);
-      await refreshAll();
-    } catch (error) {
-      errorMessage = '$error';
-    } finally {
-      isBusy = false;
-      notifyListeners();
-    }
+  Future<void> refreshExplorationStatus() async {
+    await _runBusy(() async {
+      explorationStatus = await _requireClient().fetchExplorationStatus();
+    });
   }
 
-  Future<void> startSelectedCleaning() async {
-    await sendCommand('/api/v1/cleaning/start-selected', body: const {});
-  }
-
-  Future<void> saveSchedule({
-    required String id,
-    required String timeLocal,
-    required List<String> days,
-  }) async {
-    if (_client == null) {
-      return;
-    }
-    final selection = {
-      'room_ids': status.selection['room_ids'] ?? const [],
-      'zones': status.selection['zones'] ?? const [],
-      'no_go_zones': status.selection['no_go_zones'] ?? const [],
-    };
-    final body = {
-      'id': id,
-      'enabled': true,
-      'timezone': 'Asia/Colombo',
-      'time_local': timeLocal,
-      'days': days,
-      'map_id': mapPayload.mapId,
-      'selection': selection,
-    };
-    final method = schedules.any((item) => item.id == id) ? 'PUT' : 'POST';
-    try {
-      if (method == 'POST') {
-        await _client!.sendJson(method, '/api/v1/schedules', body: body);
-      } else {
-        await _client!.sendJson(method, '/api/v1/schedules/$id', body: body);
+  Future<void> stopExploration() async {
+    await _runBusy(() async {
+      final client = _requireClient();
+      final response = await client.stopExploration();
+      lastMessage = response.message;
+      if (!response.accepted) {
+        errorMessage = response.message;
       }
-      await refreshAll();
-    } catch (error) {
-      errorMessage = '$error';
-      notifyListeners();
-    }
+      lastSavedMapId = response.mapId;
+      await _refreshRobotStatusOnly();
+      await _refreshMapsOnly();
+      if (response.mapId != null) {
+        await _selectMapOnly(response.mapId!);
+      }
+      explorationStatus = await client.fetchExplorationStatus();
+    });
   }
 
-  Future<void> deleteSchedule(String id) async {
-    if (_client == null) {
+  Future<void> sendManualDrive(String command, double speed) async {
+    await _runBusy(() async {
+      final response = await _requireClient().sendManualDrive(
+        command: command,
+        speed: speed,
+      );
+      lastMessage = response.message;
+      if (!response.accepted) {
+        errorMessage = response.message;
+      }
+    });
+  }
+
+  Future<void> refreshMaps() async {
+    await _runBusy(_refreshMapsOnly);
+  }
+
+  Future<void> selectMap(String mapId) async {
+    await _runBusy(() => _selectMapOnly(mapId));
+  }
+
+  Future<void> addSectionFromPolygon(
+    String sectionName,
+    List<List<double>> polygon,
+  ) async {
+    final metadata = selectedMapMetadata;
+    if (metadata == null) {
+      errorMessage = 'Select a map before adding sections.';
+      notifyListeners();
       return;
     }
-    await _client!.sendJson('DELETE', '/api/v1/schedules/$id');
-    await refreshAll();
+
+    final nextNumber = metadata.sections.length + 1;
+    final section = MapSection(
+      sectionId: 'sec_${DateTime.now().millisecondsSinceEpoch}',
+      name: sectionName.trim().isEmpty ? 'Section $nextNumber' : sectionName,
+      polygon: polygon,
+    );
+    selectedMapMetadata = metadata.copyWith(
+      sections: [...metadata.sections, section],
+    );
+    selectedSections = [...selectedSections, section];
+    pendingSelection = null;
+    lastMessage = 'Section "${section.name}" added locally.';
+    notifyListeners();
+  }
+
+  Future<void> saveSelectedMapMetadata() async {
+    await _runBusy(() async {
+      final metadata = selectedMapMetadata;
+      if (metadata == null) {
+        throw const ApiException('Select a map before saving metadata.');
+      }
+      selectedMapMetadata = await _requireClient().updateMapMetadata(
+        mapId: metadata.mapId,
+        name: metadata.name,
+        sections: metadata.sections,
+      );
+      await _refreshMapsOnly();
+      lastMessage = 'Map metadata saved.';
+    });
+  }
+
+  void toggleSectionForCleaning(MapSection section) {
+    final exists = selectedSections.any((item) => item.sectionId == section.sectionId);
+    selectedSections = exists
+        ? selectedSections
+            .where((item) => item.sectionId != section.sectionId)
+            .toList()
+        : [...selectedSections, section];
+    notifyListeners();
+  }
+
+  Future<void> startCleaning({required bool fullMap}) async {
+    await _runBusy(() async {
+      final metadata = selectedMapMetadata;
+      if (metadata == null) {
+        throw const ApiException('Select a map before starting cleaning.');
+      }
+      final response = await _requireClient().startCleaning(
+        mapId: metadata.mapId,
+        sections: fullMap ? const [] : selectedSections,
+      );
+      lastMessage = response.message;
+      if (!response.accepted) {
+        errorMessage = response.message;
+      }
+      await _refreshRobotStatusOnly();
+    });
+  }
+
+  Future<void> pauseCleaning() async {
+    await _runBusy(() async {
+      final response = await _requireClient().pauseCleaning();
+      lastMessage = response.message.isEmpty ? 'Cleaning paused.' : response.message;
+      if (!response.accepted) {
+        errorMessage = response.message;
+      }
+      await _refreshRobotStatusOnly();
+    });
+  }
+
+  Future<void> resumeCleaning() async {
+    await _runBusy(() async {
+      final response = await _requireClient().resumeCleaning();
+      lastMessage = response.message.isEmpty ? 'Cleaning resumed.' : response.message;
+      if (!response.accepted) {
+        errorMessage = response.message;
+      }
+      await _refreshRobotStatusOnly();
+    });
+  }
+
+  Future<void> stopCleaning() async {
+    await _runBusy(() async {
+      final response = await _requireClient().stopCleaning();
+      lastMessage = response.message.isEmpty ? 'Cleaning stopped.' : response.message;
+      if (!response.accepted) {
+        errorMessage = response.message;
+      }
+      await _refreshRobotStatusOnly();
+    });
+  }
+
+  void updateConnectionSettings({
+    required String host,
+    required int apiPort,
+  }) {
+    this.host = host;
+    this.apiPort = apiPort;
+    notifyListeners();
   }
 
   void updateHost(String value) {
-    host = value;
+    host = value.trim();
     notifyListeners();
   }
 
@@ -182,47 +259,63 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updateWsPort(String value) {
-    wsPort = int.tryParse(value) ?? wsPort;
-    notifyListeners();
-  }
-
   void setPendingSelection(RectSelection? selection) {
     pendingSelection = selection;
     notifyListeners();
   }
 
-  void _handleSocketEvent(Map<String, dynamic> event) {
-    final type = event['type'] as String? ?? '';
-    final payload = (event['payload'] as Map?)?.cast<String, dynamic>() ?? const {};
-    if (type == 'status.snapshot' || type == 'status.update') {
-      status = RobotStatus.fromJson(payload);
+  RobotApiClient _requireClient() {
+    final client = _client;
+    if (client == null) {
+      throw const ApiException('Connect to the mock API server first.');
     }
-    if (type == 'map.updated') {
-      unawaited(_refreshMapOnly());
-    }
-    unawaited(_refreshHistoryOnly());
-    notifyListeners();
+    return client;
   }
 
-  Future<void> _refreshMapOnly() async {
-    if (_client == null) {
+  Future<void> _runBusy(Future<void> Function() action) async {
+    if (isBusy) {
       return;
     }
-    final mapJson = await _client!.getJson('/api/v1/maps/current');
-    mapPayload = MapPayload.fromJson(mapJson);
+    isBusy = true;
+    errorMessage = null;
     notifyListeners();
+    try {
+      await action();
+    } catch (error) {
+      errorMessage = '$error';
+    } finally {
+      isBusy = false;
+      notifyListeners();
+    }
   }
 
-  Future<void> _refreshHistoryOnly() async {
-    if (_client == null) {
-      return;
+  Future<void> _refreshRobotStatusOnly() async {
+    robotStatus = await _requireClient().fetchRobotStatus();
+  }
+
+  Future<void> _refreshMapsOnly() async {
+    savedMaps = await _requireClient().fetchMaps();
+    if (selectedMapMetadata != null) {
+      final selectedId = selectedMapMetadata!.mapId;
+      final matching = savedMaps.where((item) => item.mapId == selectedId);
+      if (matching.isNotEmpty) {
+        selectedMapMetadata = matching.first;
+      }
     }
-    final historyJson = await _client!.getJson('/api/v1/history');
-    history = ((historyJson['items'] as List?) ?? const [])
-        .map((item) => HistoryItem.fromJson((item as Map).cast<String, dynamic>()))
+  }
+
+  Future<void> _selectMapOnly(String mapId) async {
+    final client = _requireClient();
+    selectedMapData = await client.fetchMap(mapId);
+    selectedMapMetadata = await client.fetchMapMetadata(mapId);
+    selectedSections = selectedMapMetadata!.sections
+        .where(
+          (section) => selectedSections.any(
+            (selected) => selected.sectionId == section.sectionId,
+          ),
+        )
         .toList();
-    notifyListeners();
+    pendingSelection = null;
   }
 }
 
@@ -248,7 +341,7 @@ class RectSelection {
     );
   }
 
-  List<List<double>> toWorldPolygon(MapPayload map) {
+  List<List<double>> toWorldPolygon(SweePiMapData map) {
     final normalizedRect = normalized();
     final topLeft = _toWorldPoint(map, normalizedRect.left, normalizedRect.top);
     final topRight = _toWorldPoint(map, normalizedRect.right, normalizedRect.top);
@@ -261,7 +354,7 @@ class RectSelection {
     return [topLeft, topRight, bottomRight, bottomLeft];
   }
 
-  List<double> _toWorldPoint(MapPayload map, double dx, double dy) {
+  List<double> _toWorldPoint(SweePiMapData map, double dx, double dy) {
     final mapX = (dx * map.width).clamp(0, map.width - 1).toInt();
     final mapYFromTop = (dy * map.height).clamp(0, map.height - 1).toInt();
     final mapY = map.height - 1 - mapYFromTop;

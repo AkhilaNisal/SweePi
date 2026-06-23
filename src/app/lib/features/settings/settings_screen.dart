@@ -14,7 +14,6 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   late final TextEditingController _hostController;
   late final TextEditingController _apiPortController;
-  late final TextEditingController _wsPortController;
 
   @override
   void initState() {
@@ -23,16 +22,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _apiPortController = TextEditingController(
       text: widget.controller.apiPort.toString(),
     );
-    _wsPortController = TextEditingController(
-      text: widget.controller.wsPort.toString(),
-    );
   }
 
   @override
   void dispose() {
     _hostController.dispose();
     _apiPortController.dispose();
-    _wsPortController.dispose();
     super.dispose();
   }
 
@@ -48,50 +43,53 @@ class _SettingsScreenState extends State<SettingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'LAN Connection',
+                  'Mock API Connection',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _hostController,
-                  decoration: const InputDecoration(labelText: 'Raspberry Pi host'),
+                  decoration: const InputDecoration(
+                    labelText: 'Host',
+                    border: OutlineInputBorder(),
+                  ),
                   onChanged: widget.controller.updateHost,
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _apiPortController,
-                  decoration: const InputDecoration(labelText: 'API port'),
+                  decoration: const InputDecoration(
+                    labelText: 'API port',
+                    border: OutlineInputBorder(),
+                  ),
                   keyboardType: TextInputType.number,
                   onChanged: widget.controller.updateApiPort,
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _wsPortController,
-                  decoration: const InputDecoration(labelText: 'WebSocket port'),
-                  keyboardType: TextInputType.number,
-                  onChanged: widget.controller.updateWsPort,
                 ),
                 const SizedBox(height: 16),
                 Wrap(
                   spacing: 12,
+                  runSpacing: 12,
                   children: [
-                    FilledButton(
+                    FilledButton.icon(
                       onPressed: widget.controller.isBusy
                           ? null
                           : widget.controller.connect,
-                      child: const Text('Connect'),
+                      icon: const Icon(Icons.link),
+                      label: const Text('Connect'),
                     ),
-                    OutlinedButton(
+                    OutlinedButton.icon(
                       onPressed: widget.controller.isBusy
                           ? null
-                          : widget.controller.refreshAll,
-                      child: const Text('Refresh'),
+                          : widget.controller.refreshRobotStatus,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Refresh Status'),
                     ),
-                    OutlinedButton(
+                    OutlinedButton.icon(
                       onPressed: widget.controller.isBusy
                           ? null
                           : widget.controller.disconnect,
-                      child: const Text('Disconnect'),
+                      icon: const Icon(Icons.link_off),
+                      label: const Text('Disconnect'),
                     ),
                   ],
                 ),
@@ -111,11 +109,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'The app currently uses direct LAN connectivity through your '
-                  'Wi-Fi router. Discovery is still manual in this implementation, '
-                  'so enter the Raspberry Pi host and ports here before connecting.',
-                ),
+                const Text('Windows desktop or Chrome: localhost'),
+                const Text('Android emulator: 10.0.2.2'),
+                const Text('Real phone on Wi-Fi: use the laptop IP address'),
+                const SizedBox(height: 8),
+                Text('Current base URL: http://${widget.controller.host}:${widget.controller.apiPort}'),
               ],
             ),
           ),

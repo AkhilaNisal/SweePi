@@ -4,20 +4,23 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import '../../core/models/map_models.dart';
 import '../../core/models/robot_models.dart';
 import '../app/app_controller.dart';
 
 class MapCanvas extends StatefulWidget {
   const MapCanvas({
     super.key,
-    required this.mapPayload,
+    required this.mapData,
     required this.selection,
     required this.onSelectionChanged,
+    this.robotPose,
   });
 
-  final MapPayload mapPayload;
+  final SweePiMapData mapData;
   final RectSelection? selection;
   final ValueChanged<RectSelection?> onSelectionChanged;
+  final RobotPose? robotPose;
 
   @override
   State<MapCanvas> createState() => _MapCanvasState();
@@ -35,21 +38,20 @@ class _MapCanvasState extends State<MapCanvas> {
   @override
   void didUpdateWidget(covariant MapCanvas oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.mapPayload.revision != widget.mapPayload.revision) {
+    if (oldWidget.mapData.mapId != widget.mapData.mapId ||
+        oldWidget.mapData.occupancy.length != widget.mapData.occupancy.length) {
       _rebuildRaster();
     }
   }
 
   Future<void> _rebuildRaster() async {
-    if (!widget.mapPayload.available ||
-        widget.mapPayload.width == 0 ||
-        widget.mapPayload.height == 0) {
+    if (!widget.mapData.available) {
       setState(() => _raster = null);
       return;
     }
 
-    final width = widget.mapPayload.width;
-    final height = widget.mapPayload.height;
+    final width = widget.mapData.width;
+    final height = widget.mapData.height;
     final rgba = Uint8List(width * height * 4);
 
     for (var mapY = 0; mapY < height; mapY++) {
@@ -57,15 +59,13 @@ class _MapCanvasState extends State<MapCanvas> {
         final sourceIndex = mapY * width + mapX;
         final targetY = height - 1 - mapY;
         final targetIndex = (targetY * width + mapX) * 4;
-        final occupancy = widget.mapPayload.occupancy[sourceIndex];
-        final coverage = widget.mapPayload.coverage?[sourceIndex];
+        final occupancy = widget.mapData.occupancy[sourceIndex];
 
         final color = switch (occupancy) {
           < 0 => const Color(0xFFC9D1D0),
-          0 => coverage == 100
-              ? const Color(0xFF8ED1A8)
-              : const Color(0xFFF8FCF6),
-          _ => const Color(0xFF25302B),
+          0 => const Color(0xFFF8FCF6),
+          >= 65 => const Color(0xFF25302B),
+          _ => const Color(0xFFE0E8E3),
         };
 
         rgba[targetIndex] = (color.r * 255).round().clamp(0, 255);
@@ -91,24 +91,35 @@ class _MapCanvasState extends State<MapCanvas> {
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.mapPayload.available) {
-      return const Center(child: Text('No live map is available yet.'));
+    if (!widget.mapData.available) {
+      return const Center(child: Text('Select a map to view occupancy data.'));
     }
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final aspectRatio = widget.mapPayload.width / widget.mapPayload.height;
+        final aspectRatio = widget.mapData.width / widget.mapData.height;
         return Center(
           child: AspectRatio(
             aspectRatio: aspectRatio,
             child: GestureDetector(
-              onPanStart: (details) =>
-                  widget.onSelectionChanged(_selectionFrom(details.localPosition, details.localPosition, constraints)),
-              onPanUpdate: (details) {
-                final current = widget.selection ?? const RectSelection(left: 0, top: 0, right: 0, bottom: 0);
+              onPanStart: (details) {
                 widget.onSelectionChanged(
                   _selectionFrom(
-                    Offset(current.left * constraints.maxWidth, current.top * constraints.maxHeight),
+                    details.localPosition,
+                    details.localPosition,
+                    constraints,
+                  ),
+                );
+              },
+              onPanUpdate: (details) {
+                final current = widget.selection ??
+                    const RectSelection(left: 0, top: 0, right: 0, bottom: 0);
+                widget.onSelectionChanged(
+                  _selectionFrom(
+                    Offset(
+                      current.left * constraints.maxWidth,
+                      current.top * constraints.maxHeight,
+                    ),
                     details.localPosition,
                     constraints,
                   ),
@@ -118,7 +129,8 @@ class _MapCanvasState extends State<MapCanvas> {
                 painter: _MapPainter(
                   raster: _raster,
                   selection: widget.selection,
-                  mapPayload: widget.mapPayload,
+                  mapData: widget.mapData,
+                  robotPose: widget.robotPose,
                 ),
                 child: const SizedBox.expand(),
               ),
@@ -147,12 +159,14 @@ class _MapPainter extends CustomPainter {
   const _MapPainter({
     required this.raster,
     required this.selection,
-    required this.mapPayload,
+    required this.mapData,
+    required this.robotPose,
   });
 
   final ui.Image? raster;
   final RectSelection? selection;
-  final MapPayload mapPayload;
+  final SweePiMapData mapData;
+  final RobotPose? robotPose;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -171,12 +185,13 @@ class _MapPainter extends CustomPainter {
       );
     }
 
-    final robotPose = mapPayload.robotPose;
-    if (robotPose != null && mapPayload.width > 0 && mapPayload.height > 0) {
-      final mapX = (robotPose.x - mapPayload.originX) / mapPayload.resolution;
-      final mapY = (robotPose.y - mapPayload.originY) / mapPayload.resolution;
-      final dx = mapX / mapPayload.width * size.width;
-      final dy = (1 - (mapY / mapPayload.height)) * size.height;
+    _drawGrid(canvas, size);
+
+    if (robotPose != null && mapData.width > 0 && mapData.height > 0) {
+      final mapX = (robotPose!.x - mapData.originX) / mapData.resolution;
+      final mapY = (robotPose!.y - mapData.originY) / mapData.resolution;
+      final dx = mapX / mapData.width * size.width;
+      final dy = (1 - (mapY / mapData.height)) * size.height;
       canvas.drawCircle(
         Offset(dx, dy),
         6,
@@ -204,12 +219,35 @@ class _MapPainter extends CustomPainter {
           ..color = const Color(0xFF1E6B52),
       );
     }
+
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..color = const Color(0xFF5A6D63),
+    );
+  }
+
+  void _drawGrid(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.5
+      ..color = const Color(0x223A4A42);
+    const lines = 10;
+    for (var i = 1; i < lines; i++) {
+      final dx = size.width * i / lines;
+      final dy = size.height * i / lines;
+      canvas.drawLine(Offset(dx, 0), Offset(dx, size.height), paint);
+      canvas.drawLine(Offset(0, dy), Offset(size.width, dy), paint);
+    }
   }
 
   @override
   bool shouldRepaint(covariant _MapPainter oldDelegate) {
     return oldDelegate.raster != raster ||
         oldDelegate.selection != selection ||
-        oldDelegate.mapPayload.revision != mapPayload.revision;
+        oldDelegate.mapData.mapId != mapData.mapId ||
+        oldDelegate.robotPose != robotPose;
   }
 }

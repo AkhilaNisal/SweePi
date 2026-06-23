@@ -6,6 +6,6 @@ void main() {
   testWidgets('App shell renders', (tester) async {
     await tester.pumpWidget(SweePiApp(controller: AppController()));
 
-    expect(find.text('SweePi Control'), findsOneWidget);
+    expect(find.text('SweePi'), findsOneWidget);
   });
 }

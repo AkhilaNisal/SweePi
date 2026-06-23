@@ -1,3 +1,24 @@
+import 'map_models.dart';
+
+class RobotBattery {
+  const RobotBattery({
+    required this.percent,
+    required this.charging,
+  });
+
+  factory RobotBattery.fromJson(Map<String, dynamic> json) {
+    return RobotBattery(
+      percent: (json['percent'] as num?)?.toInt() ?? 0,
+      charging: json['charging'] as bool? ?? false,
+    );
+  }
+
+  static const empty = RobotBattery(percent: 0, charging: false);
+
+  final int percent;
+  final bool charging;
+}
+
 class RobotPose {
   const RobotPose({
     required this.x,
@@ -21,181 +42,130 @@ class RobotPose {
   final String frame;
 }
 
+class RobotMapState {
+  const RobotMapState({required this.mapId});
+
+  factory RobotMapState.fromJson(Map<String, dynamic> json) {
+    return RobotMapState(mapId: json['map_id'] as String?);
+  }
+
+  static const empty = RobotMapState(mapId: null);
+
+  final String? mapId;
+}
+
+class RobotCleaningState {
+  const RobotCleaningState({
+    required this.taskId,
+    required this.mapId,
+    required this.sections,
+    required this.progressPercent,
+  });
+
+  factory RobotCleaningState.fromJson(Map<String, dynamic> json) {
+    return RobotCleaningState(
+      taskId: json['task_id'] as String?,
+      mapId: json['map_id'] as String?,
+      sections: ((json['sections'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((item) => MapSection.fromJson(item.cast<String, dynamic>()))
+          .toList(),
+      progressPercent:
+          (json['progress_percent'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+
+  static const empty = RobotCleaningState(
+    taskId: null,
+    mapId: null,
+    sections: [],
+    progressPercent: 0,
+  );
+
+  final String? taskId;
+  final String? mapId;
+  final List<MapSection> sections;
+  final double progressPercent;
+}
+
+class RobotNavState {
+  const RobotNavState({required this.executionStatus});
+
+  factory RobotNavState.fromJson(Map<String, dynamic> json) {
+    return RobotNavState(
+      executionStatus: json['execution_status'] as String? ?? 'UNKNOWN',
+    );
+  }
+
+  static const empty = RobotNavState(executionStatus: 'OFFLINE');
+
+  final String executionStatus;
+}
+
 class RobotStatus {
   const RobotStatus({
+    required this.robotId,
     required this.state,
     required this.mode,
-    required this.progressPercent,
-    required this.executionStatus,
+    required this.battery,
+    required this.pose,
+    required this.map,
+    required this.cleaning,
+    required this.nav,
     required this.errors,
     required this.warnings,
-    required this.pose,
-    required this.selection,
-    required this.taskId,
   });
 
   factory RobotStatus.fromJson(Map<String, dynamic> json) {
-    final cleaning = (json['cleaning'] as Map?)?.cast<String, dynamic>() ?? {};
-    final nav = (json['nav'] as Map?)?.cast<String, dynamic>() ?? {};
     return RobotStatus(
+      robotId: json['robot_id'] as String? ?? 'unknown',
       state: json['state'] as String? ?? 'offline',
-      mode: json['mode'] as String? ?? 'auto',
-      progressPercent:
-          (cleaning['progress_percent'] as num?)?.toDouble() ?? 0,
-      executionStatus: nav['execution_status'] as String? ?? 'unknown',
+      mode: json['mode'] as String? ?? 'automatic',
+      battery: json['battery'] is Map
+          ? RobotBattery.fromJson(
+              (json['battery'] as Map).cast<String, dynamic>(),
+            )
+          : RobotBattery.empty,
+      pose: json['pose'] is Map
+          ? RobotPose.fromJson((json['pose'] as Map).cast<String, dynamic>())
+          : null,
+      map: json['map'] is Map
+          ? RobotMapState.fromJson((json['map'] as Map).cast<String, dynamic>())
+          : RobotMapState.empty,
+      cleaning: json['cleaning'] is Map
+          ? RobotCleaningState.fromJson(
+              (json['cleaning'] as Map).cast<String, dynamic>(),
+            )
+          : RobotCleaningState.empty,
+      nav: json['nav'] is Map
+          ? RobotNavState.fromJson((json['nav'] as Map).cast<String, dynamic>())
+          : RobotNavState.empty,
       errors: List<String>.from(json['errors'] as List? ?? const []),
       warnings: List<String>.from(json['warnings'] as List? ?? const []),
-      pose: json['pose'] is Map<String, dynamic>
-          ? RobotPose.fromJson(json['pose'] as Map<String, dynamic>)
-          : null,
-      selection:
-          (cleaning['selection'] as Map?)?.cast<String, dynamic>() ?? const {},
-      taskId: cleaning['task_id'] as String?,
     );
   }
 
   static const offline = RobotStatus(
+    robotId: 'offline',
     state: 'offline',
-    mode: 'auto',
-    progressPercent: 0,
-    executionStatus: 'offline',
+    mode: 'automatic',
+    battery: RobotBattery.empty,
+    pose: null,
+    map: RobotMapState.empty,
+    cleaning: RobotCleaningState.empty,
+    nav: RobotNavState.empty,
     errors: [],
     warnings: [],
-    pose: null,
-    selection: {},
-    taskId: null,
   );
 
+  final String robotId;
   final String state;
   final String mode;
-  final double progressPercent;
-  final String executionStatus;
+  final RobotBattery battery;
+  final RobotPose? pose;
+  final RobotMapState map;
+  final RobotCleaningState cleaning;
+  final RobotNavState nav;
   final List<String> errors;
   final List<String> warnings;
-  final RobotPose? pose;
-  final Map<String, dynamic> selection;
-  final String? taskId;
-}
-
-class MapPayload {
-  const MapPayload({
-    required this.available,
-    required this.mapId,
-    required this.revision,
-    required this.resolution,
-    required this.originX,
-    required this.originY,
-    required this.width,
-    required this.height,
-    required this.occupancy,
-    required this.coverage,
-    required this.metadata,
-    required this.robotPose,
-  });
-
-  factory MapPayload.fromJson(Map<String, dynamic> json) {
-    return MapPayload(
-      available: json['available'] as bool? ?? false,
-      mapId: json['map_id'] as String? ?? 'live_map',
-      revision: (json['revision'] as num?)?.toInt() ?? 0,
-      resolution: (json['resolution'] as num?)?.toDouble() ?? 0.05,
-      originX: ((json['origin'] as Map?)?['x'] as num?)?.toDouble() ?? 0,
-      originY: ((json['origin'] as Map?)?['y'] as num?)?.toDouble() ?? 0,
-      width: (json['width'] as num?)?.toInt() ?? 0,
-      height: (json['height'] as num?)?.toInt() ?? 0,
-      occupancy: List<int>.from(json['occupancy'] as List? ?? const []),
-      coverage: json['coverage'] == null
-          ? null
-          : List<int>.from(json['coverage'] as List),
-      metadata:
-          (json['metadata'] as Map?)?.cast<String, dynamic>() ?? const {},
-      robotPose: json['robot_pose'] is Map<String, dynamic>
-          ? RobotPose.fromJson(json['robot_pose'] as Map<String, dynamic>)
-          : null,
-    );
-  }
-
-  static const empty = MapPayload(
-    available: false,
-    mapId: 'live_map',
-    revision: 0,
-    resolution: 0.05,
-    originX: 0,
-    originY: 0,
-    width: 0,
-    height: 0,
-    occupancy: [],
-    coverage: null,
-    metadata: {},
-    robotPose: null,
-  );
-
-  final bool available;
-  final String mapId;
-  final int revision;
-  final double resolution;
-  final double originX;
-  final double originY;
-  final int width;
-  final int height;
-  final List<int> occupancy;
-  final List<int>? coverage;
-  final Map<String, dynamic> metadata;
-  final RobotPose? robotPose;
-}
-
-class ScheduleItem {
-  const ScheduleItem({
-    required this.id,
-    required this.enabled,
-    required this.timeLocal,
-    required this.days,
-    required this.selection,
-  });
-
-  factory ScheduleItem.fromJson(Map<String, dynamic> json) {
-    return ScheduleItem(
-      id: json['id'] as String? ?? '',
-      enabled: json['enabled'] as bool? ?? true,
-      timeLocal: json['time_local'] as String? ?? '09:00',
-      days: List<String>.from(json['days'] as List? ?? const []),
-      selection:
-          (json['selection'] as Map?)?.cast<String, dynamic>() ?? const {},
-    );
-  }
-
-  final String id;
-  final bool enabled;
-  final String timeLocal;
-  final List<String> days;
-  final Map<String, dynamic> selection;
-}
-
-class HistoryItem {
-  const HistoryItem({
-    required this.taskId,
-    required this.taskType,
-    required this.startedAt,
-    required this.endedAt,
-    required this.result,
-    required this.coveragePercent,
-  });
-
-  factory HistoryItem.fromJson(Map<String, dynamic> json) {
-    return HistoryItem(
-      taskId: json['task_id'] as String? ?? '',
-      taskType: json['task_type'] as String? ?? 'full',
-      startedAt: json['started_at'] as String? ?? '',
-      endedAt: json['ended_at'] as String?,
-      result: json['result'] as String?,
-      coveragePercent: (json['coverage_percent'] as num?)?.toDouble(),
-    );
-  }
-
-  final String taskId;
-  final String taskType;
-  final String startedAt;
-  final String? endedAt;
-  final String? result;
-  final double? coveragePercent;
 }

@@ -2,7 +2,7 @@ import uuid
 
 from fastapi import APIRouter
 
-from app.core.state import robot_state, maps, reset_cleaning_state
+from app.core.state import robot_state, map_exists, reset_cleaning_state
 from app.models.cleaning import CleaningStartRequest
 
 
@@ -15,7 +15,7 @@ def start_cleaning(req: CleaningStartRequest):
     Start cleaning using a selected map and optional selected sections.
     If sections is empty, the mock treats it as full-map cleaning.
     """
-    if req.map_id not in maps:
+    if not map_exists(req.map_id):
         return {
             "accepted": False,
             "message": "Map not found",

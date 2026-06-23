@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../control/control_screen.dart';
+import '../cleaning/cleaning_screen.dart';
+import '../exploration/exploration_screen.dart';
 import '../map/map_screen.dart';
-import '../schedules/schedules_screen.dart';
 import '../settings/settings_screen.dart';
+import '../status/status_screen.dart';
 import 'app_controller.dart';
 
 class AppShell extends StatefulWidget {
@@ -24,14 +25,15 @@ class _AppShellState extends State<AppShell> {
       animation: widget.controller,
       builder: (context, _) {
         final screens = [
-          ControlScreen(controller: widget.controller),
+          StatusScreen(controller: widget.controller),
+          ExplorationScreen(controller: widget.controller),
           MapScreen(controller: widget.controller),
-          SchedulesScreen(controller: widget.controller),
+          CleaningScreen(controller: widget.controller),
           SettingsScreen(controller: widget.controller),
         ];
         return Scaffold(
           appBar: AppBar(
-            title: const Text('SweePi Control'),
+            title: const Text('SweePi'),
             actions: [
               Padding(
                 padding: const EdgeInsets.only(right: 16),
@@ -48,16 +50,20 @@ class _AppShellState extends State<AppShell> {
             selectedIndex: _index,
             destinations: const [
               NavigationDestination(
-                icon: Icon(Icons.tune),
-                label: 'Control',
+                icon: Icon(Icons.monitor_heart_outlined),
+                label: 'Status',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.explore_outlined),
+                label: 'Explore',
               ),
               NavigationDestination(
                 icon: Icon(Icons.map_outlined),
-                label: 'Map',
+                label: 'Maps',
               ),
               NavigationDestination(
-                icon: Icon(Icons.schedule),
-                label: 'Schedules',
+                icon: Icon(Icons.cleaning_services_outlined),
+                label: 'Clean',
               ),
               NavigationDestination(
                 icon: Icon(Icons.settings),
