@@ -1,3 +1,7 @@
 .vscode/
 src/raspberry_pi/runtime/
 .postman/
+
+__pycache__/
+*.py[cod]
+*$py.class
