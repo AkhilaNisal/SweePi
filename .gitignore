@@ -5,3 +5,4 @@ src/raspberry_pi/runtime/
 __pycache__/
 *.py[cod]
 *$py.class
+*.idea/

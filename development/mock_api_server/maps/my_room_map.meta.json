@@ -2,9 +2,9 @@
   "map_id": "my_room_map",
   "name": "My Room",
   "created_at": "2026-06-23T00:00:00+05:30",
-  "updated_at": "2026-06-23T00:00:00+05:30",
-  "width": null,
-  "height": null,
+  "updated_at": "2026-06-23T16:23:14.694639",
+  "width": 99,
+  "height": 99,
   "resolution": 0.05,
   "sections": []
 }
