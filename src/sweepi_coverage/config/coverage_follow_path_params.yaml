@@ -47,6 +47,10 @@ coverage_planner_node:
     nav_costmap_timeout_sec: 2.0
     wait_for_nav_costmap_before_planning: true
     wait_for_robot_pose_before_planning: true
+    plan_only_reachable_from_robot: true
+    cleanup_after_main_path: true
+    cleanup_max_passes: 1
+    coverage_execution_status_topic: "/coverage_execution_status"
 
 coverage_follow_path_executor_node:
   ros__parameters:
@@ -73,6 +77,9 @@ coverage_follow_path_executor_node:
     enable_costmap_validation: true
     require_costmap_for_validation: true
     max_allowed_nav_cost: 99
+    max_tolerated_blocked_costmap_samples: 20
+    max_tolerated_blocked_costmap_ratio: 0.01
+    max_tolerated_blocked_cost: 99
     treat_unknown_cost_as_blocked: true
     freeze_path_on_start: true
     ignore_path_updates_while_executing: true
@@ -107,15 +114,17 @@ coverage_follow_path_executor_node:
     dynamic_inscribed_cost_threshold: 99
     dynamic_obstacle_distance_threshold_m: 0.05
     dynamic_object_clearance_m: 0.05 # change from 0.05 m 
-    dynamic_collision_check_radius_m: 0.25 # change from 0.25 m
+    dynamic_collision_check_radius_m: 0.25
     dynamic_connector_tracking_clearance_m: 0.12 # change from 0.12 m
     dynamic_use_corridor_for_detection: true
     dynamic_monitor_temporary_paths: true
     dynamic_connector_allow_blocked_start: true
     dynamic_connector_start_grace_m: 0.20
-    dynamic_refresh_temporary_rejoin: true
+    dynamic_refresh_temporary_rejoin: false
     dynamic_temporary_rejoin_check_distance_m: 0.80
     dynamic_temporary_rejoin_refresh_cooldown_sec: 0.75
+    dynamic_max_connector_replacement_ratio: 3.0
+    dynamic_max_connector_replacement_excess_m: 0.75
     dynamic_refine_connector_path: true
     dynamic_connector_refinement_iterations: 3
     dynamic_connector_refinement_step_m: 0.04
@@ -123,9 +132,9 @@ coverage_follow_path_executor_node:
     dynamic_treat_unknown_as_blocked: true
     dynamic_skip_lookahead_m: 0.60
     dynamic_skip_padding_m: 0.05
-    dynamic_rejoin_max_search_distance_m: 5.00 # change from 3.00 m
-    dynamic_rejoin_min_clearance_m: 0.03 # change from 0.05 m
-    dynamic_max_rejoin_candidates: 60   # change from 20
+    dynamic_rejoin_max_search_distance_m: 5.00
+    dynamic_rejoin_min_clearance_m: 0.02
+    dynamic_max_rejoin_candidates: 100
     dynamic_required_consecutive_detections: 2
     dynamic_min_blocked_pose_count: 2
     dynamic_min_blocked_path_length_m: 0.10
@@ -143,14 +152,22 @@ coverage_follow_path_executor_node:
     dynamic_planner_id: "GridBased"
     dynamic_planner_timeout_sec: 2.0
     dynamic_connector_start_with_robot_pose: true
-    dynamic_connector_goal_tolerance_m: 0.15
+    dynamic_connector_goal_tolerance_m: 0.25
     dynamic_skip_check_rate_hz: 5.0
     dynamic_skip_min_remaining_poses: 2
-    dynamic_skip_max_consecutive_failures: 5
-    dynamic_skip_replan_cooldown_sec: 3.0
+    dynamic_skip_max_consecutive_failures: 10
+    dynamic_skip_replan_cooldown_sec: 1.0
     dynamic_resume_ignore_index_margin: 5
     dynamic_progress_search_backtrack_m: 0.20
-    dynamic_progress_search_forward_m: 1.0  # change from 1.00 m
+    dynamic_progress_search_forward_m: 5.0
+    enable_stuck_detection: true
+    stuck_timeout_sec: 10.0
+    stuck_start_grace_sec: 4.0
+    stuck_min_movement_m: 0.03
+    stuck_skip_distance_m: 0.60
+    enable_cleanup_after_main_path: true
+    cleanup_max_passes: 1
+    cleanup_wait_for_path_timeout_sec: 6.0
     retry_skipped_segments_at_end: false
     mark_skipped_segments_uncovered: true
     publish_skipped_segments: true

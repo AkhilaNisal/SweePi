@@ -19,6 +19,15 @@ around nearby objects and leave uncovered patches. FollowPath sends the complete
 The controller and local costmap can still stop or fail the action when the path is
 actually unsafe.
 
+## Reachable Cleanup Paths
+
+The planner separates coverage cells from travel cells. Uncovered cells decide
+what still needs to be cleaned, while safe travel cells are used only for
+connectors between regions and from the robot's current pose into a cleanup
+region. This keeps the first generated coverage path frozen during normal
+execution, then lets the cleanup pass reach missed but accessible cells without
+publishing a path whose first reachable pose is too far from the robot.
+
 ## Launch
 
 Start Nav2 with the saved map you want to cover. The normal path is to pass the
@@ -60,6 +69,34 @@ The default params live in:
 ```text
 src/sweepi_coverage/config/coverage_follow_path_params.yaml
 ```
+
+When coverage is started through `sweepi_robot_manager`, the manager launch passes
+the same installed config file into `coverage_follow_path.launch.py`:
+
+```text
+install/sweepi_coverage/share/sweepi_coverage/config/coverage_follow_path_params.yaml
+```
+
+After rebuilding and sourcing the workspace, verify the running executor is using
+the intended dynamic-bypass values:
+
+```bash
+ros2 param get /coverage_follow_path_executor_node dynamic_rejoin_max_search_distance_m
+ros2 param get /coverage_follow_path_executor_node dynamic_progress_search_forward_m
+ros2 param get /coverage_follow_path_executor_node dynamic_max_rejoin_candidates
+ros2 param get /coverage_follow_path_executor_node dynamic_collision_check_radius_m
+```
+
+Expected values:
+
+```text
+dynamic_rejoin_max_search_distance_m: 5.0
+dynamic_progress_search_forward_m: 5.0
+dynamic_max_rejoin_candidates: 100
+dynamic_collision_check_radius_m: 0.25
+```
+
+The executor also logs these loaded dynamic obstacle parameters at startup.
 
 ## Start And Runtime Controls
 
@@ -212,8 +249,11 @@ vetoing the candidate.
 
 The replacement path starts at the current robot pose, follows a temporary local
 bypass, then rejoins the original frozen coverage path from the selected rejoin
-index onward. Skipped object-covered sections are not retried and are not counted
-as cleaned. If no safe rejoin or valid bypass can be found after the confirmed
+index onward. Dynamic bypass is intentionally conservative: a connector is
+rejected when it would be a large shortcut compared with the frozen coverage path
+section being replaced, because that would skip accessible coverage strips.
+Skipped object-covered sections are not retried and are not counted as cleaned.
+If no safe rejoin or valid compact bypass can be found after the confirmed
 obstacle and exhaustive local rejoin search, the active goal is canceled and
 `/coverage_execution_status` becomes
 `BLOCKED_DYNAMIC_OBJECT` instead of continuing into the object. If any section

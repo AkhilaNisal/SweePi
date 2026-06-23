@@ -72,11 +72,15 @@ class CoveragePlannerNode(Node):
         self.declare_parameter('tf_lookup_timeout_sec', 0.2)
         self.declare_parameter('use_nav_costmap_for_planning', True)
         self.declare_parameter('use_global_costmap_for_planning', True)
-        self.declare_parameter('max_allowed_nav_cost', 90)
+        self.declare_parameter('max_allowed_nav_cost', 99)
         self.declare_parameter('treat_unknown_cost_as_blocked', True)
         self.declare_parameter('nav_costmap_timeout_sec', 2.0)
         self.declare_parameter('wait_for_nav_costmap_before_planning', False)
         self.declare_parameter('wait_for_robot_pose_before_planning', False)
+        self.declare_parameter('plan_only_reachable_from_robot', True)
+        self.declare_parameter('cleanup_after_main_path', True)
+        self.declare_parameter('cleanup_max_passes', 1)
+        self.declare_parameter('coverage_execution_status_topic', '/coverage_execution_status')
 
         self.coverage_map_topic = (
             self.get_parameter('coverage_map_topic').get_parameter_value().string_value
@@ -224,6 +228,26 @@ class CoveragePlannerNode(Node):
             .get_parameter_value()
             .bool_value
         )
+        self.plan_only_reachable_from_robot = (
+            self.get_parameter('plan_only_reachable_from_robot')
+            .get_parameter_value()
+            .bool_value
+        )
+        self.cleanup_after_main_path = (
+            self.get_parameter('cleanup_after_main_path')
+            .get_parameter_value()
+            .bool_value
+        )
+        self.cleanup_max_passes = (
+            self.get_parameter('cleanup_max_passes')
+            .get_parameter_value()
+            .integer_value
+        )
+        self.coverage_execution_status_topic = (
+            self.get_parameter('coverage_execution_status_topic')
+            .get_parameter_value()
+            .string_value
+        )
 
         self._sanitize_startup_parameters()
 
@@ -243,6 +267,8 @@ class CoveragePlannerNode(Node):
         self.connector_count = 0
         self.connector_pose_count = 0
         self.connector_failure_count = 0
+        self.cleanup_pass_count = 0
+        self.last_execution_status = ''
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
@@ -274,6 +300,12 @@ class CoveragePlannerNode(Node):
             self.nav_costmap_topic,
             self.nav_costmap_callback,
             nav_costmap_qos,
+        )
+        self.execution_status_sub = self.create_subscription(
+            String,
+            self.coverage_execution_status_topic,
+            self.execution_status_callback,
+            path_qos,
         )
         self.coverage_path_pub = self.create_publisher(
             Path,
@@ -386,6 +418,30 @@ class CoveragePlannerNode(Node):
             self.nav_costmap_checksum = new_checksum
             self.plan_dirty = True
 
+    def execution_status_callback(self, msg):
+        status = str(msg.data or '').strip()
+        previous_status = self.last_execution_status
+        self.last_execution_status = status
+
+        terminal_statuses = ('SUCCEEDED', 'COMPLETED_WITH_SKIPS')
+        if previous_status == status or status not in terminal_statuses:
+            return
+        if not self.cleanup_after_main_path:
+            return
+        if self.cleanup_pass_count >= self.cleanup_max_passes:
+            return
+        if self.coverage_map is None:
+            return
+
+        self.cleanup_pass_count += 1
+        self.path_frozen = False
+        self.plan_dirty = True
+        self.get_logger().info(
+            'Coverage main path completed; planning cleanup pass %d/%d for '
+            'currently reachable uncovered cells'
+            % (self.cleanup_pass_count, self.cleanup_max_passes)
+        )
+
     def publish_outputs(self):
         """Replan when needed, then publish visualization and stats outputs."""
         if self.coverage_map is None:
@@ -455,10 +511,21 @@ class CoveragePlannerNode(Node):
             base_planning_mask,
             msg,
         )
+        travel_mask = self._build_travel_mask(msg)
+        travel_mask = self._apply_nav_costmap_filter_to_travel_mask(
+            travel_mask,
+            msg,
+        )
+        planning_mask, reachability_stats = self._apply_reachability_mask(
+            planning_mask,
+            msg,
+            travel_mask,
+        )
         debug_mask = self._make_planning_mask_msg(msg, planning_mask)
         valid_cell_count = sum(1 for is_valid in planning_mask if is_valid)
         stats['valid_cells'] = valid_cell_count
         stats.update(nav_stats)
+        stats.update(reachability_stats)
         self.connector_count = 0
         self.connector_pose_count = 0
         self.connector_failure_count = 0
@@ -526,7 +593,7 @@ class CoveragePlannerNode(Node):
 
         ordered_cells = self._order_region_paths(
             region_paths,
-            planning_mask,
+            travel_mask,
             msg.info,
             robot_cell,
         )
@@ -546,7 +613,7 @@ class CoveragePlannerNode(Node):
             and self.connector_failure_count == 0
         )
 
-        validation = self._validate_path(path, planning_mask, msg.info)
+        validation = self._validate_path(path, travel_mask, msg.info)
         stats.update(validation)
         if validation['outside_map_poses'] > 0 or validation['blocked_poses'] > 0:
             self.get_logger().warn(
@@ -717,6 +784,12 @@ class CoveragePlannerNode(Node):
             )
             self.nav_costmap_timeout_sec = 0.0
 
+        if self.cleanup_max_passes < 0:
+            self.get_logger().warn(
+                'cleanup_max_passes must not be negative; using 0'
+            )
+            self.cleanup_max_passes = 0
+
         if self.planning_direction not in ('horizontal', 'vertical', 'auto'):
             self.get_logger().warn(
                 'Unsupported planning_direction "%s"; using "auto"'
@@ -881,6 +954,232 @@ class CoveragePlannerNode(Node):
             throttle_duration_sec=2.0,
         )
         return filtered_mask, stats
+
+    def _apply_reachability_mask(self, planning_mask, coverage_msg, travel_mask=None):
+        stats = {
+            'reachability_used': False,
+            'reachable_cells': 0,
+            'unreachable_filtered_cells': 0,
+            'robot_reachability_start_available': False,
+        }
+        if not self.plan_only_reachable_from_robot:
+            return planning_mask, stats
+
+        frame_id = coverage_msg.header.frame_id or 'map'
+        robot_cell = self._get_robot_cell(frame_id, coverage_msg.info)
+        if robot_cell is None:
+            self.get_logger().warn(
+                'Reachability filtering is enabled, but robot pose is unavailable; '
+                'keeping all currently safe planning cells',
+                throttle_duration_sec=5.0,
+            )
+            return planning_mask, stats
+
+        if travel_mask is None:
+            travel_mask = self._build_travel_mask(coverage_msg)
+            travel_mask = self._apply_nav_costmap_filter_to_travel_mask(
+                travel_mask,
+                coverage_msg,
+            )
+        start_cell = self._nearest_travel_cell(
+            robot_cell,
+            travel_mask,
+            coverage_msg.info,
+        )
+        if start_cell is None:
+            self.get_logger().warn(
+                'Could not find a safe reachable start cell near the robot; '
+                'keeping all currently safe planning cells',
+                throttle_duration_sec=5.0,
+            )
+            return planning_mask, stats
+
+        reachable_mask = self._flood_reachable_cells(
+            start_cell,
+            travel_mask,
+            coverage_msg.info,
+        )
+        filtered_mask = list(planning_mask)
+        unreachable_filtered = 0
+        reachable_planning_cells = 0
+        for index, is_valid in enumerate(planning_mask):
+            if not is_valid:
+                continue
+            if reachable_mask[index]:
+                reachable_planning_cells += 1
+            else:
+                filtered_mask[index] = False
+                unreachable_filtered += 1
+
+        stats['reachability_used'] = True
+        stats['robot_reachability_start_available'] = True
+        stats['reachable_cells'] = reachable_planning_cells
+        stats['unreachable_filtered_cells'] = unreachable_filtered
+        if unreachable_filtered > 0:
+            self.get_logger().info(
+                'Reachability filter removed %d uncovered cells that are not '
+                'safely connected to the robot start'
+                % unreachable_filtered,
+                throttle_duration_sec=2.0,
+            )
+        return filtered_mask, stats
+
+    def _build_travel_mask(self, coverage_msg):
+        width = coverage_msg.info.width
+        height = coverage_msg.info.height
+        resolution = coverage_msg.info.resolution
+        travel_mask = [
+            cell_value not in (OBSTACLE, UNKNOWN)
+            for cell_value in coverage_msg.data
+        ]
+
+        inflation_radius = max(
+            self.inflation_radius_m,
+            self.robot_radius_m + self.coverage_safety_margin_m,
+        )
+        inflation_cells = meters_to_cell_radius(inflation_radius, resolution)
+        if inflation_cells == 0:
+            return travel_mask
+
+        inflation_offsets = []
+        for dy in range(-inflation_cells, inflation_cells + 1):
+            for dx in range(-inflation_cells, inflation_cells + 1):
+                if math.hypot(dx * resolution, dy * resolution) <= inflation_radius:
+                    inflation_offsets.append((dx, dy))
+
+        for y in range(height):
+            for x in range(width):
+                index = map_to_flat_index(x, y, width)
+                if coverage_msg.data[index] not in (OBSTACLE, UNKNOWN):
+                    continue
+
+                for dx, dy in inflation_offsets:
+                    inflated_x = x + dx
+                    inflated_y = y + dy
+                    if not in_bounds(inflated_x, inflated_y, width, height):
+                        continue
+                    inflated_index = map_to_flat_index(inflated_x, inflated_y, width)
+                    travel_mask[inflated_index] = False
+
+        return travel_mask
+
+    def _apply_nav_costmap_filter_to_travel_mask(self, travel_mask, coverage_msg):
+        if not self._nav_costmap_enabled():
+            return travel_mask
+        if self.nav_costmap is None or self._nav_costmap_is_stale():
+            return travel_mask
+
+        coverage_frame = coverage_msg.header.frame_id or 'map'
+        costmap_frame = self.nav_costmap.header.frame_id or coverage_frame
+        if costmap_frame != coverage_frame:
+            return travel_mask
+
+        filtered_mask = list(travel_mask)
+        width = coverage_msg.info.width
+        height = coverage_msg.info.height
+        for y in range(height):
+            for x in range(width):
+                coverage_index = map_to_flat_index(x, y, width)
+                if not filtered_mask[coverage_index]:
+                    continue
+
+                world_x, world_y = map_to_world(x, y, coverage_msg.info)
+                try:
+                    costmap_x, costmap_y = world_to_map(
+                        world_x,
+                        world_y,
+                        self.nav_costmap.info,
+                    )
+                except ValueError:
+                    filtered_mask[coverage_index] = False
+                    continue
+
+                if not in_bounds(
+                    costmap_x,
+                    costmap_y,
+                    self.nav_costmap.info.width,
+                    self.nav_costmap.info.height,
+                ):
+                    filtered_mask[coverage_index] = False
+                    continue
+
+                costmap_index = map_to_flat_index(
+                    costmap_x,
+                    costmap_y,
+                    self.nav_costmap.info.width,
+                )
+                cost = self.nav_costmap.data[costmap_index]
+                if cost < 0:
+                    if self.treat_unknown_cost_as_blocked:
+                        filtered_mask[coverage_index] = False
+                    continue
+                if cost > self.max_allowed_nav_cost:
+                    filtered_mask[coverage_index] = False
+
+        return filtered_mask
+
+    def _nearest_travel_cell(self, robot_cell, travel_mask, map_info):
+        width = map_info.width
+        height = map_info.height
+        start_x, start_y = robot_cell
+        if in_bounds(start_x, start_y, width, height):
+            start_index = map_to_flat_index(start_x, start_y, width)
+            if travel_mask[start_index]:
+                return robot_cell
+
+        max_radius = max(
+            1,
+            meters_to_cells(
+                self.robot_radius_m + self.coverage_safety_margin_m,
+                map_info.resolution,
+            ),
+        )
+        best_cell = None
+        best_distance = None
+        for radius in range(1, max_radius + 1):
+            for dy in range(-radius, radius + 1):
+                for dx in range(-radius, radius + 1):
+                    if max(abs(dx), abs(dy)) != radius:
+                        continue
+                    x = start_x + dx
+                    y = start_y + dy
+                    if not in_bounds(x, y, width, height):
+                        continue
+                    index = map_to_flat_index(x, y, width)
+                    if not travel_mask[index]:
+                        continue
+                    distance = dx * dx + dy * dy
+                    if best_distance is None or distance < best_distance:
+                        best_distance = distance
+                        best_cell = (x, y)
+            if best_cell is not None:
+                return best_cell
+        return None
+
+    def _flood_reachable_cells(self, start_cell, travel_mask, map_info):
+        width = map_info.width
+        height = map_info.height
+        reachable = [False] * len(travel_mask)
+        start_index = map_to_flat_index(start_cell[0], start_cell[1], width)
+        if not travel_mask[start_index]:
+            return reachable
+
+        queue = deque([start_cell])
+        reachable[start_index] = True
+        while queue:
+            cell_x, cell_y = queue.popleft()
+            for neighbor_x, neighbor_y in self._neighbors_4(
+                cell_x,
+                cell_y,
+                width,
+                height,
+            ):
+                neighbor_index = map_to_flat_index(neighbor_x, neighbor_y, width)
+                if reachable[neighbor_index] or not travel_mask[neighbor_index]:
+                    continue
+                reachable[neighbor_index] = True
+                queue.append((neighbor_x, neighbor_y))
+        return reachable
 
     def _nav_costmap_enabled(self):
         return self.use_nav_costmap_for_planning or self.use_global_costmap_for_planning
@@ -1237,16 +1536,28 @@ class CoveragePlannerNode(Node):
 
         return ordered_cells
 
-    def _order_region_paths(self, region_paths, planning_mask, map_info, robot_cell=None):
+    def _order_region_paths(self, region_paths, connector_mask, map_info, robot_cell=None):
         remaining_paths = [list(region_path) for region_path in region_paths]
         ordered_cells = []
         current_cell = None
+        selection_cell = robot_cell
+
+        if robot_cell is not None:
+            start_cell = self._nearest_travel_cell(
+                robot_cell,
+                connector_mask,
+                map_info,
+            )
+            if start_cell is not None:
+                self._append_cell_without_duplicate(ordered_cells, start_cell)
+                current_cell = start_cell
+                selection_cell = start_cell
 
         while remaining_paths:
             if current_cell is None:
                 path_index, reverse_start = self._select_initial_path(
                     remaining_paths,
-                    robot_cell,
+                    selection_cell,
                 )
                 path = remaining_paths.pop(path_index)
                 if reverse_start:
@@ -1264,7 +1575,7 @@ class CoveragePlannerNode(Node):
                 self._connect_or_append_cell(
                     ordered_cells,
                     path[0],
-                    planning_mask,
+                    connector_mask,
                     map_info,
                     'region',
                 )
@@ -1598,7 +1909,7 @@ class CoveragePlannerNode(Node):
             )
         if blocked_poses:
             self.get_logger().warn(
-                '%d generated path poses fall on blocked planning-mask cells'
+                '%d generated path poses fall on blocked travel-mask cells'
                 % blocked_poses,
                 throttle_duration_sec=5.0,
             )
@@ -1737,6 +2048,10 @@ class CoveragePlannerNode(Node):
             'nav_costmap_filtered_cells': 0,
             'nav_costmap_stale': False,
             'nav_costmap_frame_mismatch': False,
+            'reachability_used': False,
+            'reachable_cells': 0,
+            'unreachable_filtered_cells': 0,
+            'robot_reachability_start_available': False,
             'robot_start_used': False,
             'valid_cells': 0,
             'coverable': 0,
@@ -1775,7 +2090,8 @@ class CoveragePlannerNode(Node):
             'connector_count=%d connector_pose_count=%d total_poses=%d '
             'path_length_m=%.2f max_consecutive_jump_m=%.3f max_jump_index=%d '
             'first_pose=%s last_pose=%s follow_path_ready=%s robot_start_used=%s '
-            'nav_costmap_used=%s nav_blocked_cells=%d nav_filtered_cells=%d'
+            'nav_costmap_used=%s nav_blocked_cells=%d nav_filtered_cells=%d '
+            'reachability_used=%s reachable_cells=%d unreachable_filtered_cells=%d'
             % (
                 stats['segments_before_ordering'],
                 stats['segments_after_ordering'],
@@ -1792,6 +2108,9 @@ class CoveragePlannerNode(Node):
                 str(stats.get('nav_costmap_used', False)).lower(),
                 stats.get('nav_costmap_blocked_cells', 0),
                 stats.get('nav_costmap_filtered_cells', 0),
+                str(stats.get('reachability_used', False)).lower(),
+                stats.get('reachable_cells', 0),
+                stats.get('unreachable_filtered_cells', 0),
             )
         )
 
@@ -1803,13 +2122,14 @@ class CoveragePlannerNode(Node):
     def _log_replan_summary(self, stats):
         self.get_logger().info(
             'Coverage replan: percentage=%.1f%%, uncovered=%d, segments=%d, '
-            'poses=%d, path_length=%.2fm'
+            'poses=%d, path_length=%.2fm, unreachable_filtered=%d'
             % (
                 stats['percentage'],
                 stats['uncovered'],
                 stats['segments'],
                 stats['poses'],
                 stats['length_m'],
+                stats.get('unreachable_filtered_cells', 0),
             )
         )
 
@@ -1818,7 +2138,8 @@ class CoveragePlannerNode(Node):
             'covered=%d uncovered=%d total=%d percentage=%.1f '
             'path_length_m=%.2f segments=%d poses=%d max_jump_m=%.3f '
             'follow_path_ready=%s robot_start_used=%s nav_costmap_used=%s '
-            'nav_blocked_cells=%d nav_filtered_cells=%d'
+            'nav_blocked_cells=%d nav_filtered_cells=%d reachability_used=%s '
+            'reachable_cells=%d unreachable_filtered_cells=%d cleanup_pass=%d'
             % (
                 stats['covered'],
                 stats['uncovered'],
@@ -1833,6 +2154,10 @@ class CoveragePlannerNode(Node):
                 str(stats.get('nav_costmap_used', False)).lower(),
                 stats.get('nav_costmap_blocked_cells', 0),
                 stats.get('nav_costmap_filtered_cells', 0),
+                str(stats.get('reachability_used', False)).lower(),
+                stats.get('reachable_cells', 0),
+                stats.get('unreachable_filtered_cells', 0),
+                self.cleanup_pass_count,
             )
         )
 

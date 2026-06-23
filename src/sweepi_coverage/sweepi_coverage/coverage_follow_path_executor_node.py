@@ -137,6 +137,11 @@ class CoverageFollowPathExecutorNode(Node):
         self.dynamic_active_original_rejoin_index = None
         self.dynamic_active_rejoin_path_index = None
         self.dynamic_last_temporary_rejoin_refresh_monotonic = 0.0
+        self.stuck_monitor_last_pose = None
+        self.stuck_monitor_last_progress_monotonic = 0.0
+        self.stuck_monitor_last_nearest_index = None
+        self.stuck_monitor_goal_start_monotonic = 0.0
+        self.stuck_monitor_last_log_monotonic = 0.0
         self.dynamic_planner_in_flight = False
         self.dynamic_planner_goal_handle = None
         self.dynamic_planner_pending_context = None
@@ -159,6 +164,11 @@ class CoverageFollowPathExecutorNode(Node):
         self.coverage_stopped = False
         self.coverage_pause_requested = False
         self.coverage_control_cancel_reason = None
+        self.cleanup_pass_count = 0
+        self.cleanup_waiting_for_path = False
+        self.cleanup_wait_started_monotonic = 0.0
+        self.cleanup_auto_start_pending = False
+        self.cleanup_final_status_if_no_path = self.STATUS_SUCCEEDED
         self.home_pose = None
         self.return_home_goal_handle = None
         self.return_home_in_flight = False
@@ -333,6 +343,7 @@ class CoverageFollowPathExecutorNode(Node):
                 self.static_map_topic,
             )
         )
+        self._log_loaded_dynamic_parameters()
 
     def _declare_parameters(self):
         defaults = {
@@ -360,7 +371,10 @@ class CoverageFollowPathExecutorNode(Node):
             'robot_radius_m': 0.20,
             'enable_costmap_validation': True,
             'require_costmap_for_validation': True,
-            'max_allowed_nav_cost': 90,
+            'max_allowed_nav_cost': 99,
+            'max_tolerated_blocked_costmap_samples': 20,
+            'max_tolerated_blocked_costmap_ratio': 0.01,
+            'max_tolerated_blocked_cost': 99,
             'treat_unknown_cost_as_blocked': True,
             'freeze_path_on_start': True,
             'ignore_path_updates_while_executing': True,
@@ -384,7 +398,7 @@ class CoverageFollowPathExecutorNode(Node):
             'smoother_id': 'simple_smoother',
             'max_smoothing_duration_s': 2.0,
             'check_smooth_path_for_collisions': True,
-            'fallback_to_raw_path_on_smoothing_failure': False,
+            'fallback_to_raw_path_on_smoothing_failure': True,
             'publish_raw_and_smoothed_paths': True,
             'publish_debug_markers': True,
             'enable_dynamic_obstacle_skip': True,
@@ -400,24 +414,26 @@ class CoverageFollowPathExecutorNode(Node):
             'dynamic_obstacle_distance_threshold_m': 0.05,
             'dynamic_treat_unknown_as_blocked': True,
             'dynamic_object_clearance_m': 0.05,
-            'dynamic_collision_check_radius_m': 0.0,
+            'dynamic_collision_check_radius_m': 0.25,
             'dynamic_connector_tracking_clearance_m': 0.12,
             'dynamic_use_corridor_for_detection': True,
             'dynamic_monitor_temporary_paths': True,
             'dynamic_connector_allow_blocked_start': True,
             'dynamic_connector_start_grace_m': 0.20,
-            'dynamic_refresh_temporary_rejoin': True,
+            'dynamic_refresh_temporary_rejoin': False,
             'dynamic_temporary_rejoin_check_distance_m': 0.80,
             'dynamic_temporary_rejoin_refresh_cooldown_sec': 0.75,
+            'dynamic_max_connector_replacement_ratio': 3.00,
+            'dynamic_max_connector_replacement_excess_m': 0.75,
             'dynamic_refine_connector_path': True,
             'dynamic_connector_refinement_iterations': 3,
             'dynamic_connector_refinement_step_m': 0.04,
             'dynamic_connector_refinement_influence_m': 0.45,
             'dynamic_skip_lookahead_m': 0.60,
             'dynamic_skip_padding_m': 0.05,
-            'dynamic_rejoin_min_clearance_m': 0.05,
-            'dynamic_rejoin_max_search_distance_m': 1.00,
-            'dynamic_max_rejoin_candidates': 20,
+            'dynamic_rejoin_min_clearance_m': 0.02,
+            'dynamic_rejoin_max_search_distance_m': 5.00,
+            'dynamic_max_rejoin_candidates': 100,
             'dynamic_required_consecutive_detections': 2,
             'dynamic_min_blocked_pose_count': 2,
             'dynamic_min_blocked_path_length_m': 0.10,
@@ -428,10 +444,18 @@ class CoverageFollowPathExecutorNode(Node):
             'dynamic_resume_ignore_index_margin': 5,
             'dynamic_skip_check_rate_hz': 5.0,
             'dynamic_skip_min_remaining_poses': 2,
-            'dynamic_skip_max_consecutive_failures': 5,
-            'dynamic_skip_replan_cooldown_sec': 3.0,
+            'dynamic_skip_max_consecutive_failures': 10,
+            'dynamic_skip_replan_cooldown_sec': 1.0,
             'dynamic_progress_search_backtrack_m': 0.20,
-            'dynamic_progress_search_forward_m': 3.00,
+            'dynamic_progress_search_forward_m': 5.00,
+            'enable_stuck_detection': True,
+            'stuck_timeout_sec': 10.0,
+            'stuck_start_grace_sec': 4.0,
+            'stuck_min_movement_m': 0.03,
+            'stuck_skip_distance_m': 0.60,
+            'enable_cleanup_after_main_path': True,
+            'cleanup_max_passes': 1,
+            'cleanup_wait_for_path_timeout_sec': 6.0,
             'retry_skipped_segments_at_end': False,
             'mark_skipped_segments_uncovered': True,
             'publish_skipped_segments': True,
@@ -440,7 +464,7 @@ class CoverageFollowPathExecutorNode(Node):
             'dynamic_planner_id': 'GridBased',
             'dynamic_planner_timeout_sec': 2.0,
             'dynamic_connector_start_with_robot_pose': True,
-            'dynamic_connector_goal_tolerance_m': 0.15,
+            'dynamic_connector_goal_tolerance_m': 0.25,
             'dynamic_static_encroachment_tolerance_m': 0.05,
             'dynamic_require_safe_connector': False,
             'dynamic_enable_local_astar_detour': True,
@@ -484,6 +508,15 @@ class CoverageFollowPathExecutorNode(Node):
             'require_costmap_for_validation'
         )
         self.max_allowed_nav_cost = self._int_param('max_allowed_nav_cost')
+        self.max_tolerated_blocked_costmap_samples = self._int_param(
+            'max_tolerated_blocked_costmap_samples'
+        )
+        self.max_tolerated_blocked_costmap_ratio = self._double_param(
+            'max_tolerated_blocked_costmap_ratio'
+        )
+        self.max_tolerated_blocked_cost = self._int_param(
+            'max_tolerated_blocked_cost'
+        )
         self.treat_unknown_cost_as_blocked = self._bool_param(
             'treat_unknown_cost_as_blocked'
         )
@@ -594,6 +627,12 @@ class CoverageFollowPathExecutorNode(Node):
         self.dynamic_temporary_rejoin_refresh_cooldown_sec = self._double_param(
             'dynamic_temporary_rejoin_refresh_cooldown_sec'
         )
+        self.dynamic_max_connector_replacement_ratio = self._double_param(
+            'dynamic_max_connector_replacement_ratio'
+        )
+        self.dynamic_max_connector_replacement_excess_m = self._double_param(
+            'dynamic_max_connector_replacement_excess_m'
+        )
         self.dynamic_refine_connector_path = self._bool_param(
             'dynamic_refine_connector_path'
         )
@@ -659,6 +698,18 @@ class CoverageFollowPathExecutorNode(Node):
         self.dynamic_progress_search_forward_m = self._double_param(
             'dynamic_progress_search_forward_m'
         )
+        self.enable_stuck_detection = self._bool_param('enable_stuck_detection')
+        self.stuck_timeout_sec = self._double_param('stuck_timeout_sec')
+        self.stuck_start_grace_sec = self._double_param('stuck_start_grace_sec')
+        self.stuck_min_movement_m = self._double_param('stuck_min_movement_m')
+        self.stuck_skip_distance_m = self._double_param('stuck_skip_distance_m')
+        self.enable_cleanup_after_main_path = self._bool_param(
+            'enable_cleanup_after_main_path'
+        )
+        self.cleanup_max_passes = self._int_param('cleanup_max_passes')
+        self.cleanup_wait_for_path_timeout_sec = self._double_param(
+            'cleanup_wait_for_path_timeout_sec'
+        )
         self.retry_skipped_segments_at_end = self._bool_param(
             'retry_skipped_segments_at_end'
         )
@@ -708,6 +759,18 @@ class CoverageFollowPathExecutorNode(Node):
         )
 
         self.max_allowed_nav_cost = min(100, max(0, self.max_allowed_nav_cost))
+        self.max_tolerated_blocked_costmap_samples = max(
+            0,
+            self.max_tolerated_blocked_costmap_samples,
+        )
+        self.max_tolerated_blocked_costmap_ratio = max(
+            0.0,
+            self.max_tolerated_blocked_costmap_ratio,
+        )
+        self.max_tolerated_blocked_cost = min(
+            100,
+            max(self.max_allowed_nav_cost, self.max_tolerated_blocked_cost),
+        )
         self.robot_radius_m = max(0.01, self.robot_radius_m)
         self.dynamic_obstacle_cost_threshold = min(
             100,
@@ -741,6 +804,14 @@ class CoverageFollowPathExecutorNode(Node):
         self.dynamic_temporary_rejoin_refresh_cooldown_sec = max(
             0.0,
             self.dynamic_temporary_rejoin_refresh_cooldown_sec,
+        )
+        self.dynamic_max_connector_replacement_ratio = max(
+            1.0,
+            self.dynamic_max_connector_replacement_ratio,
+        )
+        self.dynamic_max_connector_replacement_excess_m = max(
+            0.0,
+            self.dynamic_max_connector_replacement_excess_m,
         )
         self.dynamic_connector_refinement_iterations = max(
             0,
@@ -786,7 +857,10 @@ class CoverageFollowPathExecutorNode(Node):
             0.10,
             self.dynamic_rejoin_max_search_distance_m,
         )
-        self.dynamic_max_rejoin_candidates = max(1, self.dynamic_max_rejoin_candidates)
+        self.dynamic_max_rejoin_candidates = max(
+            100,
+            self.dynamic_max_rejoin_candidates,
+        )
         self.dynamic_required_consecutive_detections = max(
             1,
             self.dynamic_required_consecutive_detections,
@@ -832,6 +906,18 @@ class CoverageFollowPathExecutorNode(Node):
             self.dynamic_skip_lookahead_m,
             self.dynamic_progress_search_forward_m,
         )
+        self.stuck_timeout_sec = max(1.0, self.stuck_timeout_sec)
+        self.stuck_start_grace_sec = max(0.0, self.stuck_start_grace_sec)
+        self.stuck_min_movement_m = max(0.0, self.stuck_min_movement_m)
+        self.stuck_skip_distance_m = max(
+            self.dynamic_skip_padding_m,
+            self.stuck_skip_distance_m,
+        )
+        self.cleanup_max_passes = max(0, self.cleanup_max_passes)
+        self.cleanup_wait_for_path_timeout_sec = max(
+            1.0,
+            self.cleanup_wait_for_path_timeout_sec,
+        )
         self.dynamic_planner_timeout_sec = max(
             0.1,
             self.dynamic_planner_timeout_sec,
@@ -861,6 +947,29 @@ class CoverageFollowPathExecutorNode(Node):
             self.dynamic_detour_sample_step_m,
         )
 
+    def _log_loaded_dynamic_parameters(self):
+        self.get_logger().info(
+            'Loaded dynamic obstacle parameters: '
+            'dynamic_rejoin_max_search_distance_m=%.2f '
+            'dynamic_progress_search_forward_m=%.2f '
+            'dynamic_max_rejoin_candidates=%d '
+            'dynamic_rejoin_min_clearance_m=%.2f '
+            'dynamic_collision_check_radius_m=%.2f '
+            'dynamic_connector_goal_tolerance_m=%.2f '
+            'dynamic_skip_replan_cooldown_sec=%.2f '
+            'dynamic_skip_max_consecutive_failures=%d'
+            % (
+                self.dynamic_rejoin_max_search_distance_m,
+                self.dynamic_progress_search_forward_m,
+                self.dynamic_max_rejoin_candidates,
+                self.dynamic_rejoin_min_clearance_m,
+                self.dynamic_collision_check_radius_m,
+                self.dynamic_connector_goal_tolerance_m,
+                self.dynamic_skip_replan_cooldown_sec,
+                self.dynamic_skip_max_consecutive_failures,
+            )
+        )
+
     def coverage_path_callback(self, msg):
         if self.goal_in_flight and self.ignore_path_updates_while_executing:
             self.get_logger().info(
@@ -878,29 +987,37 @@ class CoverageFollowPathExecutorNode(Node):
             )
             return
 
-        report = self._validate_path_structure(msg, check_costmap=False)
+        report = self._run_preflight_validation(msg)
         if not report['valid']:
             self.latest_path_error = report['reason']
             self._publish_debug(report)
             self.get_logger().warn(
-                'Ignoring invalid /coverage_path: %s' % report['reason'],
+                'Waiting for executable /coverage_path before freezing: %s'
+                % report['reason'],
                 throttle_duration_sec=5.0,
             )
             return
 
         self.cached_raw_path = copy.deepcopy(msg)
         self.coverage_path_frozen = True
+        self.cleanup_waiting_for_path = False
         self.latest_path_error = ''
         self._stamp_path(self.cached_raw_path)
         self.raw_path_pub.publish(self.cached_raw_path)
         self._set_status(self.STATUS_IDLE)
         self._log_path_summary(self.cached_raw_path, 'Coverage path frozen')
         self.get_logger().info(
-            'Path is frozen from the first valid /coverage_path. Later updates '
+            'Path is frozen from the first executable /coverage_path. Later updates '
             'will not replace the active coverage path without reset.'
         )
-        if self.auto_start:
-            self._request_execution('auto_start')
+        if self.auto_start or self.cleanup_auto_start_pending:
+            reason = (
+                'cleanup_pass_%d' % self.cleanup_pass_count
+                if self.cleanup_auto_start_pending
+                else 'auto_start'
+            )
+            self.cleanup_auto_start_pending = False
+            self._request_execution(reason)
 
     def nav_costmap_callback(self, msg):
         expected_cells = msg.info.width * msg.info.height
@@ -1220,11 +1337,17 @@ class CoverageFollowPathExecutorNode(Node):
         self.coverage_stopped = False
         self.coverage_pause_requested = False
         self.coverage_control_cancel_reason = None
+        self.cleanup_pass_count = 0
+        self.cleanup_waiting_for_path = False
+        self.cleanup_wait_started_monotonic = 0.0
+        self.cleanup_auto_start_pending = False
+        self.cleanup_final_status_if_no_path = self.STATUS_SUCCEEDED
         response.success = True
         response.message = 'Coverage FollowPath cache reset; waiting for /coverage_path'
         return response
 
     def timer_callback(self):
+        self._check_cleanup_wait_timeout()
         self.latest_status_msg.data = self.execution_status
         self.execution_status_pub.publish(self.latest_status_msg)
 
@@ -1247,7 +1370,8 @@ class CoverageFollowPathExecutorNode(Node):
         if not self.enable_dynamic_obstacle_skip:
             return
         self.last_dynamic_skip_check_monotonic = time.monotonic()
-        self._dynamic_obstacle_monitor_tick()
+        if not self._dynamic_obstacle_monitor_tick():
+            self._stuck_monitor_tick()
 
     def _request_execution(self, reason):
         if self.coverage_stopped:
@@ -1274,7 +1398,12 @@ class CoverageFollowPathExecutorNode(Node):
 
         self.coverage_pause_requested = False
         self.coverage_control_cancel_reason = None
-        self.skipped_segments = []
+        cleanup_run = str(reason).startswith('cleanup_pass')
+        if not cleanup_run:
+            self.skipped_segments = []
+            self.cleanup_pass_count = 0
+        self.cleanup_waiting_for_path = False
+        self.cleanup_auto_start_pending = False
         self.dynamic_detection_candidate = None
         self.dynamic_confirmed_marker_report = None
         self.dynamic_ignored_static_marker_poses = []
@@ -1299,6 +1428,7 @@ class CoverageFollowPathExecutorNode(Node):
         self.dynamic_active_original_rejoin_index = None
         self.dynamic_active_rejoin_path_index = None
         self.dynamic_last_temporary_rejoin_refresh_monotonic = 0.0
+        self._reset_stuck_monitor()
         self._clear_dynamic_planner_state()
         self.dynamic_controller_blocked_reports_count = 0
         if self.publish_skipped_segments:
@@ -1518,8 +1648,17 @@ class CoverageFollowPathExecutorNode(Node):
             self.get_logger().warn(
                 'Falling back to custom/raw coverage path after smoothing failure'
             )
-            self._send_follow_path_goal(self.pending_follow_path, 'smoothing_fallback')
-            return True
+            if self._send_follow_path_goal(
+                self.pending_follow_path,
+                'smoothing_fallback',
+            ):
+                return True
+            fallback_error = self.latest_path_error
+            self.get_logger().warn(
+                'Custom/raw coverage path fallback also failed: %s'
+                % fallback_error
+            )
+            reason = '%s; fallback failed: %s' % (reason, fallback_error)
 
         self.latest_path_error = reason
         self._publish_debug_info('status=FAILED reason=%s' % reason)
@@ -1576,6 +1715,7 @@ class CoverageFollowPathExecutorNode(Node):
         self.latest_path_error = ''
         self.dynamic_last_nearest_index = 0
         self.dynamic_controller_blocked_reports_count = 0
+        self._reset_stuck_monitor()
         if self._is_dynamic_rejoin_reason(reason):
             self.dynamic_active_path_is_temporary = True
             self.dynamic_active_original_rejoin_index = (
@@ -1636,6 +1776,7 @@ class CoverageFollowPathExecutorNode(Node):
             return
 
         self.current_goal_handle = goal_handle
+        self._reset_stuck_monitor()
         self.get_logger().info('FollowPath goal accepted by Nav2')
         if self._is_dynamic_rejoin_reason(reason):
             self._clear_dynamic_skip_temporary_state()
@@ -1716,6 +1857,13 @@ class CoverageFollowPathExecutorNode(Node):
             )
             return
 
+        if status == GoalStatus.STATUS_CANCELED and self.cleanup_waiting_for_path:
+            self.get_logger().info(
+                '[CLEANUP_PASS] ignored stale FollowPath canceled result while '
+                'waiting for cleanup path'
+            )
+            return
+
         if self.coverage_control_cancel_reason in ('pause', 'stop', 'return_home'):
             reason = self.coverage_control_cancel_reason
             self.get_logger().info(
@@ -1771,6 +1919,16 @@ class CoverageFollowPathExecutorNode(Node):
             )
             self.get_logger().warn(text)
             self._publish_dynamic_skip_status(text)
+
+            if self.enable_stuck_detection:
+                stuck_report = self._make_stuck_skip_report_from_current_pose(
+                    'nav2_recoverable_error_%d_%s' % (error_code, error_label)
+                )
+                if stuck_report and self._start_stuck_skip(
+                    stuck_report,
+                    after_failure=True,
+                ):
+                    return
 
         if error_code == 105:
             debug = (
@@ -1837,6 +1995,7 @@ class CoverageFollowPathExecutorNode(Node):
         self.dynamic_active_original_rejoin_index = None
         self.dynamic_active_rejoin_path_index = None
         self.dynamic_last_temporary_rejoin_refresh_monotonic = 0.0
+        self._reset_stuck_monitor()
         self.execution_start_monotonic = None
         self._set_status(final_status)
 
@@ -1861,6 +2020,65 @@ class CoverageFollowPathExecutorNode(Node):
                 '[COVERAGE_DONE] SUCCEEDED %s'
                 % self._skipped_summary_text(completed_with_skips=False)
             )
+
+        if self._begin_cleanup_pass_if_needed(final_status):
+            return
+
+    def _begin_cleanup_pass_if_needed(self, final_status):
+        if not self.enable_cleanup_after_main_path:
+            return False
+        if final_status not in (self.STATUS_SUCCEEDED, self.STATUS_COMPLETED_WITH_SKIPS):
+            return False
+        if self.cleanup_pass_count >= self.cleanup_max_passes:
+            return False
+        if self.coverage_stopped or self.coverage_pause_requested:
+            return False
+
+        self.cleanup_pass_count += 1
+        self.cleanup_waiting_for_path = True
+        self.cleanup_auto_start_pending = True
+        self.cleanup_wait_started_monotonic = time.monotonic()
+        self.cleanup_final_status_if_no_path = final_status
+        self.cached_raw_path = None
+        self.coverage_path_frozen = False
+        self.active_path = None
+        self.smoothed_path = None
+        self.latest_path_error = (
+            'Waiting for reachable cleanup coverage path after main pass'
+        )
+        self._publish_empty_paths_and_markers()
+        text = (
+            '[CLEANUP_PASS] main coverage path completed; waiting for reachable '
+            'cleanup path %d/%d for up to %.1fs'
+            % (
+                self.cleanup_pass_count,
+                self.cleanup_max_passes,
+                self.cleanup_wait_for_path_timeout_sec,
+            )
+        )
+        self.get_logger().info(text)
+        self._publish_dynamic_skip_status(text)
+        self._set_status(self.STATUS_WAITING_FOR_PATH)
+        return True
+
+    def _check_cleanup_wait_timeout(self):
+        if not self.cleanup_waiting_for_path:
+            return
+        elapsed = time.monotonic() - self.cleanup_wait_started_monotonic
+        if elapsed < self.cleanup_wait_for_path_timeout_sec:
+            return
+
+        self.cleanup_waiting_for_path = False
+        self.cleanup_auto_start_pending = False
+        status = self.cleanup_final_status_if_no_path
+        text = (
+            '[CLEANUP_PASS] no reachable cleanup path received after %.1fs; '
+            'finishing coverage with status=%s'
+            % (elapsed, status)
+        )
+        self.get_logger().info(text)
+        self._publish_dynamic_skip_status(text)
+        self._set_status(status)
 
     def _remember_home_pose_if_needed(self):
         if self.home_pose is not None:
@@ -2112,6 +2330,7 @@ class CoverageFollowPathExecutorNode(Node):
             'blocked_pose_count': 0,
             'unknown_pose_count': 0,
             'max_observed_cost': 0,
+            'tolerated_blocked_pose_count': 0,
         }
         if self.nav_costmap is None:
             report['costmap_valid'] = not self.require_costmap_for_validation
@@ -2129,18 +2348,22 @@ class CoverageFollowPathExecutorNode(Node):
 
         report['costmap_used'] = True
         sample_step = max(0.01, self.nav_costmap.info.resolution * 0.5)
+        sample_count = 0
         blocked_count = 0
         unknown_count = 0
         max_cost = 0
+        max_blocked_cost = 0
 
         for index in range(len(path.poses)):
             pose = path.poses[index].pose
             cost_info = self._costmap_value_at(pose.position.x, pose.position.y)
+            sample_count += 1
             if cost_info['unknown']:
                 unknown_count += 1
             max_cost = max(max_cost, cost_info['cost'])
             if cost_info['blocked']:
                 blocked_count += 1
+                max_blocked_cost = max(max_blocked_cost, cost_info['cost'])
                 self._append_blocked_debug_point(pose.position)
 
             if index == 0:
@@ -2155,11 +2378,13 @@ class CoverageFollowPathExecutorNode(Node):
                 x = previous.x + ratio * (current.x - previous.x)
                 y = previous.y + ratio * (current.y - previous.y)
                 cost_info = self._costmap_value_at(x, y)
+                sample_count += 1
                 if cost_info['unknown']:
                     unknown_count += 1
                 max_cost = max(max_cost, cost_info['cost'])
                 if cost_info['blocked']:
                     blocked_count += 1
+                    max_blocked_cost = max(max_blocked_cost, cost_info['cost'])
                     point = Point()
                     point.x = x
                     point.y = y
@@ -2170,15 +2395,44 @@ class CoverageFollowPathExecutorNode(Node):
         report['unknown_pose_count'] = unknown_count
         report['max_observed_cost'] = max_cost
         if blocked_count > 0:
+            blocked_ratio = (
+                float(blocked_count) / float(sample_count)
+                if sample_count > 0
+                else 1.0
+            )
+            if (
+                unknown_count == 0
+                and blocked_count <= self.max_tolerated_blocked_costmap_samples
+                and blocked_ratio <= self.max_tolerated_blocked_costmap_ratio
+                and max_blocked_cost <= self.max_tolerated_blocked_cost
+            ):
+                report['tolerated_blocked_pose_count'] = blocked_count
+                report['costmap_reason'] = (
+                    'tolerated %d inflated costmap samples, ratio=%.4f, '
+                    'max_blocked_cost=%d'
+                    % (blocked_count, blocked_ratio, max_blocked_cost)
+                )
+                self.get_logger().warn(
+                    'Coverage path has %d inflated costmap samples '
+                    '(ratio=%.4f, max_cost=%d); tolerating because it is under '
+                    'configured limits.'
+                    % (blocked_count, blocked_ratio, max_blocked_cost),
+                    throttle_duration_sec=5.0,
+                )
+                return report
+
             report['costmap_valid'] = False
             report['costmap_reason'] = (
                 'path has %d blocked costmap samples, unknown_samples=%d, '
-                'max_observed_cost=%d, max_allowed_nav_cost=%d'
+                'max_observed_cost=%d, max_allowed_nav_cost=%d, '
+                'max_tolerated_samples=%d, max_tolerated_ratio=%.4f'
                 % (
                     blocked_count,
                     unknown_count,
                     max_cost,
                     self.max_allowed_nav_cost,
+                    self.max_tolerated_blocked_costmap_samples,
+                    self.max_tolerated_blocked_costmap_ratio,
                 )
             )
         return report
@@ -2389,15 +2643,15 @@ class CoverageFollowPathExecutorNode(Node):
 
     def _dynamic_obstacle_monitor_tick(self):
         if self.execution_status != self.STATUS_EXECUTING:
-            return
+            return False
         if not self.goal_in_flight:
-            return
+            return False
         if self.current_goal_handle is None:
-            return
+            return False
         if self.dynamic_skip_in_progress:
-            return
+            return True
         if self.active_path is None or len(self.active_path.poses) < 2:
-            return
+            return False
         if self.local_costmap is None:
             now = time.monotonic()
             if now - getattr(self, 'last_dynamic_skip_waiting_log', 0.0) >= 5.0:
@@ -2409,7 +2663,7 @@ class CoverageFollowPathExecutorNode(Node):
                 'dynamic skip waiting for local costmap',
                 throttle_duration_sec=5.0,
             )
-            return
+            return False
 
         now = time.monotonic()
         if now < self.dynamic_skip_monitor_suppressed_until_monotonic:
@@ -2423,16 +2677,244 @@ class CoverageFollowPathExecutorNode(Node):
                 '[DYNAMIC_SKIP] monitor cooldown active after rejoin goal',
                 throttle_duration_sec=2.0,
             )
-            return
+            return False
 
         if self._refresh_dynamic_temporary_rejoin_if_needed():
-            return
+            return True
 
         report = self._detect_dynamic_blocked_interval(self.active_path)
         if not report or not report['blocked']:
-            return
+            return False
 
-        self._start_dynamic_skip(report)
+        return self._start_dynamic_skip(report)
+
+    def _reset_stuck_monitor(self):
+        self.stuck_monitor_last_pose = None
+        self.stuck_monitor_last_progress_monotonic = 0.0
+        self.stuck_monitor_last_nearest_index = None
+        self.stuck_monitor_goal_start_monotonic = time.monotonic()
+        self.stuck_monitor_last_log_monotonic = 0.0
+
+    def _stuck_monitor_tick(self):
+        if not self.enable_stuck_detection:
+            return False
+        if self.execution_status != self.STATUS_EXECUTING:
+            return False
+        if not self.goal_in_flight or self.current_goal_handle is None:
+            return False
+        if self.dynamic_skip_in_progress or self.cancel_requested:
+            return False
+        if self.active_path is None or len(self.active_path.poses) < 2:
+            return False
+
+        now = time.monotonic()
+        if self.stuck_monitor_goal_start_monotonic <= 0.0:
+            self.stuck_monitor_goal_start_monotonic = now
+        if now - self.stuck_monitor_goal_start_monotonic < self.stuck_start_grace_sec:
+            return False
+
+        path_frame = self._path_frame(self.active_path)
+        robot_pose = self._lookup_robot_pose(path_frame)
+        if robot_pose is None:
+            return False
+
+        nearest_index, nearest_distance = self._find_nearest_path_index(
+            self.active_path,
+            robot_pose,
+        )
+        if nearest_index < 0:
+            return False
+
+        if self.stuck_monitor_last_pose is None:
+            self.stuck_monitor_last_pose = copy.deepcopy(robot_pose)
+            self.stuck_monitor_last_progress_monotonic = now
+            self.stuck_monitor_last_nearest_index = nearest_index
+            return False
+
+        baseline = self.stuck_monitor_last_pose.pose.position
+        current = robot_pose.pose.position
+        moved_m = self._distance_2d(
+            baseline.x,
+            baseline.y,
+            current.x,
+            current.y,
+        )
+        previous_index = self.stuck_monitor_last_nearest_index
+        progressed_by_index = (
+            previous_index is not None
+            and nearest_index > previous_index
+        )
+        if moved_m >= self.stuck_min_movement_m or progressed_by_index:
+            self.stuck_monitor_last_pose = copy.deepcopy(robot_pose)
+            self.stuck_monitor_last_progress_monotonic = now
+            self.stuck_monitor_last_nearest_index = max(
+                nearest_index,
+                previous_index if previous_index is not None else nearest_index,
+            )
+            return False
+
+        no_progress_sec = now - self.stuck_monitor_last_progress_monotonic
+        if no_progress_sec < self.stuck_timeout_sec:
+            if now - self.stuck_monitor_last_log_monotonic >= 2.0:
+                self.stuck_monitor_last_log_monotonic = now
+                self._publish_dynamic_skip_status(
+                    '[STUCK_MONITOR] no_progress_sec=%.1f/%.1f moved=%.3fm '
+                    'nearest_index=%d distance_to_path=%.3f'
+                    % (
+                        no_progress_sec,
+                        self.stuck_timeout_sec,
+                        moved_m,
+                        nearest_index,
+                        nearest_distance,
+                    )
+                )
+            return False
+
+        report = self._make_stuck_skip_report(
+            self.active_path,
+            nearest_index,
+            nearest_distance,
+            no_progress_sec,
+            moved_m,
+        )
+        if report is None:
+            return False
+        return self._start_stuck_skip(report, after_failure=False)
+
+    def _make_stuck_skip_report(
+        self,
+        path,
+        nearest_index,
+        nearest_distance,
+        no_progress_sec,
+        moved_m,
+    ):
+        if path is None or len(path.poses) < 2:
+            return None
+
+        nearest_index = max(0, min(int(nearest_index), len(path.poses) - 1))
+        blocked_end_index = self._index_after_distance(
+            path,
+            nearest_index,
+            self.stuck_skip_distance_m,
+        )
+        blocked_end_index = max(nearest_index, blocked_end_index)
+        lookahead_end_index = self._index_after_distance(
+            path,
+            blocked_end_index,
+            self.dynamic_rejoin_max_search_distance_m,
+        )
+        skipped_poses = copy.deepcopy(
+            path.poses[nearest_index : blocked_end_index + 1]
+        )
+        reason = (
+            'robot_stuck_no_progress no_progress_sec=%.1f moved=%.3fm '
+            'nearest_index=%d skip_distance_m=%.2f'
+            % (
+                no_progress_sec,
+                moved_m,
+                nearest_index,
+                self.stuck_skip_distance_m,
+            )
+        )
+        return {
+            'blocked': True,
+            'nearest_index': nearest_index,
+            'nearest_distance': nearest_distance,
+            'blocked_start_index': nearest_index,
+            'blocked_end_index': blocked_end_index,
+            'lookahead_end_index': lookahead_end_index,
+            'min_cost': 0,
+            'max_cost': 0,
+            'nearest_obstacle_distance_m': float('inf'),
+            'obstacle_distance_threshold_m': self._get_dynamic_detection_radius_m(),
+            'reason': reason,
+            'local_costmap_frame': self.local_costmap.header.frame_id
+            if self.local_costmap is not None
+            else self.global_frame,
+            'path_frame': self._path_frame(path),
+            'local_lethal_count': 0,
+            'inflated_ignored_count': 0,
+            'static_known_blocked_count': 0,
+            'static_unknown_blocked_count': 0,
+            'dynamic_only_blocked_count': 0,
+            'blocked_path_length_m': self._distance_along_path(
+                path,
+                nearest_index,
+                blocked_end_index,
+            ),
+            'consecutive_count': 1,
+            'dynamic_only_blocked_poses': skipped_poses,
+            'static_known_blocked_poses': [],
+            'stuck_skip': True,
+            'no_progress_sec': no_progress_sec,
+            'moved_m': moved_m,
+        }
+
+    def _make_stuck_skip_report_from_current_pose(self, reason_label):
+        if self.active_path is None or len(self.active_path.poses) < 2:
+            return None
+
+        path_frame = self._path_frame(self.active_path)
+        robot_pose = self._lookup_robot_pose(path_frame)
+        if robot_pose is None:
+            return None
+
+        nearest_index, nearest_distance = self._find_nearest_path_index(
+            self.active_path,
+            robot_pose,
+        )
+        if nearest_index < 0:
+            return None
+
+        no_progress_sec = 0.0
+        if self.stuck_monitor_last_progress_monotonic > 0.0:
+            no_progress_sec = (
+                time.monotonic() - self.stuck_monitor_last_progress_monotonic
+            )
+        report = self._make_stuck_skip_report(
+            self.active_path,
+            nearest_index,
+            nearest_distance,
+            no_progress_sec,
+            0.0,
+        )
+        if report is not None:
+            report['reason'] = '%s %s' % (report['reason'], reason_label)
+        return report
+
+    def _start_stuck_skip(self, report, after_failure=False):
+        if self.dynamic_skip_in_progress:
+            return False
+
+        self.dynamic_skip_in_progress = True
+        self._reset_stuck_monitor()
+        self._set_status(self.STATUS_SKIPPING_DYNAMIC_OBSTACLE)
+        text = (
+            '[STUCK_SKIP] robot appears stuck; skipping current coverage points '
+            'nearest_index=%d blocked_end_index=%d no_progress_sec=%.1f '
+            'moved=%.3fm'
+            % (
+                report.get('nearest_index', -1),
+                report.get('blocked_end_index', -1),
+                report.get('no_progress_sec', 0.0),
+                report.get('moved_m', 0.0),
+            )
+        )
+        self.get_logger().warn(text)
+        self._publish_dynamic_skip_status(text)
+
+        path, report = self._dynamic_bypass_source_path_and_report(report)
+        if path is None:
+            self.dynamic_skip_in_progress = False
+            self._set_status(self.STATUS_EXECUTING)
+            return False
+
+        return self._begin_dynamic_bypass_search(
+            path,
+            report,
+            after_failure=after_failure,
+        )
 
     def _make_sample_pose(self, frame_id, x, y):
         pose = PoseStamped()
@@ -3304,6 +3786,17 @@ class CoverageFollowPathExecutorNode(Node):
         report = copy.deepcopy(report)
 
         if report.get('blocked_end_index', -1) >= len(original_path.poses) - 1:
+            if report.get('dynamic_rejoin_refresh') and not after_failure:
+                text = (
+                    '[DYNAMIC_REPLAN] unsafe temporary rejoin is at the end of '
+                    'the frozen path; keeping current FollowPath and letting '
+                    'Nav2/stuck handling decide instead of finishing early'
+                )
+                self.get_logger().warn(text)
+                self._publish_dynamic_skip_status(text)
+                self.dynamic_skip_in_progress = False
+                self._set_status(self.STATUS_EXECUTING)
+                return False
             return self._handle_dynamic_blocked_to_end(
                 original_path,
                 report,
@@ -3813,6 +4306,62 @@ class CoverageFollowPathExecutorNode(Node):
         self._stamp_path(candidate)
         return candidate
 
+    def _connector_preserves_coverage_order(
+        self,
+        report,
+        original_path,
+        rejoin_index,
+        connector_path,
+    ):
+        if (
+            report is None
+            or original_path is None
+            or connector_path is None
+            or not original_path.poses
+            or not connector_path.poses
+        ):
+            return True, 'insufficient_data'
+
+        rejoin_index = max(0, min(int(rejoin_index), len(original_path.poses) - 1))
+        nearest_index = int(report.get('nearest_index', rejoin_index))
+        blocked_start_index = int(report.get('blocked_start_index', nearest_index))
+        replacement_start = max(
+            0,
+            min(nearest_index, blocked_start_index, rejoin_index),
+        )
+        frozen_distance = self._distance_along_path(
+            original_path,
+            replacement_start,
+            rejoin_index,
+        )
+        connector_distance = self._path_length(connector_path)
+
+        allowed_distance = frozen_distance + self.dynamic_max_connector_replacement_excess_m
+        if frozen_distance > 1.0e-6:
+            allowed_distance = max(
+                allowed_distance,
+                frozen_distance * self.dynamic_max_connector_replacement_ratio,
+            )
+
+        if connector_distance <= allowed_distance:
+            return True, 'connector_preserves_order'
+
+        return (
+            False,
+            (
+                'connector_shortcut_would_skip_accessible_coverage '
+                'connector_length=%.3f frozen_replaced_length=%.3f '
+                'allowed_length=%.3f replacement_start_index=%d rejoin_index=%d'
+                % (
+                    connector_distance,
+                    frozen_distance,
+                    allowed_distance,
+                    replacement_start,
+                    rejoin_index,
+                )
+            ),
+        )
+
     def _build_rejoin_validation_path(self, connector_path, original_path, rejoin_index):
         if (
             connector_path is None
@@ -3894,6 +4443,21 @@ class CoverageFollowPathExecutorNode(Node):
             text = (
                 '[DYNAMIC_CONNECTOR] %s rejected after refinement reason=%s'
                 % (source_label, reach_reason)
+            )
+            self.get_logger().warn(text)
+            self._publish_dynamic_skip_status(text)
+            return False
+
+        preserves_order, order_reason = self._connector_preserves_coverage_order(
+            report,
+            original_path,
+            rejoin_index,
+            connector_path,
+        )
+        if not preserves_order:
+            text = (
+                '[DYNAMIC_CONNECTOR] %s rejected reason=%s'
+                % (source_label, order_reason)
             )
             self.get_logger().warn(text)
             self._publish_dynamic_skip_status(text)
@@ -4062,7 +4626,10 @@ class CoverageFollowPathExecutorNode(Node):
         self._clear_dynamic_planner_state()
         self.dynamic_skip_failure_counter += 1
         object_imminent = self._is_dynamic_obstacle_imminent(report)
-        if report.get('dynamic_rejoin_refresh') and not after_failure:
+        if (
+            report.get('dynamic_rejoin_refresh')
+            or 'connector_shortcut_would_skip_accessible_coverage' in str(reason)
+        ) and not after_failure:
             object_imminent = False
         should_stop = (
             object_imminent
@@ -6672,10 +7239,15 @@ class CoverageFollowPathExecutorNode(Node):
         pose_count = end_index - start_index + 1
         distance_m = self._distance_along_path(path, start_index, end_index)
         timestamp_sec = self.get_clock().now().nanoseconds * 1.0e-9
+        skip_reason = (
+            'ROBOT_STUCK_NO_PROGRESS'
+            if report.get('stuck_skip')
+            else 'DYNAMIC_LOCAL_OBSTACLE'
+        )
 
         skipped = {
             'id': segment_id,
-            'reason': 'DYNAMIC_LOCAL_OBSTACLE',
+            'reason': skip_reason,
             'source_path_frame': self._path_frame(path),
             'start_index': start_index,
             'end_index': end_index,
@@ -6696,9 +7268,11 @@ class CoverageFollowPathExecutorNode(Node):
 
         text = (
             '[DYNAMIC_SKIP] skipped segment recorded '
-            'segment_id=%d poses=%d distance=%.3f rejoin_index=%d max_cost=%d'
+            'segment_id=%d reason=%s poses=%d distance=%.3f '
+            'rejoin_index=%d max_cost=%d'
             % (
                 segment_id,
+                skip_reason,
                 pose_count,
                 distance_m,
                 rejoin_index,
@@ -6818,7 +7392,11 @@ class CoverageFollowPathExecutorNode(Node):
             label.color.g = 0.2
             label.color.b = 0.0
             label.color.a = 0.95
-            label.text = 'SKIPPED_DYNAMIC_OBSTACLE'
+            label.text = (
+                'SKIPPED_STUCK'
+                if segment.get('reason') == 'ROBOT_STUCK_NO_PROGRESS'
+                else 'SKIPPED_DYNAMIC_OBSTACLE'
+            )
             markers.markers.append(label)
 
         confirmed_poses = []
@@ -6909,7 +7487,8 @@ class CoverageFollowPathExecutorNode(Node):
         return (
             'skipped_segment_count=%d skipped_pose_count=%d '
             'skipped_distance_m=%.3f completed_with_skips=%s '
-            'reason=dynamic_local_obstacles skipped_sections_retried=false '
+            'reason=dynamic_obstacles_or_stuck_points '
+            'skipped_sections_retried=false '
             'skipped_sections_counted_as_covered=false'
             % (
                 len(self.skipped_segments),
