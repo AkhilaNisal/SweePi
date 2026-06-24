@@ -1,6 +1,8 @@
 """Saved map metadata and occupancy helpers for SweePi maps."""
 
+from datetime import datetime, timezone
 import json
+import math
 import os
 import re
 
@@ -48,12 +50,16 @@ class MapStore:
         clean_id = sanitize_map_id(map_id)
         yaml_data = self.read_yaml(clean_id)
         meta = self.read_meta(clean_id)
+        image = self._read_pgm(self.map_image_path(clean_id, yaml_data))
+        origin = self._origin_to_dict(yaml_data.get('origin', [0.0, 0.0, 0.0]))
         payload = {
             'map_id': clean_id,
             'name': meta.get('name') or clean_id,
             'available': self.exists(clean_id),
             'resolution': yaml_data.get('resolution'),
-            'origin': yaml_data.get('origin'),
+            'origin': origin,
+            'width': image['width'] if image else None,
+            'height': image['height'] if image else None,
             'sections': meta.get('sections', []),
             'no_go_zones': meta.get('no_go_zones', []),
             'created_at': meta.get('created_at'),
@@ -72,6 +78,30 @@ class MapStore:
             return {}
         return data if isinstance(data, dict) else {}
 
+    def update_metadata(self, map_id, name=None, sections=None, no_go_zones=None):
+        clean_id = sanitize_map_id(map_id)
+        meta = self.read_meta(clean_id)
+        meta['map_id'] = clean_id
+        if name is not None:
+            meta['name'] = str(name).strip() or clean_id
+        else:
+            meta['name'] = meta.get('name') or clean_id
+        if sections is not None:
+            meta['sections'] = sections
+        else:
+            meta.setdefault('sections', [])
+        if no_go_zones is not None:
+            meta['no_go_zones'] = no_go_zones
+        else:
+            meta.setdefault('no_go_zones', [])
+        meta['updated_at'] = self._now_string()
+        if not meta.get('created_at'):
+            meta['created_at'] = meta['updated_at']
+        os.makedirs(self.maps_dir, exist_ok=True)
+        with open(self.meta_path(clean_id), 'w', encoding='utf-8') as handle:
+            json.dump(meta, handle, indent=2, sort_keys=True)
+        return self.metadata(clean_id)
+
     def write_sections(self, map_id, sections, no_go_zones):
         clean_id = sanitize_map_id(map_id)
         meta = self.read_meta(clean_id)
@@ -86,6 +116,63 @@ class MapStore:
         with open(self.meta_path(clean_id), 'w', encoding='utf-8') as handle:
             json.dump(meta, handle, indent=2, sort_keys=True)
         return meta
+
+    def write_processed_map(self, output_map_id, processed_map, meta_extra=None):
+        clean_id = sanitize_map_id(output_map_id)
+        width = int(processed_map['width'])
+        height = int(processed_map['height'])
+        resolution = float(processed_map['resolution'])
+        origin = processed_map['origin']
+        occupancy = [int(value) for value in processed_map['occupancy']]
+        if width <= 0 or height <= 0 or len(occupancy) != width * height:
+            raise ValueError('processed_map occupancy size does not match width*height')
+
+        os.makedirs(self.maps_dir, exist_ok=True)
+        self._write_occupancy_as_map(
+            clean_id,
+            width,
+            height,
+            resolution,
+            self._origin_to_dict(origin),
+            occupancy,
+        )
+        meta = self.ensure_meta(clean_id, meta_extra or {})
+        return {'map_id': clean_id, 'metadata': meta}
+
+    def write_section_map(self, base_map_id, output_map_id, sections, meta_extra=None):
+        source = self.read_map(base_map_id)
+        if not source.get('available'):
+            raise ValueError('base map not found')
+
+        width = int(source['width'])
+        height = int(source['height'])
+        resolution = float(source['resolution'])
+        origin = source['origin']
+        source_occupancy = list(source['occupancy'])
+        masked = []
+        for index, cell in enumerate(source_occupancy):
+            x_index = index % width
+            y_index = index // width
+            world_x = origin['x'] + (x_index + 0.5) * resolution
+            world_y = origin['y'] + (y_index + 0.5) * resolution
+            if cell == 0 and self._point_in_sections(world_x, world_y, sections):
+                masked.append(0)
+            elif cell == -1:
+                masked.append(-1)
+            else:
+                masked.append(100)
+
+        os.makedirs(self.maps_dir, exist_ok=True)
+        self._write_occupancy_as_map(
+            output_map_id,
+            width,
+            height,
+            resolution,
+            origin,
+            masked,
+        )
+        meta = self.ensure_meta(output_map_id, meta_extra or {})
+        return {'map_id': sanitize_map_id(output_map_id), 'metadata': meta}
 
     def ensure_meta(self, map_id, extra=None):
         clean_id = sanitize_map_id(map_id)
@@ -140,11 +227,7 @@ class MapStore:
             'resolution': resolution,
             'width': image['width'],
             'height': image['height'],
-            'origin': {
-                'x': float(origin[0]) if len(origin) > 0 else 0.0,
-                'y': float(origin[1]) if len(origin) > 1 else 0.0,
-                'yaw': float(origin[2]) if len(origin) > 2 else 0.0,
-            },
+            'origin': self._origin_to_dict(origin),
             'occupancy': occupancy,
         }
 
@@ -221,7 +304,80 @@ class MapStore:
                 continue
             token.extend(char)
 
-    def _now_string(self):
-        from datetime import datetime
+    def _origin_to_dict(self, origin):
+        if isinstance(origin, dict):
+            return {
+                'x': float(origin.get('x', 0.0)),
+                'y': float(origin.get('y', 0.0)),
+                'yaw': float(origin.get('yaw', 0.0)),
+            }
+        values = origin if isinstance(origin, (list, tuple)) else []
+        return {
+            'x': float(values[0]) if len(values) > 0 else 0.0,
+            'y': float(values[1]) if len(values) > 1 else 0.0,
+            'yaw': float(values[2]) if len(values) > 2 else 0.0,
+        }
 
-        return datetime.now().isoformat(timespec='seconds')
+    def _point_in_sections(self, x, y, sections):
+        for section in sections:
+            bounds = section.get('bounds', {})
+            min_x = float(bounds.get('x', 0.0))
+            min_y = float(bounds.get('y', 0.0))
+            max_x = min_x + float(bounds.get('width', 0.0))
+            max_y = min_y + float(bounds.get('height', 0.0))
+            if min_x <= x <= max_x and min_y <= y <= max_y:
+                return True
+        return False
+
+    def _write_occupancy_as_map(
+        self,
+        map_id,
+        width,
+        height,
+        resolution,
+        origin,
+        occupancy,
+    ):
+        clean_id = sanitize_map_id(map_id)
+        pgm_name = clean_id + '.pgm'
+        yaml_name = clean_id + '.yaml'
+        pgm_path = os.path.join(self.maps_dir, pgm_name)
+        yaml_path = os.path.join(self.maps_dir, yaml_name)
+        with open(pgm_path, 'wb') as handle:
+            handle.write(('P5\n%d %d\n255\n' % (width, height)).encode('ascii'))
+            pixels = bytearray()
+            for cell in occupancy:
+                if cell < 0:
+                    pixels.append(205)
+                elif cell >= 50:
+                    pixels.append(0)
+                else:
+                    pixels.append(254)
+            handle.write(bytes(pixels))
+
+        yaw = float(origin.get('yaw', 0.0))
+        if not math.isfinite(yaw):
+            yaw = 0.0
+        yaml_text = (
+            'image: %s\n'
+            'mode: trinary\n'
+            'resolution: %.12g\n'
+            'origin: [%.12g, %.12g, %.12g]\n'
+            'negate: 0\n'
+            'occupied_thresh: 0.65\n'
+            'free_thresh: 0.196\n'
+        ) % (
+            pgm_name,
+            float(resolution),
+            float(origin.get('x', 0.0)),
+            float(origin.get('y', 0.0)),
+            yaw,
+        )
+        with open(yaml_path, 'w', encoding='utf-8') as handle:
+            handle.write(yaml_text)
+
+    def _now_string(self):
+        return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace(
+            '+00:00',
+            'Z',
+        )

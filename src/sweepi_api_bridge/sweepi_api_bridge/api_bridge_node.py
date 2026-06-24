@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """HTTP JSON API bridge for SweePi."""
 
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import math
 import threading
@@ -221,7 +222,11 @@ class SweePiApiBridge(Node):
                             json_response(
                                 self,
                                 400,
-                                {'ok': False, 'message': str(exc)},
+                                bridge._error(
+                                    str(exc),
+                                    'VALIDATION_ERROR',
+                                    {'field': 'body'},
+                                ),
                             )
                             return
                     status, payload = bridge.handle_http_request(
@@ -238,7 +243,10 @@ class SweePiApiBridge(Node):
                     json_response(
                         self,
                         500,
-                        {'ok': False, 'message': 'Internal API bridge error'},
+                        bridge._error(
+                            'Internal API bridge error',
+                            'INTERNAL_ERROR',
+                        ),
                     )
 
         self.http_server = ThreadingHTTPServer(
@@ -255,7 +263,7 @@ class SweePiApiBridge(Node):
     def handle_http_request(self, method, path, body):
         parts, query = split_path(path)
         if not parts or parts[0] != 'api':
-            return 404, {'ok': False, 'message': 'Unknown route'}
+            return 404, self._error('Unknown route', 'VALIDATION_ERROR')
         route = parts[1:]
 
         if method == 'GET' and route == ['system', 'health']:
@@ -272,25 +280,96 @@ class SweePiApiBridge(Node):
         if route and route[0] == 'cleaning':
             return self._handle_cleaning(method, route[1:], body, query)
 
-        return 404, {'ok': False, 'message': 'Unknown route'}
+        return 404, self._error('Unknown route', 'VALIDATION_ERROR')
+
+    def _timestamp(self):
+        return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace(
+            '+00:00',
+            'Z',
+        )
+
+    def _success(self, message, **fields):
+        payload = {
+            'success': True,
+            'message': message,
+            'error': None,
+            'timestamp': self._timestamp(),
+        }
+        payload.update(fields)
+        return payload
+
+    def _error(self, message, code, details=None, accepted=None):
+        payload = {
+            'success': False,
+            'message': message,
+            'error': {
+                'code': code,
+                'details': details or {},
+            },
+            'timestamp': self._timestamp(),
+        }
+        if accepted is not None:
+            payload['accepted'] = bool(accepted)
+        return payload
+
+    def _service_payload(self, result, success_message=None, failure_code='TASK_FAILED', **fields):
+        if result.get('success'):
+            return self._success(
+                success_message or result.get('message', ''),
+                accepted=True,
+                **fields,
+            )
+        return self._error(
+            result.get('message', 'Service call failed'),
+            failure_code,
+            accepted=False,
+        )
 
     def _handle_exploration(self, method, route, body):
         if method == 'POST' and route == ['start']:
             return 200, self._api_start_exploration(body)
         if method == 'GET' and route == ['status']:
             return 200, self._exploration_status()
+        if method == 'POST' and route == ['switch']:
+            return 200, self._api_switch_exploration_mode(body)
         if method == 'POST' and route == ['mode']:
             return 200, self._api_switch_exploration_mode(body)
         if method == 'POST' and route == ['switch-mode']:
             return 200, self._api_switch_exploration_mode(body)
+        if method == 'POST' and route == ['manual-drive']:
+            return 200, self._api_manual_drive_command(body)
         if method == 'POST' and route == ['manual', 'drive']:
             return 200, self._api_manual_drive(body)
         if method == 'POST' and route == ['manual', 'command']:
             return 200, self._api_manual_command(body)
         if method == 'POST' and route == ['manual', 'stop']:
             self._publish_zero_velocity()
-            return 200, {'ok': True, 'accepted': True, 'message': 'Manual motion stopped'}
+            return 200, self._success(
+                'Manual motion stopped.',
+                accepted=True,
+                state=self.state.snapshot()['robot_state'],
+            )
         if method == 'POST' and route == ['stop']:
+            if body.get('save_map') is False:
+                self._publish_zero_velocity()
+                result = self._call_trigger('/sweepi_robot_manager/exploration/stop')
+                if result['success']:
+                    self.state.update(
+                        robot_state='exploration_stopped',
+                        active_task='exploration',
+                        exploration_active=True,
+                        exploration_mode='stopped',
+                    )
+                return 200, self._service_payload(
+                    result,
+                    success_message='Exploration motion stopped without saving.',
+                    state=self.state.snapshot()['robot_state'],
+                    map_saved=False,
+                    map_id=self.state.snapshot().get('active_map_id'),
+                    map_name=self.state.snapshot().get('active_map_id'),
+                )
+            return 200, self._api_stop_exploration_and_save()
+        if method == 'POST' and route == ['stop-motion']:
             self._publish_zero_velocity()
             result = self._call_trigger('/sweepi_robot_manager/exploration/stop')
             if result['success']:
@@ -300,28 +379,14 @@ class SweePiApiBridge(Node):
                     exploration_active=True,
                     exploration_mode='stopped',
                 )
-            return 200, self._accepted_from_service(result)
+            return 200, self._service_payload(
+                result,
+                success_message='Exploration motion stopped.',
+                state=self.state.snapshot()['robot_state'],
+            )
         if method == 'POST' and route == ['stop-and-save']:
-            self._publish_zero_velocity()
-            result = self._call_trigger('/sweepi_robot_manager/exploration/stop_and_save')
-            snapshot = self.state.snapshot()
-            map_id = snapshot.get('active_map_id')
-            map_saved = self.map_store.exists(map_id) if map_id else False
-            if map_id:
-                self.map_store.ensure_meta(
-                    map_id,
-                    {
-                        'area_name': snapshot.get('active_area_name'),
-                        'source': 'exploration',
-                    },
-                )
-            if result['success']:
-                self.state.reset_exploration()
-            payload = self._accepted_from_service(result)
-            payload['map_id'] = map_id
-            payload['map_saved'] = map_saved
-            return 200, payload
-        return 404, {'ok': False, 'message': 'Unknown exploration route'}
+            return 200, self._api_stop_exploration_and_save()
+        return 404, self._error('Unknown exploration route', 'VALIDATION_ERROR')
 
     def _handle_localization(self, method, route, body):
         if method == 'POST' and route == ['initial-pose']:
@@ -353,18 +418,24 @@ class SweePiApiBridge(Node):
             })
             return 200, payload
         if method == 'GET' and route == []:
-            return 200, {'ok': True, 'maps': self.map_store.list_maps()}
+            return 200, self._success(
+                'Maps fetched.',
+                items=[
+                    self._contract_map_metadata(metadata)
+                    for metadata in self.map_store.list_maps()
+                ],
+            )
         if len(route) >= 1:
             map_id = sanitize_map_id(route[0])
             if method == 'GET' and len(route) == 1:
-                payload = self.map_store.read_map(map_id)
-                payload['ok'] = True
-                return 200, payload
+                return 200, self._api_get_map(map_id)
             if method == 'GET' and len(route) == 2 and route[1] == 'metadata':
-                return 200, {'ok': True, 'metadata': self.map_store.metadata(map_id)}
+                return 200, self._api_get_map_metadata(map_id)
+            if method == 'PUT' and len(route) == 2 and route[1] == 'metadata':
+                return 200, self._api_update_map_metadata(map_id, body)
             if method == 'PUT' and len(route) == 2 and route[1] == 'sections':
                 return 200, self._api_store_sections(map_id, body)
-        return 404, {'ok': False, 'message': 'Unknown maps route'}
+        return 404, self._error('Unknown maps route', 'VALIDATION_ERROR')
 
     def _handle_cleaning(self, method, route, body, query):
         if method == 'POST' and route == ['start']:
@@ -384,60 +455,100 @@ class SweePiApiBridge(Node):
             result = self._call_trigger('/sweepi_robot_manager/coverage/pause')
             if result['success']:
                 self.state.update(robot_state='paused', cleaning_paused=True)
-            return 200, self._accepted_from_service(result)
+            return 200, self._service_payload(
+                result,
+                success_message='Cleaning paused.',
+                state='paused',
+                task_id=self.state.snapshot().get('active_task_id'),
+            )
         if method == 'POST' and route == ['resume']:
             result = self._call_trigger('/sweepi_robot_manager/coverage/continue')
             if result['success']:
                 self.state.update(robot_state='cleaning', cleaning_paused=False)
-            return 200, self._accepted_from_service(result)
+            return 200, self._service_payload(
+                result,
+                success_message='Cleaning resumed.',
+                state='cleaning',
+                task_id=self.state.snapshot().get('active_task_id'),
+            )
         if method == 'POST' and route == ['stop']:
             self._publish_zero_velocity()
+            task_id = self.state.snapshot().get('active_task_id')
             result = self._call_trigger('/sweepi_robot_manager/coverage/stop')
             if result['success']:
                 self.state.reset_cleaning()
-            return 200, self._accepted_from_service(result)
+            return 200, self._service_payload(
+                result,
+                success_message='Cleaning stopped.',
+                state='stopped',
+                task_id=task_id,
+            )
         if method == 'POST' and route == ['reset']:
             self._publish_zero_velocity()
+            task_id = self.state.snapshot().get('active_task_id')
             result = self._call_trigger('/sweepi_robot_manager/coverage/reset')
             if result['success']:
                 self._clear_coverage_cache()
                 self.state.reset_cleaning()
-            return 200, self._accepted_from_service(result)
+            return 200, self._service_payload(
+                result,
+                success_message='Cleaning state reset.',
+                state='idle',
+                task_id=None if result['success'] else task_id,
+            )
         if method == 'POST' and route == ['return-home']:
             result = self._call_trigger('/sweepi_robot_manager/coverage/return_home')
             if result['success']:
                 self.state.update(robot_state='returning_home')
-            return 200, self._accepted_from_service(result)
+            return 200, self._service_payload(
+                result,
+                success_message='Robot is returning home.',
+                state='returning_home',
+            )
         if method == 'GET' and route == ['last-summary']:
             result = self._call_trigger('/sweepi_robot_manager/coverage/last_summary')
-            return 200, {
-                'ok': True,
-                'accepted': result['success'],
-                'message': result['message'],
-                'topic_summary': self.last_coverage_summary_topic,
-            }
-        return 404, {'ok': False, 'message': 'Unknown cleaning route'}
+            return 200, self._success(
+                'Last cleaning summary fetched.',
+                accepted=result['success'],
+                summary=result['message'],
+                topic_summary=self.last_coverage_summary_topic,
+            )
+        return 404, self._error('Unknown cleaning route', 'VALIDATION_ERROR')
 
     def _api_start_exploration(self, body):
         snapshot = self.state.snapshot()
         if snapshot['cleaning_active'] or snapshot['cleaning_paused']:
-            return {
-                'ok': True,
-                'accepted': False,
-                'message': 'Cannot start exploration while cleaning is active',
-            }
+            return self._error(
+                'Cannot start exploration while cleaning is active.',
+                'ROBOT_BUSY',
+                accepted=False,
+            )
+        if snapshot['exploration_active']:
+            return self._error(
+                'Exploration is already active.',
+                'ROBOT_BUSY',
+                accepted=False,
+            )
 
-        area_name = str(body.get('area_name') or body.get('map_id') or 'map').strip()
-        map_id = sanitize_map_id(body.get('map_id') or area_name)
+        requested_map_name = str(body.get('map_name') or '').strip()
+        if not requested_map_name:
+            return self._error(
+                'map_name is required.',
+                'VALIDATION_ERROR',
+                {'field': 'map_name'},
+                accepted=False,
+            )
+        map_id = sanitize_map_id(requested_map_name)
         api_mode, manager_mode = self._normalize_exploration_api_mode(
             body.get('mode') or 'automatic'
         )
         if not api_mode:
-            return {
-                'ok': True,
-                'accepted': False,
-                'message': 'mode must be automatic/auto or manual',
-            }
+            return self._error(
+                'mode must be automatic or manual.',
+                'VALIDATION_ERROR',
+                {'field': 'mode', 'allowed_values': ['automatic', 'manual']},
+                accepted=False,
+            )
         request = StartTask.Request()
         request.map_name = map_id
         request.mode = manager_mode
@@ -450,18 +561,19 @@ class SweePiApiBridge(Node):
                 exploration_active=True,
                 exploration_mode=api_mode,
                 active_map_id=map_id,
-                active_area_name=area_name,
+                active_area_name=requested_map_name,
                 active_task_id=None,
             )
-        return {
-            'ok': True,
-            'accepted': result['success'],
-            'state': self.state.snapshot()['robot_state'],
-            'map_id': map_id,
-            'area_name': area_name,
-            'mode': api_mode,
-            'message': result['message'],
-        }
+        if not result['success']:
+            return self._error(result['message'], 'TASK_FAILED', accepted=False)
+        return self._success(
+            'Exploration started.',
+            accepted=True,
+            state='exploring',
+            map_id=map_id,
+            map_name=map_id,
+            mode=api_mode,
+        )
 
     def _normalize_exploration_api_mode(self, value):
         mode = str(value or '').strip().lower()
@@ -473,17 +585,22 @@ class SweePiApiBridge(Node):
 
     def _api_switch_exploration_mode(self, body):
         api_mode, manager_mode = self._normalize_exploration_api_mode(
-            body.get('mode')
+            body.get('new_mode') or body.get('mode')
         )
         if not api_mode:
-            return {
-                'ok': True,
-                'accepted': False,
-                'message': 'mode must be manual or automatic/auto',
-            }
+            return self._error(
+                'new_mode must be automatic or manual.',
+                'VALIDATION_ERROR',
+                {'field': 'new_mode', 'allowed_values': ['automatic', 'manual']},
+                accepted=False,
+            )
         snapshot = self.state.snapshot()
-        if snapshot['active_task'] != 'exploration':
-            return {'ok': True, 'accepted': False, 'message': 'Exploration is not active'}
+        if snapshot['active_task'] != 'exploration' or not snapshot['exploration_active']:
+            return self._error(
+                'Exploration is not active.',
+                'INVALID_STATE',
+                accepted=False,
+            )
 
         request = StartTask.Request()
         request.map_name = snapshot.get('active_map_id') or ''
@@ -497,10 +614,91 @@ class SweePiApiBridge(Node):
                 exploration_active=True,
                 exploration_mode=api_mode,
             )
-        payload = self._accepted_from_service(result)
-        payload['mode'] = api_mode
-        payload['map_id'] = snapshot.get('active_map_id')
-        return payload
+        if not result['success']:
+            return self._error(result['message'], 'TASK_FAILED', accepted=False)
+        return self._success(
+            'Exploration mode switched.',
+            accepted=True,
+            state='exploring',
+            mode=api_mode,
+            map_id=snapshot.get('active_map_id'),
+            map_name=snapshot.get('active_map_id'),
+        )
+
+    def _api_stop_exploration_and_save(self):
+        self._publish_zero_velocity()
+        result = self._call_trigger('/sweepi_robot_manager/exploration/stop_and_save')
+        snapshot = self.state.snapshot()
+        map_id = snapshot.get('active_map_id')
+        if map_id:
+            self.map_store.ensure_meta(
+                map_id,
+                {
+                    'name': snapshot.get('active_area_name') or map_id,
+                    'source': 'exploration',
+                },
+            )
+        if result['success']:
+            self.state.reset_exploration()
+        map_saved = self.map_store.exists(map_id) if map_id else False
+        if not result['success']:
+            return self._error(result['message'], 'TASK_FAILED', accepted=False)
+        return self._success(
+            'Exploration stopped and map saved.',
+            accepted=True,
+            state='idle',
+            map_saved=map_saved,
+            map_id=map_id,
+            map_name=map_id,
+        )
+
+    def _api_manual_drive_command(self, body):
+        if not self._manual_drive_allowed():
+            return self._error(
+                'Manual driving is allowed only during manual exploration.',
+                'INVALID_STATE',
+                accepted=False,
+            )
+
+        command = str(body.get('command') or '').strip().lower()
+        try:
+            speed = abs(float(body.get('speed', 0.15)))
+        except (TypeError, ValueError):
+            return self._error(
+                'speed must be a number.',
+                'VALIDATION_ERROR',
+                {'field': 'speed'},
+                accepted=False,
+            )
+        speed = clamp(speed, 0.0, 0.8)
+        mapping = {
+            'forward': (min(speed, 0.20), 0.0),
+            'backward': (-min(speed, 0.20), 0.0),
+            'left': (0.0, min(speed, 0.80)),
+            'right': (0.0, -min(speed, 0.80)),
+            'stop': (0.0, 0.0),
+        }
+        if command not in mapping:
+            return self._error(
+                'command must be forward, backward, left, right, or stop.',
+                'VALIDATION_ERROR',
+                {
+                    'field': 'command',
+                    'allowed_values': ['forward', 'backward', 'left', 'right', 'stop'],
+                },
+                accepted=False,
+            )
+
+        linear_x, angular_z = mapping[command]
+        self._publish_velocity(linear_x, angular_z)
+        self.manual_command_expiry = time.monotonic() + 0.3
+        return self._success(
+            'Manual drive command accepted.',
+            accepted=True,
+            command=command,
+            speed=speed,
+            state=self.state.snapshot()['robot_state'],
+        )
 
     def _api_manual_drive(self, body):
         if not self._manual_drive_allowed():
@@ -568,95 +766,241 @@ class SweePiApiBridge(Node):
             'message': 'Initial pose published',
         }
 
+    def _api_get_map(self, map_id):
+        payload = self.map_store.read_map(map_id)
+        if not payload.get('available'):
+            return self._error(
+                payload.get('message', 'Map not found.'),
+                'MAP_NOT_FOUND',
+                {'map_id': map_id},
+            )
+        metadata = payload.get('metadata', {})
+        return self._success(
+            'Map fetched.',
+            map_id=payload['map_id'],
+            name=metadata.get('name') or payload['map_id'],
+            resolution=payload['resolution'],
+            origin=payload['origin'],
+            width=payload['width'],
+            height=payload['height'],
+            occupancy=payload['occupancy'],
+            sections=metadata.get('sections', []),
+        )
+
+    def _api_get_map_metadata(self, map_id):
+        if not self.map_store.exists(map_id):
+            return self._error(
+                'Map not found.',
+                'MAP_NOT_FOUND',
+                {'map_id': map_id},
+            )
+        metadata = self.map_store.metadata(map_id)
+        return self._success(
+            'Map metadata fetched.',
+            **self._contract_map_metadata(metadata),
+        )
+
+    def _api_update_map_metadata(self, map_id, body):
+        if not self.map_store.exists(map_id):
+            return self._error(
+                'Map not found.',
+                'MAP_NOT_FOUND',
+                {'map_id': map_id},
+            )
+        validation = self._validate_sections_payload(
+            {'sections': body.get('sections', [])},
+            require_bounds=True,
+            allow_empty=True,
+        )
+        if validation is not None:
+            return validation
+        metadata = self.map_store.update_metadata(
+            map_id,
+            name=body.get('name'),
+            sections=body.get('sections', []),
+        )
+        return self._success(
+            'Map metadata updated.',
+            **self._contract_map_metadata(metadata),
+        )
+
+    def _contract_map_metadata(self, metadata):
+        return {
+            'map_id': metadata.get('map_id'),
+            'name': metadata.get('name'),
+            'created_at': metadata.get('created_at'),
+            'updated_at': metadata.get('updated_at'),
+            'resolution': metadata.get('resolution'),
+            'origin': metadata.get('origin') or {'x': 0.0, 'y': 0.0, 'yaw': 0.0},
+            'width': metadata.get('width'),
+            'height': metadata.get('height'),
+            'sections': metadata.get('sections', []),
+        }
+
     def _api_start_cleaning(self, body):
         snapshot = self.state.snapshot()
         if snapshot['exploration_active']:
-            return {
-                'ok': True,
-                'accepted': False,
-                'message': 'Cannot start cleaning while exploration is active',
-            }
-        map_id = sanitize_map_id(body.get('map_id') or '')
+            return self._error(
+                'Cannot start cleaning while exploration is active.',
+                'ROBOT_BUSY',
+                accepted=False,
+            )
+        if snapshot['cleaning_active'] or snapshot['cleaning_paused']:
+            return self._error(
+                'Cleaning is already active.',
+                'ROBOT_BUSY',
+                accepted=False,
+            )
+        map_id = sanitize_map_id(body.get('map_id') or '', fallback='')
         if not map_id:
-            return {'ok': True, 'accepted': False, 'message': 'map_id is required'}
+            return self._error(
+                'map_id is required.',
+                'VALIDATION_ERROR',
+                {'field': 'map_id'},
+                accepted=False,
+            )
         if not self.map_store.exists(map_id):
-            return {'ok': True, 'accepted': False, 'message': 'Requested map does not exist'}
+            return self._error(
+                'Requested map does not exist.',
+                'MAP_NOT_FOUND',
+                {'map_id': map_id},
+                accepted=False,
+            )
 
-        cleaning_mode = str(body.get('cleaning_mode') or 'full_map').strip().lower()
-        if cleaning_mode == 'sections':
-            store_result = self._store_inline_sections_if_present(map_id, body)
-            if store_result is not None and not store_result['ok']:
-                return store_result
-            return {
-                'ok': True,
-                'accepted': False,
-                'map_id': map_id,
-                'message': (
-                    'Selected-section cleaning API is stored but coverage planner '
-                    'section masking is not implemented yet'
-                ),
-            }
-        if cleaning_mode != 'full_map':
-            return {'ok': True, 'accepted': False, 'message': 'Unsupported cleaning_mode'}
-
+        cleaning_mode = self._normalize_cleaning_mode(body.get('cleaning_mode'))
+        if not cleaning_mode:
+            return self._error(
+                'Invalid cleaning_mode. Allowed values are full-map and sections.',
+                'VALIDATION_ERROR',
+                {
+                    'field': 'cleaning_mode',
+                    'allowed_values': ['full-map', 'sections'],
+                },
+                accepted=False,
+            )
         initial_pose = body.get('initial_pose')
-        if isinstance(initial_pose, dict):
-            pose_result = self._api_initial_pose({'map_id': map_id, **initial_pose})
-            if not pose_result.get('accepted'):
-                return pose_result
+        pose_validation = self._validate_initial_pose_payload(initial_pose)
+        if pose_validation is not None:
+            return pose_validation
 
-        task_id = 'cleaning_%d' % int(time.time())
+        sections = body.get('sections', [])
+        if cleaning_mode == 'sections':
+            validation = self._validate_sections_payload(
+                {'sections': sections},
+                require_bounds=True,
+                allow_empty=False,
+            )
+            if validation is not None:
+                return validation
+        elif sections:
+            validation = self._validate_sections_payload(
+                {'sections': sections},
+                require_bounds=True,
+                allow_empty=True,
+            )
+            if validation is not None:
+                return validation
+        elif sections is None:
+            sections = []
+
+        processed_map = body.get('processed_map')
+        if processed_map is not None:
+            processed_validation = self._validate_processed_map(processed_map)
+            if processed_validation is not None:
+                return processed_validation
+
+        task_id = 'cleaning_%s' % datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
+        coverage_map_id = map_id
+        try:
+            if processed_map is not None:
+                coverage_map_id = sanitize_map_id('%s_%s_processed' % (map_id, task_id))
+                self.map_store.write_processed_map(
+                    coverage_map_id,
+                    processed_map,
+                    {
+                        'name': '%s processed cleaning map' % map_id,
+                        'source_map_id': map_id,
+                        'source': 'api_processed_map',
+                        'sections': sections or [],
+                    },
+                )
+            elif cleaning_mode == 'sections':
+                coverage_map_id = sanitize_map_id('%s_%s_sections' % (map_id, task_id))
+                self.map_store.write_section_map(
+                    map_id,
+                    coverage_map_id,
+                    sections,
+                    {
+                        'name': '%s section cleaning map' % map_id,
+                        'source_map_id': map_id,
+                        'source': 'api_sections',
+                        'sections': sections,
+                    },
+                )
+            if sections:
+                self.map_store.update_metadata(map_id, sections=sections)
+        except (OSError, ValueError) as exc:
+            return self._error(
+                'Could not prepare cleaning map: %s' % exc,
+                'TASK_FAILED',
+                accepted=False,
+            )
+
+        pose_result = self._api_initial_pose({'map_id': map_id, **initial_pose})
+        if not pose_result.get('accepted'):
+            return self._error(
+                pose_result.get('message', 'initial_pose is invalid.'),
+                'VALIDATION_ERROR',
+                {'field': 'initial_pose'},
+                accepted=False,
+            )
+
         self._clear_coverage_cache()
         self.validated_for_current_path = False
         self.state.update(
-            robot_state='coverage_preparing',
+            robot_state='cleaning',
             active_task='cleaning',
             cleaning_active=True,
             cleaning_paused=False,
             active_map_id=map_id,
+            active_coverage_map_id=coverage_map_id,
             active_task_id=task_id,
             cleaning_mode=cleaning_mode,
+            active_sections=sections or [],
             coverage_validated=False,
             coverage_path_available=False,
             coverage_map_available=False,
-            initial_pose_received=bool(isinstance(initial_pose, dict)),
-            initial_pose_source='api' if isinstance(initial_pose, dict) else None,
+            initial_pose_received=True,
+            initial_pose_source='api',
         )
 
         request = StartTask.Request()
-        request.map_name = map_id
+        request.map_name = coverage_map_id
         request.mode = ''
-        request.auto_start = False
+        request.auto_start = True
         result = self._call_start_task(self.start_coverage_client, request)
         if not result['success']:
             self.state.reset_cleaning()
-            return self._accepted_from_service(result)
+            return self._error(result['message'], 'TASK_FAILED', accepted=False)
 
         self._update_coverage_readiness()
-        auto_start = bool(body.get('auto_start', False))
-        if auto_start:
-            ready = self._wait_for_cleaning_ready(timeout_sec=20.0)
-            if not ready:
-                return {
-                    'ok': True,
-                    'accepted': False,
-                    'state': self.state.snapshot()['robot_state'],
-                    'map_id': map_id,
-                    'message': 'Coverage prepared, but initial pose, TF, or path is not ready yet',
-                }
-            return self._api_start_cleaning_motion()
-
-        return {
-            'ok': True,
-            'accepted': True,
-            'state': self.state.snapshot()['robot_state'],
-            'map_id': map_id,
-            'task_id': task_id,
-            'message': (
-                'Coverage prepared. Waiting for initial pose from API or RViz; '
-                'coverage path will be generated after initial pose and TF are ready.'
-            ),
-        }
+        return self._success(
+            'Cleaning started.',
+            accepted=True,
+            task_id=task_id,
+            state='cleaning',
+            map_id=map_id,
+            cleaning_mode=cleaning_mode,
+            sections=sections or [],
+            initial_pose={
+                'x': float(initial_pose['x']),
+                'y': float(initial_pose['y']),
+                'yaw': float(initial_pose['yaw']),
+                'frame': initial_pose.get('frame', 'map'),
+            },
+            progress_percent=0.0,
+            coverage_map_id=coverage_map_id,
+        )
 
     def _api_validate_cleaning(self):
         ready = self._cleaning_preconditions(require_path=False)
@@ -688,21 +1032,29 @@ class SweePiApiBridge(Node):
 
     def _api_store_sections(self, map_id, body):
         if not self.map_store.exists(map_id):
-            return {'ok': True, 'accepted': False, 'message': 'Map does not exist'}
-        validation = self._validate_sections_payload(body)
+            return self._error(
+                'Map not found.',
+                'MAP_NOT_FOUND',
+                {'map_id': map_id},
+                accepted=False,
+            )
+        validation = self._validate_sections_payload(
+            body,
+            require_bounds=True,
+            allow_empty=True,
+        )
         if validation is not None:
             return validation
-        meta = self.map_store.write_sections(
+        meta = self.map_store.update_metadata(
             map_id,
-            body.get('sections', []),
-            body.get('no_go_zones', []),
+            sections=body.get('sections', []),
+            no_go_zones=body.get('no_go_zones', []),
         )
-        return {
-            'ok': True,
-            'accepted': True,
-            'metadata': meta,
-            'message': 'Map sections saved',
-        }
+        return self._success(
+            'Map sections saved.',
+            accepted=True,
+            **self._contract_map_metadata(meta),
+        )
 
     def _store_inline_sections_if_present(self, map_id, body):
         if 'sections' not in body and 'no_go_zones' not in body:
@@ -717,34 +1069,192 @@ class SweePiApiBridge(Node):
         )
         return {'ok': True}
 
-    def _validate_sections_payload(self, body):
+    def _normalize_cleaning_mode(self, value):
+        mode = str(value or '').strip().lower().replace('_', '-')
+        if mode in ('full-map', 'fullmap'):
+            return 'full-map'
+        if mode == 'sections':
+            return 'sections'
+        return ''
+
+    def _validate_initial_pose_payload(self, initial_pose):
+        if not isinstance(initial_pose, dict):
+            return self._error(
+                'initial_pose is required.',
+                'VALIDATION_ERROR',
+                {'field': 'initial_pose'},
+                accepted=False,
+            )
+        for field in ('x', 'y', 'yaw'):
+            if field not in initial_pose:
+                return self._error(
+                    'initial_pose.%s is required.' % field,
+                    'VALIDATION_ERROR',
+                    {'field': 'initial_pose.%s' % field},
+                    accepted=False,
+                )
+            try:
+                float(initial_pose[field])
+            except (TypeError, ValueError):
+                return self._error(
+                    'initial_pose.%s must be a number.' % field,
+                    'VALIDATION_ERROR',
+                    {'field': 'initial_pose.%s' % field},
+                    accepted=False,
+                )
+        return None
+
+    def _validate_processed_map(self, processed_map):
+        if not isinstance(processed_map, dict):
+            return self._error(
+                'processed_map must be an object.',
+                'VALIDATION_ERROR',
+                {'field': 'processed_map'},
+                accepted=False,
+            )
+        for field in ('width', 'height', 'resolution', 'origin', 'occupancy'):
+            if field not in processed_map:
+                return self._error(
+                    'processed_map.%s is required.' % field,
+                    'VALIDATION_ERROR',
+                    {'field': 'processed_map.%s' % field},
+                    accepted=False,
+                )
+        try:
+            width = int(processed_map['width'])
+            height = int(processed_map['height'])
+            float(processed_map['resolution'])
+        except (TypeError, ValueError):
+            return self._error(
+                'processed_map width, height, and resolution must be numeric.',
+                'VALIDATION_ERROR',
+                {'field': 'processed_map'},
+                accepted=False,
+            )
+        occupancy = processed_map.get('occupancy')
+        if not isinstance(occupancy, list) or len(occupancy) != width * height:
+            return self._error(
+                'processed_map occupancy size must match width*height.',
+                'VALIDATION_ERROR',
+                {'field': 'processed_map.occupancy'},
+                accepted=False,
+            )
+        origin = processed_map.get('origin')
+        if not isinstance(origin, dict):
+            return self._error(
+                'processed_map.origin is required.',
+                'VALIDATION_ERROR',
+                {'field': 'processed_map.origin'},
+                accepted=False,
+            )
+        return None
+
+    def _validate_sections_payload(self, body, require_bounds=False, allow_empty=True):
         sections = body.get('sections', [])
         no_go_zones = body.get('no_go_zones', [])
         if not isinstance(sections, list):
-            return {'ok': True, 'accepted': False, 'message': 'sections must be a list'}
+            return self._error(
+                'sections must be a list.',
+                'VALIDATION_ERROR',
+                {'field': 'sections'},
+                accepted=False,
+            )
+        if not allow_empty and not sections:
+            return self._error(
+                'sections must contain at least one section when cleaning_mode is sections.',
+                'VALIDATION_ERROR',
+                {'field': 'sections', 'cleaning_mode': 'sections'},
+                accepted=False,
+            )
         if not isinstance(no_go_zones, list):
-            return {'ok': True, 'accepted': False, 'message': 'no_go_zones must be a list'}
+            return self._error(
+                'no_go_zones must be a list.',
+                'VALIDATION_ERROR',
+                {'field': 'no_go_zones'},
+                accepted=False,
+            )
         ids = set()
         for group_name, zones in (('sections', sections), ('no_go_zones', no_go_zones)):
             for index, zone in enumerate(zones):
                 if not isinstance(zone, dict):
-                    return {'ok': True, 'accepted': False, 'message': '%s entries must be objects' % group_name}
+                    return self._error(
+                        '%s entries must be objects.' % group_name,
+                        'VALIDATION_ERROR',
+                        {'field': '%s[%d]' % (group_name, index)},
+                        accepted=False,
+                    )
                 zone_id = str(zone.get('section_id') or zone.get('zone_id') or '').strip()
                 if not zone_id:
-                    return {'ok': True, 'accepted': False, 'message': '%s[%d] id is required' % (group_name, index)}
+                    return self._error(
+                        '%s[%d] id is required.' % (group_name, index),
+                        'VALIDATION_ERROR',
+                        {'field': '%s[%d].section_id' % (group_name, index)},
+                        accepted=False,
+                    )
                 if zone_id in ids:
-                    return {'ok': True, 'accepted': False, 'message': 'section IDs must be unique'}
+                    return self._error(
+                        'section IDs must be unique.',
+                        'VALIDATION_ERROR',
+                        {'field': 'sections'},
+                        accepted=False,
+                    )
                 ids.add(zone_id)
+                if require_bounds or 'bounds' in zone:
+                    bounds = zone.get('bounds')
+                    if not isinstance(bounds, dict):
+                        return self._error(
+                            '%s[%d].bounds is required.' % (group_name, index),
+                            'VALIDATION_ERROR',
+                            {'field': '%s[%d].bounds' % (group_name, index)},
+                            accepted=False,
+                        )
+                    for field in ('x', 'y', 'width', 'height'):
+                        try:
+                            value = float(bounds[field])
+                        except (KeyError, TypeError, ValueError):
+                            return self._error(
+                                '%s[%d].bounds.%s must be a number.'
+                                % (group_name, index, field),
+                                'VALIDATION_ERROR',
+                                {
+                                    'field': '%s[%d].bounds.%s'
+                                    % (group_name, index, field)
+                                },
+                                accepted=False,
+                            )
+                        if field in ('width', 'height') and value <= 0.0:
+                            return self._error(
+                                '%s[%d].bounds.%s must be positive.'
+                                % (group_name, index, field),
+                                'VALIDATION_ERROR',
+                                {
+                                    'field': '%s[%d].bounds.%s'
+                                    % (group_name, index, field)
+                                },
+                                accepted=False,
+                            )
+                    continue
                 polygon = zone.get('polygon')
                 if not isinstance(polygon, list) or len(polygon) < 3:
-                    return {'ok': True, 'accepted': False, 'message': '%s[%d] polygon needs at least 3 points' % (group_name, index)}
+                    return self._error(
+                        '%s[%d] polygon needs at least 3 points.'
+                        % (group_name, index),
+                        'VALIDATION_ERROR',
+                        {'field': '%s[%d].polygon' % (group_name, index)},
+                        accepted=False,
+                    )
                 for point in polygon:
                     if (
                         not isinstance(point, list)
                         or len(point) != 2
                         or not all(isinstance(value, (int, float)) for value in point)
                     ):
-                        return {'ok': True, 'accepted': False, 'message': 'Polygon points must be [x, y] numbers'}
+                        return self._error(
+                            'Polygon points must be [x, y] numbers.',
+                            'VALIDATION_ERROR',
+                            {'field': '%s[%d].polygon' % (group_name, index)},
+                            accepted=False,
+                        )
         return None
 
     def _cleaning_preconditions(self, require_path=False):
@@ -789,26 +1299,29 @@ class SweePiApiBridge(Node):
             message = 'Cleaning paused'
         else:
             message = 'Coverage prepared. Waiting for initial pose from API or RViz.'
-        return {
-            'ok': True,
-            'state': snapshot['robot_state'],
-            'active': snapshot['cleaning_active'],
-            'paused': snapshot['cleaning_paused'],
-            'map_id': snapshot['active_map_id'],
-            'task_id': snapshot['active_task_id'],
-            'cleaning_mode': snapshot['cleaning_mode'],
-            'initial_pose_received': snapshot['initial_pose_received'],
-            'initial_pose_source': snapshot['initial_pose_source'],
-            'pose': snapshot['initial_pose'],
-            'pose_available': self.pose_available,
-            'path_available': snapshot['coverage_path_available'],
-            'coverage_map_available': snapshot['coverage_map_available'],
-            'progress_percent': self.coverage_percentage,
-            'execution_status': self.coverage_execution_status,
-            'coverage_stats': self.coverage_stats,
-            'ready_to_start_motion': ready and snapshot['robot_state'] != 'cleaning',
-            'message': message,
-        }
+        state = snapshot['robot_state']
+        if not snapshot['cleaning_active']:
+            state = 'idle'
+        return self._success(
+            'Cleaning status fetched.',
+            active=snapshot['cleaning_active'],
+            state=state,
+            task_id=snapshot['active_task_id'],
+            map_id=snapshot['active_map_id'],
+            cleaning_mode=snapshot['cleaning_mode'],
+            sections=snapshot.get('active_sections', []),
+            progress_percent=self.coverage_percentage,
+            pose=self.robot_pose or snapshot['initial_pose'],
+            nav={'execution_status': self.coverage_execution_status},
+            coverage=self._coverage_area_summary(),
+            paused=snapshot['cleaning_paused'],
+            initial_pose_received=snapshot['initial_pose_received'],
+            initial_pose_source=snapshot['initial_pose_source'],
+            path_available=snapshot['coverage_path_available'],
+            coverage_map_available=snapshot['coverage_map_available'],
+            ready_to_start_motion=ready and snapshot['robot_state'] != 'cleaning',
+            status_message=message,
+        )
 
     def _cleaning_path(self, stride):
         with self.data_lock:
@@ -830,71 +1343,100 @@ class SweePiApiBridge(Node):
         payload.update({'ok': True, 'map_id': map_id})
         return payload
 
+    def _coverage_area_summary(self):
+        with self.data_lock:
+            coverage_map = self.coverage_map
+        if coverage_map is None:
+            return {
+                'covered_area_m2': 0.0,
+                'total_area_m2': 0.0,
+            }
+        covered_cells = 0
+        uncovered_cells = 0
+        for value in coverage_map.data:
+            if value == 100:
+                covered_cells += 1
+            elif value == 50:
+                uncovered_cells += 1
+        cell_area = float(coverage_map.info.resolution) ** 2
+        return {
+            'covered_area_m2': round(covered_cells * cell_area, 3),
+            'total_area_m2': round((covered_cells + uncovered_cells) * cell_area, 3),
+        }
+
     def _exploration_status(self):
         snapshot = self.state.snapshot()
-        return {
-            'ok': True,
-            'state': snapshot['robot_state'],
-            'mode': snapshot['exploration_mode'],
-            'area_name': snapshot['active_area_name'],
-            'map_id': snapshot['active_map_id'],
-            'map_available': bool(snapshot['active_map_id'] and self.map_store.exists(snapshot['active_map_id'])),
-            'robot_pose': self.robot_pose,
-            'live_map_available': snapshot['live_map_available'],
-            'message': 'Exploration active' if snapshot['exploration_active'] else 'Exploration idle',
-        }
+        return self._success(
+            'Exploration status fetched.',
+            active=snapshot['exploration_active'],
+            state=snapshot['robot_state'],
+            map_name=snapshot['active_map_id'],
+            map_id=snapshot['active_map_id'],
+            mode=snapshot['exploration_mode'] if snapshot['exploration_active'] else None,
+            progress_percent=None,
+            pose=self.robot_pose,
+            map_available=bool(snapshot['live_map_available']),
+            saved_map_available=bool(
+                snapshot['active_map_id'] and self.map_store.exists(snapshot['active_map_id'])
+            ),
+        )
 
     def _robot_status(self):
         snapshot = self.state.snapshot()
-        return {
-            'ok': True,
-            'robot_id': 'sweepi-robot-001',
-            'state': snapshot['robot_state'],
-            'active_task': None if snapshot['active_task'] == 'none' else snapshot['active_task'],
-            'mode': snapshot['exploration_mode'] if snapshot['active_task'] == 'exploration' else None,
-            'battery': {'percent': None, 'charging': None},
-            'pose': self.robot_pose,
-            'localization': {
+        return self._success(
+            'Robot status fetched.',
+            robot_id='sweepi-robot-001',
+            state=snapshot['robot_state'],
+            active_task=None if snapshot['active_task'] == 'none' else snapshot['active_task'],
+            mode=snapshot['exploration_mode'] if snapshot['active_task'] == 'exploration' else None,
+            battery={'percent': None, 'charging': None},
+            pose=self.robot_pose,
+            localization={
                 'initial_pose_received': snapshot['initial_pose_received'],
                 'initial_pose_source': snapshot['initial_pose_source'],
                 'pose_available': self.pose_available,
             },
-            'exploration': {
+            exploration={
                 'active': snapshot['exploration_active'],
                 'mode': snapshot['exploration_mode'] if snapshot['exploration_active'] else None,
-                'area_name': snapshot['active_area_name'],
+                'map_name': snapshot['active_map_id'] if snapshot['active_task'] == 'exploration' else None,
                 'map_id': snapshot['active_map_id'] if snapshot['active_task'] == 'exploration' else None,
                 'map_available': snapshot['live_map_available'],
             },
-            'cleaning': {
+            cleaning={
                 'active': snapshot['cleaning_active'],
                 'paused': snapshot['cleaning_paused'],
                 'task_id': snapshot['active_task_id'],
                 'cleaning_mode': snapshot['cleaning_mode'],
                 'progress_percent': self.coverage_percentage,
                 'map_id': snapshot['active_map_id'] if snapshot['active_task'] == 'cleaning' else None,
+                'sections': snapshot.get('active_sections', []),
                 'path_available': snapshot['coverage_path_available'],
                 'coverage_map_available': snapshot['coverage_map_available'],
                 'execution_status': self.coverage_execution_status,
                 'coverage_stats': self.coverage_stats,
             },
-            'map': {
+            map={
                 'map_id': snapshot['active_map_id'],
                 'name': snapshot['active_area_name'] or snapshot['active_map_id'],
                 'live_available': snapshot['live_map_available'],
                 'saved_available': bool(snapshot['active_map_id'] and self.map_store.exists(snapshot['active_map_id'])),
             },
-            'errors': [snapshot['last_error']] if snapshot['last_error'] else [],
-            'warnings': snapshot['warnings'],
-        }
+            nav={'execution_status': self.coverage_execution_status},
+            errors=[snapshot['last_error']] if snapshot['last_error'] else [],
+            warnings=snapshot['warnings'],
+        )
 
     def _system_health(self):
-        return {
-            'ok': True,
-            'api': {'host': self.api_host, 'port': self.api_port, 'prefix': '/api'},
-            'manager_status': self.manager_status,
-            'ros_time_sec': self.get_clock().now().nanoseconds / 1e9,
-        }
+        return self._success(
+            'API server is healthy.',
+            status='ok',
+            robot_connected=bool(self.manager_status),
+            server='sweepi_api_bridge',
+            api={'host': self.api_host, 'port': self.api_port, 'prefix': '/api'},
+            manager_status=self.manager_status,
+            ros_time_sec=self.get_clock().now().nanoseconds / 1e9,
+        )
 
     def _call_start_task(self, client, request, timeout_sec=10.0):
         if not client.wait_for_service(timeout_sec=1.0):

@@ -16,6 +16,8 @@ class RuntimeState:
     active_map_id: str = None
     active_area_name: str = None
     active_task_id: str = None
+    active_sections: list = field(default_factory=list)
+    active_coverage_map_id: str = None
     cleaning_mode: str = None
     initial_pose_received: bool = False
     initial_pose_source: str = None
@@ -59,6 +61,8 @@ class StateStore:
             self._state.coverage_map_available = False
             self._state.cleaning_mode = None
             self._state.active_task_id = None
+            self._state.active_sections = []
+            self._state.active_coverage_map_id = None
             if self._state.active_task == 'cleaning':
                 self._state.active_task = 'none'
                 self._state.active_map_id = None
@@ -81,6 +85,7 @@ class StateStore:
             if self._state.active_task == 'exploration':
                 self._state.active_task = 'none'
                 self._state.active_area_name = None
+                self._state.active_map_id = None
             if self._state.robot_state == 'exploring':
                 self._state.robot_state = 'idle'
             self._state.last_updated_sec = time.time()
