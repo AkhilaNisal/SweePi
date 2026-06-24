@@ -1,312 +1,153 @@
-# SweePi API Bridge Guide
+# SweePi API Guide
 
-The API bridge exposes the SweePi simulation and robot stack to HTTP clients
-such as `curl`, Postman, and the Flutter app.
+The current mobile app talks to the SweePi API over plain HTTP JSON. This
+document lists only the endpoints currently used by the Flutter app and
+implemented by the mock API server in `development/mock_api_server`.
 
-Default simulation URLs:
-
-```text
-HTTP:      http://localhost:8080
-WebSocket: ws://localhost:8765
-```
-
-The implementation lives in:
+Primary implementation references:
 
 ```text
-src/raspberry_pi/src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py
+src/app/lib/core/network/robot_api_client.dart
+development/mock_api_server/app/routers
+development/mock_api_server/app/models
+development/mock_api_server/app/core/state.py
 ```
 
-## Run The Simulation
+## Base URL And Authentication
 
-From the ROS 2 workspace:
+```text
+HTTP base URL: http://<robot-ip>:8080
+API prefix:    /api
+```
+
+Local mock server example:
+
+```text
+http://localhost:8080/api/robot/status
+```
+
+The current API has no authentication requirement. The mock server enables CORS
+for local development and accepts requests from the Flutter app, browser, curl,
+and Postman.
+
+For a real Android phone, configure the mobile app with the laptop or robot LAN
+IP address. Do not use `localhost`, `127.0.0.1`, or `0.0.0.0` on the phone,
+because those addresses refer to the phone itself.
+
+The app defaults are in:
+
+```text
+src/app/lib/core/network/robot_api_client.dart
+```
+
+## Setup Commands
+
+Install mock API server dependencies:
 
 ```bash
-cd /home/akhila-wedamestrige/SweePi/src/raspberry_pi
-source /opt/ros/jazzy/setup.bash
-colcon build --symlink-install --packages-select sweepi_bringup sweepi_coverage sweepi_api_bridge sweepi_slam sweepi_exploration
-source install/setup.bash
-ros2 launch sweepi_bringup sweepi_sim_full.launch.py
+cd development/mock_api_server
+python -m pip install -r requirements.txt
 ```
 
-`sweepi_sim_full.launch.py` starts Gazebo, Nav2, SLAM Toolbox, the idle
-wavefront explorer, coverage nodes, coverage manager, and `api_bridge_node`.
-Exploration does not move the robot until the API calls
-`POST /api/v1/exploration/start`.
-
-Check that the bridge is listening:
+Install Flutter app dependencies:
 
 ```bash
-ss -ltnp | grep -E "8080|8765"
-curl http://localhost:8080/api/v1/robot/status
+cd src/app
+flutter pub get
 ```
 
-## Operation Sequence
+## Start Commands
 
-1. Launch simulation:
+Start the mock API server:
 
-   ```bash
-   ros2 launch sweepi_bringup sweepi_sim_full.launch.py
-   ```
+```bash
+cd development/mock_api_server
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
+```
 
-2. Check bridge and robot status:
+On Windows, the helper script also checks for `fastapi` and `uvicorn` before
+starting the server:
 
-   ```bash
-   curl http://localhost:8080/api/v1/robot/status
-   ```
+```bat
+development\mock_api_server\run_mock_server.bat
+```
 
-3. Start exploration and name the map that will be saved later:
+## Run Commands
 
-   ```bash
-   curl -X POST http://localhost:8080/api/v1/exploration/start \
-     -H "Content-Type: application/json" \
-     -d '{"area_name":"first_floor"}'
-   ```
+Run the Flutter app from the app project:
 
-4. Check exploration status:
+```bash
+cd src/app
+flutter run
+```
 
-   ```bash
-   curl http://localhost:8080/api/v1/exploration/status
-   ```
+Check the mock API from a terminal:
 
-5. Wait until a map is available:
+```bash
+curl http://localhost:8080/api/robot/status
+```
 
-   ```bash
-   curl http://localhost:8080/api/v1/maps/current
-   ```
-
-   The response should include `"available": true`. If cleaning starts before
-   `/map` is available, the bridge can respond with `"accepted": false`.
-
-6. Stop exploration and save the current live `/map` using `area_name`:
-
-   ```bash
-   curl -X POST http://localhost:8080/api/v1/exploration/stop
-   ```
-
-7. Start full-map cleaning:
-
-   ```bash
-   curl -X POST http://localhost:8080/api/v1/cleaning/start
-   ```
-
-8. Query progress:
-
-   ```bash
-   curl http://localhost:8080/api/v1/robot/status
-   curl http://localhost:8080/api/v1/maps/current
-   ```
-
-9. Pause, resume, or stop when supported by the current robot state:
-
-   ```bash
-   curl -X POST http://localhost:8080/api/v1/cleaning/pause
-   curl -X POST http://localhost:8080/api/v1/cleaning/resume
-   curl -X POST http://localhost:8080/api/v1/cleaning/stop
-   ```
-
-The active state is reported through `GET /api/v1/robot/status` as `state` and
-`nav.execution_status`. The API bridge does not currently expose the manager's
-`allowed_commands` list, but the underlying coverage manager allows:
+Open the mock server's generated OpenAPI docs while it is running:
 
 ```text
-idle     -> start_cleaning
-cleaning -> pause_cleaning, stop_cleaning
-paused   -> resume_cleaning, stop_cleaning
-error    -> stop_cleaning
+http://localhost:8080/docs
 ```
 
-## Exploration / Mapping API
+## Current Mobile App Flow
 
-These endpoints control the `wavefront_explorer` node through ROS services.
-The API bridge stores the `area_name` from the start request and uses it when
-saving the live `/map` during stop.
+1. Connect and load status with `GET /api/robot/status`.
+2. Load exploration status with `GET /api/exploration/status`.
+3. Load saved map metadata with `GET /api/maps`.
+4. Select a map with `GET /api/maps/{map_id}` and
+   `GET /api/maps/{map_id}/metadata`.
+5. Start exploration with `POST /api/exploration/start`.
+6. In manual exploration, repeatedly call `POST /api/exploration/manual-drive`
+   while a drive button is held.
+7. Stop exploration with `POST /api/exploration/stop`; the response returns
+   the saved `map_id`.
+8. Add sections locally in the app and save them with
+   `PUT /api/maps/{map_id}/metadata`.
+9. Start cleaning with `POST /api/cleaning/start`.
+10. Pause, resume, or stop cleaning with the cleaning command endpoints.
 
-### POST /api/v1/exploration/start
+## Response And Error Rules
 
-Purpose: Start autonomous mapping/exploration and set the map name that will be
-used when the map is saved.
+All documented endpoints return JSON.
+
+The mock server uses FastAPI/Pydantic, so malformed JSON or schema validation
+errors return HTTP `422`. Unknown routes return HTTP `404`.
+
+Some valid commands that cannot be performed in the current robot state return
+HTTP `200` with `"accepted": false`. Examples include manual drive commands
+outside manual exploration and cleaning a missing map.
+
+This guide intentionally omits prototype and historical API surfaces that are
+not implemented by the current mobile/mock flow.
+
+## Endpoints
+
+### GET /api/robot/status
+
+Returns the current robot state.
+
+Request body: none.
 
 Curl:
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/exploration/start \
-  -H "Content-Type: application/json" \
-  -d '{"area_name":"first_floor"}'
+curl http://localhost:8080/api/robot/status
 ```
 
-Postman:
-
-```text
-Method: POST
-URL:    http://localhost:8080/api/v1/exploration/start
-Body:   raw JSON
-```
+Current mock response shape:
 
 ```json
 {
-  "area_name": "first_floor"
-}
-```
-
-Expected response:
-
-```json
-{
-  "accepted": true,
-  "state": "exploring",
-  "area_name": "first_floor",
-  "message": "Exploration started"
-}
-```
-
-If the explorer is not running, the response is:
-
-```json
-{
-  "accepted": false,
+  "robot_id": "sweepi-mock-001",
   "state": "idle",
-  "area_name": "first_floor",
-  "message": "/exploration/start is unavailable"
-}
-```
-
-### GET /api/v1/exploration/status
-
-Purpose: Return the latest exploration status cached by the API bridge.
-
-Curl:
-
-```bash
-curl http://localhost:8080/api/v1/exploration/status
-```
-
-Postman:
-
-```text
-Method: GET
-URL:    http://localhost:8080/api/v1/exploration/status
-Body:   none
-```
-
-Expected response:
-
-```json
-{
-  "state": "exploring",
-  "area_name": "first_floor",
-  "map_available": true,
-  "frontiers_remaining": 10,
-  "last_goal": {
-    "x": 1.2,
-    "y": 0.5
-  },
-  "message": "Navigating to frontier (1.20, 0.50)"
-}
-```
-
-Reliable fields are `state`, `area_name`, `map_available`,
-`frontiers_remaining`, `last_goal`, and `message`. `frontiers_remaining` is the
-latest detected frontier count from the explorer loop. `last_goal` is `null`
-until the explorer sends its first Nav2 goal. Detailed completion reason,
-coverage quality, and per-frontier history are not exposed yet.
-
-### POST /api/v1/exploration/stop
-
-Purpose: Stop autonomous exploration and save the current live `/map` using the
-`area_name` supplied to `POST /api/v1/exploration/start`.
-
-Curl:
-
-```bash
-curl -X POST http://localhost:8080/api/v1/exploration/stop
-```
-
-Postman:
-
-```text
-Method: POST
-URL:    http://localhost:8080/api/v1/exploration/stop
-Body:   none
-```
-
-Expected response when a live `/map` is available:
-
-```json
-{
-  "accepted": true,
-  "state": "idle",
-  "area_name": "first_floor",
-  "map_saved": true,
-  "map_id": "first_floor",
-  "message": "Exploration stopped and map saved"
-}
-```
-
-Expected response when no live `/map` is available:
-
-```json
-{
-  "accepted": true,
-  "state": "idle",
-  "area_name": "first_floor",
-  "map_saved": false,
-  "message": "Exploration stopped, but no live /map was available to save"
-}
-```
-
-## Postman Basics
-
-For HTTP requests:
-
-1. Create a new HTTP request.
-2. Set the method and URL from the endpoint reference below.
-3. For endpoints with a JSON body, choose `Body` -> `raw` -> `JSON`.
-4. Add header `Content-Type: application/json` when sending a JSON body.
-5. Click `Send`.
-
-For WebSocket:
-
-1. Create a new WebSocket request.
-2. Connect to `ws://localhost:8765`.
-3. Watch incoming messages. The bridge does not require client messages.
-
-## HTTP Endpoint Reference
-
-All endpoints return JSON. Failed commands generally still return HTTP `200`
-with `"accepted": false` when the bridge reached the ROS service but the command
-was rejected. Malformed JSON or invalid request data returns HTTP `400`.
-Unknown paths return HTTP `404`.
-
-### GET /api/v1/robot/status
-
-Purpose: Get the robot, cleaning, map, navigation, warning, and error state.
-
-Required body: none.
-
-Curl:
-
-```bash
-curl http://localhost:8080/api/v1/robot/status
-```
-
-Postman:
-
-```text
-Method: GET
-URL:    http://localhost:8080/api/v1/robot/status
-Body:   none
-```
-
-Expected response:
-
-```json
-{
-  "robot_id": "sweepi-sim-001",
-  "state": "idle",
-  "mode": "auto",
+  "mode": "automatic",
   "battery": {
-    "percent": null,
-    "charging": null
+    "percent": 87,
+    "charging": false
   },
   "pose": {
     "x": 0.0,
@@ -314,1004 +155,507 @@ Expected response:
     "yaw": 0.0,
     "frame": "map"
   },
+  "map": {
+    "map_id": "my_room_map"
+  },
   "cleaning": {
     "task_id": null,
-    "type": null,
-    "progress_percent": 0.0,
-    "selection": {
-      "selection_id": null,
-      "room_ids": [],
-      "zones": [],
-      "no_go_zones": [],
-      "map_id": null,
-      "map_revision": null
-    }
-  },
-  "map": {
     "map_id": null,
-    "revision": 0
+    "sections": [],
+    "progress_percent": 0.0
   },
   "nav": {
-    "execution_status": "WAITING_FOR_PATH",
-    "coverage_stats": ""
+    "execution_status": "IDLE"
   },
   "errors": [],
   "warnings": []
 }
 ```
 
-`pose` is `null` until the bridge can look up the `map -> base_link` transform.
+The mobile app reads `robot_id`, `state`, `mode`, `battery`, `pose`, `map`,
+`cleaning`, `nav`, `errors`, and `warnings`.
 
-### GET /api/v1/maps/current
+### POST /api/exploration/start
 
-Purpose: Get the live occupancy map, coverage map, current selection, metadata,
-and robot pose.
+Starts an exploration session.
 
-Required body: none.
+Request body:
+
+```json
+{
+  "map_name": "bedroom",
+  "mode": "automatic"
+}
+```
+
+Fields:
+
+| Field | Required | Values | Notes |
+|---|---:|---|---|
+| `map_name` | yes | string | User-facing name for the map to save later. |
+| `mode` | yes | `automatic`, `manual` | The app sends one of these two modes. |
 
 Curl:
 
 ```bash
-curl http://localhost:8080/api/v1/maps/current
+curl -X POST http://localhost:8080/api/exploration/start \
+  -H "Content-Type: application/json" \
+  -d '{"map_name":"bedroom","mode":"automatic"}'
 ```
 
-Postman:
-
-```text
-Method: GET
-URL:    http://localhost:8080/api/v1/maps/current
-Body:   none
-```
-
-Expected response before `/map` is available:
+Response:
 
 ```json
 {
-  "map_id": null,
-  "revision": 0,
-  "available": false,
-  "selection": {
-    "selection_id": null,
-    "room_ids": [],
-    "zones": [],
-    "no_go_zones": [],
-    "map_id": null,
-    "map_revision": null
-  }
+  "accepted": true,
+  "state": "exploring",
+  "mode": "automatic",
+  "map_name": "bedroom",
+  "message": "Exploration started"
 }
 ```
 
-Expected response after `/map` is available:
+### GET /api/exploration/status
+
+Returns the latest exploration state.
+
+Request body: none.
+
+Curl:
+
+```bash
+curl http://localhost:8080/api/exploration/status
+```
+
+Response while exploration is active:
 
 ```json
 {
-  "map_id": "live_map",
-  "revision": 123456,
-  "available": true,
+  "state": "exploring",
+  "mode": "manual",
+  "map_name": "bedroom",
+  "map_available": false,
+  "message": "Mock exploration running"
+}
+```
+
+Response while exploration is inactive:
+
+```json
+{
+  "state": "idle",
+  "mode": "automatic",
+  "map_name": null,
+  "map_available": true,
+  "message": "Exploration is not running"
+}
+```
+
+### POST /api/exploration/manual-drive
+
+Sends a button-style drive command during manual exploration.
+
+Request body:
+
+```json
+{
+  "command": "forward",
+  "speed": 0.2
+}
+```
+
+Fields:
+
+| Field | Required | Values | Notes |
+|---|---:|---|---|
+| `command` | yes | `forward`, `backward`, `rotate_left`, `rotate_right`, `stop` | The mobile app sends repeated movement commands while a button is held. |
+| `speed` | no | `0.0` to `1.0` | Defaults to `0.2` in the mock model. |
+
+Curl:
+
+```bash
+curl -X POST http://localhost:8080/api/exploration/manual-drive \
+  -H "Content-Type: application/json" \
+  -d '{"command":"forward","speed":0.2}'
+```
+
+Accepted response:
+
+```json
+{
+  "accepted": true,
+  "command": "forward",
+  "speed": 0.2,
+  "message": "Mock robot command: forward"
+}
+```
+
+Rejected response when the robot is not in manual exploration:
+
+```json
+{
+  "accepted": false,
+  "message": "Manual drive is allowed only during manual exploration"
+}
+```
+
+### POST /api/exploration/stop
+
+Stops exploration and saves a mock map.
+
+Request body: none.
+
+Curl:
+
+```bash
+curl -X POST http://localhost:8080/api/exploration/stop
+```
+
+Response:
+
+```json
+{
+  "accepted": true,
+  "state": "idle",
+  "map_saved": true,
+  "map_id": "map_abc123",
+  "message": "Exploration stopped and mock map saved"
+}
+```
+
+The mobile app stores `map_id`, refreshes saved maps, and selects the saved map.
+
+### GET /api/maps
+
+Returns metadata for all saved maps.
+
+Request body: none.
+
+Curl:
+
+```bash
+curl http://localhost:8080/api/maps
+```
+
+Response:
+
+```json
+{
+  "items": [
+    {
+      "map_id": "my_room_map",
+      "name": "My Room",
+      "created_at": "2026-06-23T00:00:00+05:30",
+      "updated_at": "2026-06-23T16:36:13.499284",
+      "width": 99,
+      "height": 99,
+      "resolution": 0.05,
+      "sections": []
+    }
+  ]
+}
+```
+
+The list endpoint returns metadata only. Fetch occupancy data with
+`GET /api/maps/{map_id}`.
+
+### GET /api/maps/{map_id}
+
+Returns occupancy data for a saved map.
+
+Request body: none.
+
+Curl:
+
+```bash
+curl http://localhost:8080/api/maps/my_room_map
+```
+
+Response:
+
+```json
+{
+  "map_id": "my_room_map",
+  "name": "My Room",
   "resolution": 0.05,
   "origin": {
-    "x": -10.0,
-    "y": -10.0
-  },
-  "width": 400,
-  "height": 400,
-  "occupancy": [0, 0, 100],
-  "coverage": [0, 0, 100],
-  "selection": {},
-  "metadata": {
-    "map_id": "live_map",
-    "name": "live_map",
-    "rooms": [],
-    "no_go_zones": [],
-    "labels": []
-  },
-  "robot_pose": {
     "x": 0.0,
-    "y": 0.0,
-    "yaw": 0.0,
-    "frame": "map"
-  }
+    "y": 0.0
+  },
+  "width": 99,
+  "height": 99,
+  "occupancy": [0, 0, 100]
 }
 ```
 
-The `occupancy` and `coverage` arrays are full occupancy-grid arrays, so this
-response can be large.
+`occupancy` is the full occupancy-grid array and can be large. Unknown
+`map_id` returns HTTP `404` with FastAPI detail text:
 
-### GET /api/v1/maps
+```json
+{
+  "detail": "Map not found"
+}
+```
 
-Purpose: List maps saved by the bridge under `runtime/raspberry_pi/maps`.
+### GET /api/maps/{map_id}/metadata
 
-Required body: none.
+Returns metadata for one saved map without the occupancy array.
+
+Request body: none.
 
 Curl:
 
 ```bash
-curl http://localhost:8080/api/v1/maps
+curl http://localhost:8080/api/maps/my_room_map/metadata
 ```
 
-Postman:
-
-```text
-Method: GET
-URL:    http://localhost:8080/api/v1/maps
-Body:   none
-```
-
-Expected response:
+Response:
 
 ```json
 {
-  "items": [
+  "map_id": "my_room_map",
+  "name": "My Room",
+  "created_at": "2026-06-23T00:00:00+05:30",
+  "updated_at": "2026-06-23T16:36:13.499284",
+  "width": 99,
+  "height": 99,
+  "resolution": 0.05,
+  "sections": [
     {
-      "map_id": "test_map",
-      "yaml_path": "/home/akhila-wedamestrige/SweePi/runtime/raspberry_pi/maps/test_map.yaml",
-      "pgm_path": "/home/akhila-wedamestrige/SweePi/runtime/raspberry_pi/maps/test_map.pgm",
-      "metadata": {
-        "map_id": "test_map",
-        "name": "test_map",
-        "rooms": [],
-        "no_go_zones": [],
-        "labels": []
-      }
+      "section_id": "sec_001",
+      "name": "Left side",
+      "polygon": [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]
     }
   ]
 }
 ```
 
-### POST /api/v1/maps/save
+Unknown `map_id` returns HTTP `404`.
 
-Purpose: Save the current live `/map` as PGM, YAML, and metadata files.
+### PUT /api/maps/{map_id}/metadata
 
-Required body:
+Updates a saved map's editable metadata. The current app sends the map name and
+section list.
 
-```json
-{
-  "name": "test_map"
-}
-```
-
-`name` is optional. If omitted, the bridge uses `map_<unix_timestamp>`.
-
-Curl:
-
-```bash
-curl -X POST http://localhost:8080/api/v1/maps/save \
-  -H "Content-Type: application/json" \
-  -d '{"name":"test_map"}'
-```
-
-Postman:
-
-```text
-Method: POST
-URL:    http://localhost:8080/api/v1/maps/save
-Body:   raw JSON
-```
+Request body:
 
 ```json
 {
-  "name": "test_map"
-}
-```
-
-Expected response:
-
-```json
-{
-  "accepted": true,
-  "map_id": "test_map",
-  "pgm_path": "/home/akhila-wedamestrige/SweePi/runtime/raspberry_pi/maps/test_map.pgm",
-  "yaml_path": "/home/akhila-wedamestrige/SweePi/runtime/raspberry_pi/maps/test_map.yaml",
-  "metadata_path": "/home/akhila-wedamestrige/SweePi/runtime/raspberry_pi/maps/test_map.meta.json"
-}
-```
-
-If no live map is available, the response is HTTP `400`:
-
-```json
-{
-  "error": "No live /map is available to save"
-}
-```
-
-### POST /api/v1/maps/load
-
-Purpose: Mark a saved map as active in the bridge.
-
-Required body:
-
-```json
-{
-  "map_id": "test_map"
-}
-```
-
-Curl:
-
-```bash
-curl -X POST http://localhost:8080/api/v1/maps/load \
-  -H "Content-Type: application/json" \
-  -d '{"map_id":"test_map"}'
-```
-
-Postman:
-
-```text
-Method: POST
-URL:    http://localhost:8080/api/v1/maps/load
-Body:   raw JSON
-```
-
-```json
-{
-  "map_id": "test_map"
-}
-```
-
-Expected response:
-
-```json
-{
-  "accepted": true,
-  "active_map_id": "test_map",
-  "robot_apply_supported": false,
-  "note": "Saved map selection is tracked by the bridge, but applying it to the localization stack is still a planned simulation-first step."
-}
-```
-
-Important: this endpoint does not currently apply the saved map to Nav2 or the
-localization stack.
-
-### GET /api/v1/maps/{map_id}/metadata
-
-Purpose: Get editable map metadata such as rooms, no-go zones, and labels.
-
-Required body: none.
-
-Curl:
-
-```bash
-curl http://localhost:8080/api/v1/maps/test_map/metadata
-```
-
-Postman:
-
-```text
-Method: GET
-URL:    http://localhost:8080/api/v1/maps/test_map/metadata
-Body:   none
-```
-
-Expected response:
-
-```json
-{
-  "map_id": "test_map",
-  "name": "test_map",
-  "rooms": [],
-  "no_go_zones": [],
-  "labels": []
-}
-```
-
-If metadata has not been saved yet, the bridge returns default empty metadata.
-
-### PUT /api/v1/maps/{map_id}/metadata
-
-Purpose: Replace map metadata.
-
-Required body:
-
-```json
-{
-  "name": "Apartment",
-  "rooms": [
+  "name": "Bedroom",
+  "sections": [
     {
-      "id": "living_room",
-      "name": "Living Room",
-      "polygon": [[0.0, 0.0], [2.0, 0.0], [2.0, 2.0]]
+      "section_id": "sec_001",
+      "name": "Left side",
+      "polygon": [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]
     }
-  ],
-  "no_go_zones": [],
-  "labels": []
+  ]
 }
 ```
+
+Fields:
+
+| Field | Required | Notes |
+|---|---:|---|
+| `name` | no | If omitted, the stored name is unchanged. |
+| `sections` | no | Replaces the stored section list. Defaults to an empty list. |
 
 Curl:
 
 ```bash
-curl -X PUT http://localhost:8080/api/v1/maps/test_map/metadata \
+curl -X PUT http://localhost:8080/api/maps/my_room_map/metadata \
   -H "Content-Type: application/json" \
-  -d '{"name":"Apartment","rooms":[],"no_go_zones":[],"labels":[]}'
+  -d '{"name":"Bedroom","sections":[{"section_id":"sec_001","name":"Left side","polygon":[[0,0],[1,0],[1,1],[0,1]]}]}'
 ```
 
-Postman:
-
-```text
-Method: PUT
-URL:    http://localhost:8080/api/v1/maps/test_map/metadata
-Body:   raw JSON
-```
-
-Expected response:
+Response:
 
 ```json
 {
-  "map_id": "test_map",
-  "name": "Apartment",
-  "rooms": [],
-  "no_go_zones": [],
-  "labels": []
-}
-```
-
-### PUT /api/v1/cleaning/selection
-
-Purpose: Set the selected rooms, selected zones, and no-go zones for selected
-cleaning. The bridge publishes the selection to `/coverage_selection`.
-
-Required body:
-
-```json
-{
-  "selection_id": "sel_demo",
-  "map_id": "live_map",
-  "map_revision": 123456,
-  "room_ids": [],
-  "zones": [
+  "map_id": "my_room_map",
+  "name": "Bedroom",
+  "created_at": "2026-06-23T00:00:00+05:30",
+  "updated_at": "2026-06-24T12:00:00.000000",
+  "width": 99,
+  "height": 99,
+  "resolution": 0.05,
+  "sections": [
     {
-      "id": "zone_1",
-      "polygon": [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]]
+      "section_id": "sec_001",
+      "name": "Left side",
+      "polygon": [[0, 0], [1, 0], [1, 1], [0, 1]]
     }
-  ],
-  "no_go_zones": []
+  ]
 }
 ```
 
-`selection_id`, `map_id`, and `map_revision` are optional. Each zone or no-go
-polygon must contain at least three `[x, y]` points. `room_ids` are resolved
-from saved map metadata when possible.
+Unknown `map_id` returns HTTP `404`.
+
+### POST /api/cleaning/start
+
+Starts cleaning for a selected saved map. An empty `sections` list means
+full-map cleaning in the current app/mock flow. A non-empty list means selected
+section cleaning.
+
+Request body for full-map cleaning:
+
+```json
+{
+  "map_id": "my_room_map",
+  "sections": []
+}
+```
+
+Request body for selected-section cleaning:
+
+```json
+{
+  "map_id": "my_room_map",
+  "sections": [
+    {
+      "section_id": "sec_001",
+      "name": "Left side",
+      "polygon": [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]
+    }
+  ]
+}
+```
+
+Fields:
+
+| Field | Required | Notes |
+|---|---:|---|
+| `map_id` | yes | Must exist in the robot/mock map store. |
+| `sections` | no | Defaults to `[]`; the app sends one selected section for section cleaning. |
 
 Curl:
 
 ```bash
-curl -X PUT http://localhost:8080/api/v1/cleaning/selection \
+curl -X POST http://localhost:8080/api/cleaning/start \
   -H "Content-Type: application/json" \
-  -d '{"map_id":"live_map","room_ids":[],"zones":[{"id":"zone_1","polygon":[[0,0],[1,0],[1,1]]}],"no_go_zones":[]}'
+  -d '{"map_id":"my_room_map","sections":[]}'
 ```
 
-Postman:
-
-```text
-Method: PUT
-URL:    http://localhost:8080/api/v1/cleaning/selection
-Body:   raw JSON
-```
-
-Expected response:
+Accepted response:
 
 ```json
 {
   "accepted": true,
-  "selection": {
-    "selection_id": "sel_demo",
-    "map_id": "live_map",
-    "map_revision": 123456,
-    "room_ids": [],
-    "rooms": [],
-    "zones": [
-      {
-        "id": "zone_1",
-        "polygon": [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]]
-      }
-    ],
-    "no_go_zones": [],
-    "updated_at": "2026-06-21T00:00:00+00:00"
-  }
+  "task_id": "task_a1b2c3",
+  "state": "cleaning",
+  "map_id": "my_room_map",
+  "sections": [],
+  "message": "Mock cleaning started"
 }
 ```
 
-### POST /api/v1/cleaning/start
-
-Purpose: Start full-map cleaning through `/manager/start_cleaning`.
-
-Optional body:
+Rejected response for an unknown map:
 
 ```json
 {
-  "task_id": "task_demo",
-  "command_id": "cmd_001",
-  "schedule_id": "sch_001"
+  "accepted": false,
+  "message": "Map not found"
 }
 ```
+
+### POST /api/cleaning/pause
+
+Pauses an active cleaning task.
+
+Request body: none.
 
 Curl:
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/cleaning/start
+curl -X POST http://localhost:8080/api/cleaning/pause
 ```
 
-With a task id:
-
-```bash
-curl -X POST http://localhost:8080/api/v1/cleaning/start \
-  -H "Content-Type: application/json" \
-  -d '{"task_id":"task_demo","command_id":"cmd_001"}'
-```
-
-Postman:
-
-```text
-Method: POST
-URL:    http://localhost:8080/api/v1/cleaning/start
-Body:   none, or raw JSON with task_id/command_id/schedule_id
-```
-
-Expected accepted response:
+Accepted response:
 
 ```json
 {
   "accepted": true,
-  "task_id": "task_demo",
+  "state": "paused"
+}
+```
+
+Rejected response when the robot is not cleaning:
+
+```json
+{
+  "accepted": false,
+  "message": "Robot is not cleaning"
+}
+```
+
+### POST /api/cleaning/resume
+
+Resumes a paused cleaning task.
+
+Request body: none.
+
+Curl:
+
+```bash
+curl -X POST http://localhost:8080/api/cleaning/resume
+```
+
+Accepted response:
+
+```json
+{
+  "accepted": true,
   "state": "cleaning"
 }
 ```
 
-Expected rejected response:
+Rejected response when the robot is not paused:
 
 ```json
 {
   "accepted": false,
-  "message": "Cannot start cleaning before /map is available"
+  "message": "Robot is not paused"
 }
 ```
 
-### POST /api/v1/cleaning/start-selected
+### POST /api/cleaning/stop
 
-Purpose: Start selected cleaning using the current selection.
+Stops cleaning and clears the current mock cleaning state.
 
-Required precondition: first call `PUT /api/v1/cleaning/selection` with at
-least one `zone` or `room_id`.
-
-Optional body:
-
-```json
-{
-  "task_id": "task_selected_demo",
-  "command_id": "cmd_002"
-}
-```
+Request body: none.
 
 Curl:
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/cleaning/start-selected \
-  -H "Content-Type: application/json" \
-  -d '{"task_id":"task_selected_demo"}'
+curl -X POST http://localhost:8080/api/cleaning/stop
 ```
 
-Postman:
-
-```text
-Method: POST
-URL:    http://localhost:8080/api/v1/cleaning/start-selected
-Body:   none, or raw JSON with task_id/command_id/schedule_id
-```
-
-Expected accepted response:
+Response:
 
 ```json
 {
   "accepted": true,
-  "task_id": "task_selected_demo",
-  "state": "cleaning"
+  "state": "idle",
+  "message": "Mock cleaning stopped"
 }
 ```
 
-Expected response when no selection has been set:
-
-```json
-{
-  "error": "Selected cleaning requires at least one zone or room"
-}
-```
-
-### POST /api/v1/cleaning/stop
-
-Purpose: Stop or cancel the current cleaning task through
-`/manager/stop_cleaning`.
-
-Required body: none.
-
-Curl:
-
-```bash
-curl -X POST http://localhost:8080/api/v1/cleaning/stop
-```
-
-Postman:
+## Current Endpoint Summary
 
 ```text
-Method: POST
-URL:    http://localhost:8080/api/v1/cleaning/stop
-Body:   none
+GET  /api/robot/status
+
+POST /api/exploration/start
+GET  /api/exploration/status
+POST /api/exploration/manual-drive
+POST /api/exploration/stop
+
+GET  /api/maps
+GET  /api/maps/{map_id}
+GET  /api/maps/{map_id}/metadata
+PUT  /api/maps/{map_id}/metadata
+
+POST /api/cleaning/start
+POST /api/cleaning/pause
+POST /api/cleaning/resume
+POST /api/cleaning/stop
 ```
-
-Expected response:
-
-```json
-{
-  "accepted": true,
-  "message": "..."
-}
-```
-
-If the robot is idle:
-
-```json
-{
-  "accepted": false,
-  "message": "Cannot stop cleaning while state=idle"
-}
-```
-
-### POST /api/v1/cleaning/pause
-
-Purpose: Pause cleaning by canceling the active coverage execution while keeping
-paused context in the manager.
-
-Required body: none.
-
-Curl:
-
-```bash
-curl -X POST http://localhost:8080/api/v1/cleaning/pause
-```
-
-Postman:
-
-```text
-Method: POST
-URL:    http://localhost:8080/api/v1/cleaning/pause
-Body:   none
-```
-
-Expected response:
-
-```json
-{
-  "accepted": true,
-  "message": "..."
-}
-```
-
-If not currently cleaning:
-
-```json
-{
-  "accepted": false,
-  "message": "Cannot pause cleaning while state=idle"
-}
-```
-
-### POST /api/v1/cleaning/resume
-
-Purpose: Resume cleaning from paused state.
-
-Required body: none.
-
-Curl:
-
-```bash
-curl -X POST http://localhost:8080/api/v1/cleaning/resume
-```
-
-Postman:
-
-```text
-Method: POST
-URL:    http://localhost:8080/api/v1/cleaning/resume
-Body:   none
-```
-
-Expected response:
-
-```json
-{
-  "accepted": true,
-  "message": "..."
-}
-```
-
-If not paused:
-
-```json
-{
-  "accepted": false,
-  "message": "Cannot resume cleaning while state=idle"
-}
-```
-
-### POST /api/v1/robot/return-to-dock
-
-Purpose: Request return-to-dock through `/manager/return_to_dock`.
-
-Required body: none.
-
-Curl:
-
-```bash
-curl -X POST http://localhost:8080/api/v1/robot/return-to-dock
-```
-
-Postman:
-
-```text
-Method: POST
-URL:    http://localhost:8080/api/v1/robot/return-to-dock
-Body:   none
-```
-
-Current expected response:
-
-```json
-{
-  "accepted": false,
-  "message": "Return to dock is still a planned simulation-first feature and is not automated in the current stack."
-}
-```
-
-### GET /api/v1/history
-
-Purpose: List cleaning history recorded by the bridge.
-
-Required body: none.
-
-Curl:
-
-```bash
-curl http://localhost:8080/api/v1/history
-```
-
-Postman:
-
-```text
-Method: GET
-URL:    http://localhost:8080/api/v1/history
-Body:   none
-```
-
-Expected response:
-
-```json
-{
-  "items": [
-    {
-      "task_id": "task_demo",
-      "task_type": "full",
-      "map_id": "live_map",
-      "selection": {},
-      "started_at": "2026-06-21T00:00:00+00:00",
-      "ended_at": null,
-      "result": null,
-      "coverage_percent": null,
-      "notes": {
-        "command_id": "cmd_001"
-      }
-    }
-  ]
-}
-```
-
-When the manager reports a terminal status, `ended_at`, `result`, and
-`coverage_percent` are updated.
-
-### GET /api/v1/schedules
-
-Purpose: List saved cleaning schedules.
-
-Required body: none.
-
-Curl:
-
-```bash
-curl http://localhost:8080/api/v1/schedules
-```
-
-Postman:
-
-```text
-Method: GET
-URL:    http://localhost:8080/api/v1/schedules
-Body:   none
-```
-
-Expected response:
-
-```json
-{
-  "items": [
-    {
-      "id": "sch_weekday",
-      "enabled": true,
-      "timezone": "Asia/Colombo",
-      "days": ["MON", "TUE"],
-      "time_local": "09:30",
-      "map_id": "live_map",
-      "selection": {},
-      "created_at": "2026-06-21T00:00:00+00:00",
-      "updated_at": "2026-06-21T00:00:00+00:00",
-      "last_run_at": null,
-      "next_run_at": null
-    }
-  ]
-}
-```
-
-### POST /api/v1/schedules
-
-Purpose: Create or replace a schedule.
-
-Required body:
-
-```json
-{
-  "id": "sch_weekday",
-  "enabled": true,
-  "timezone": "Asia/Colombo",
-  "days": ["MON", "TUE", "WED", "THU", "FRI"],
-  "time_local": "09:30",
-  "map_id": "live_map",
-  "selection": {
-    "room_ids": [],
-    "zones": [],
-    "no_go_zones": []
-  }
-}
-```
-
-Only `time_local` is required by the bridge. `id` is optional; if omitted, the
-bridge creates one.
-
-Curl:
-
-```bash
-curl -X POST http://localhost:8080/api/v1/schedules \
-  -H "Content-Type: application/json" \
-  -d '{"id":"sch_weekday","enabled":true,"timezone":"Asia/Colombo","days":["MON","TUE","WED","THU","FRI"],"time_local":"09:30","map_id":"live_map","selection":{}}'
-```
-
-Postman:
-
-```text
-Method: POST
-URL:    http://localhost:8080/api/v1/schedules
-Body:   raw JSON
-```
-
-Expected response:
-
-```json
-{
-  "id": "sch_weekday",
-  "enabled": true,
-  "timezone": "Asia/Colombo",
-  "days": ["MON", "TUE", "WED", "THU", "FRI"],
-  "time_local": "09:30",
-  "map_id": "live_map",
-  "selection": {},
-  "created_at": "2026-06-21T00:00:00+00:00",
-  "updated_at": "2026-06-21T00:00:00+00:00",
-  "last_run_at": null,
-  "next_run_at": null
-}
-```
-
-### PUT /api/v1/schedules/{schedule_id}
-
-Purpose: Replace an existing schedule or create it with the path id.
-
-Required body: same as `POST /api/v1/schedules`, except the path controls the
-schedule id.
-
-Curl:
-
-```bash
-curl -X PUT http://localhost:8080/api/v1/schedules/sch_weekday \
-  -H "Content-Type: application/json" \
-  -d '{"enabled":true,"timezone":"Asia/Colombo","days":["MON"],"time_local":"09:30","map_id":"live_map","selection":{}}'
-```
-
-Postman:
-
-```text
-Method: PUT
-URL:    http://localhost:8080/api/v1/schedules/sch_weekday
-Body:   raw JSON
-```
-
-Expected response: same shape as `POST /api/v1/schedules`.
-
-### DELETE /api/v1/schedules/{schedule_id}
-
-Purpose: Delete a schedule.
-
-Required body: none.
-
-Curl:
-
-```bash
-curl -X DELETE http://localhost:8080/api/v1/schedules/sch_weekday
-```
-
-Postman:
-
-```text
-Method: DELETE
-URL:    http://localhost:8080/api/v1/schedules/sch_weekday
-Body:   none
-```
-
-Expected response:
-
-```json
-{
-  "deleted": true
-}
-```
-
-If the id did not exist:
-
-```json
-{
-  "deleted": false
-}
-```
-
-## WebSocket Behavior
-
-Connect to:
-
-```text
-ws://localhost:8765
-```
-
-The bridge sends JSON text messages. It does not currently require or process
-application-level client messages. It only responds to WebSocket ping frames
-with pong frames.
-
-On connect, the bridge sends:
-
-```json
-{
-  "type": "status.snapshot",
-  "payload": {
-    "robot_id": "sweepi-sim-001",
-    "state": "idle",
-    "mode": "auto"
-  }
-}
-```
-
-During runtime, it broadcasts:
-
-```json
-{
-  "type": "status.update",
-  "payload": {}
-}
-```
-
-`status.update` is sent when coverage percentage, coverage stats, manager
-status, selection, or task context changes. The payload has the same shape as
-`GET /api/v1/robot/status`.
-
-```json
-{
-  "type": "map.updated",
-  "payload": {
-    "map_revision": 123456
-  }
-}
-```
-
-`map.updated` is sent when the live occupancy map or coverage map updates.
-Clients should then call `GET /api/v1/maps/current` if they need fresh map
-arrays.
-
-```json
-{
-  "type": "task.completed",
-  "payload": {
-    "task_id": "task_demo",
-    "result": "SUCCEEDED",
-    "coverage_percent": 98.5
-  }
-}
-```
-
-`task.completed` is sent when the manager reports one of these terminal
-execution statuses:
-
-```text
-SUCCEEDED
-COMPLETED_WITH_SKIPS
-FAILED
-BLOCKED_DYNAMIC_OBJECT
-CANCELED
-```
-
-Flutter app usage:
-
-1. Open one WebSocket connection to `ws://<robot-ip>:8765`.
-2. Use `status.snapshot` to initialize UI state.
-3. Use `status.update` to refresh robot state, cleaning state, progress, errors,
-   and warnings.
-4. Use `map.updated` as an invalidation event, then fetch
-   `GET /api/v1/maps/current` only when the map view is visible or stale.
-5. Use `task.completed` to close active-task UI and refresh history with
-   `GET /api/v1/history`.
-
-Manual testing options:
-
-```bash
-websocat ws://localhost:8765
-```
-
-or:
-
-```bash
-wscat -c ws://localhost:8765
-```
-
-Postman can also test the WebSocket directly with a WebSocket request to
-`ws://localhost:8765`.
-
-Normal `curl` is not a WebSocket client, so use it only for the HTTP endpoints.
-
-## Currently Missing Or Partial Operations
-
-Already supported:
-
-```text
-start full cleaning  -> POST /api/v1/cleaning/start
-start selected       -> POST /api/v1/cleaning/start-selected
-pause cleaning       -> POST /api/v1/cleaning/pause
-resume cleaning      -> POST /api/v1/cleaning/resume
-stop/cancel cleaning -> POST /api/v1/cleaning/stop
-robot status         -> GET  /api/v1/robot/status
-coverage percentage  -> included at cleaning.progress_percent
-cleaning state       -> included at state and nav.execution_status
-current map          -> GET  /api/v1/maps/current
-history              -> GET  /api/v1/history
-schedules            -> /api/v1/schedules
-```
-
-Partial:
-
-```text
-return to dock -> endpoint exists, but currently returns accepted=false
-map load       -> bridge tracks active saved map, but does not apply it to Nav2/localization
-battery        -> fields exist, but values are null
-```
-
-Suggested clean endpoint names for future work:
-
-```text
-POST /api/v1/robot/emergency-stop
-POST /api/v1/robot/clear-emergency-stop
-POST /api/v1/navigation/goal
-POST /api/v1/navigation/cancel
-GET  /api/v1/navigation/status
-GET  /api/v1/cleaning/state
-GET  /api/v1/coverage/status
-GET  /api/v1/maps/current/summary
-GET  /api/v1/maps/current/image?layer=occupancy
-GET  /api/v1/maps/current/image?layer=coverage
-POST /api/v1/maps/load-and-apply
-GET  /api/v1/robot/battery
-```
-
-The current API already exposes enough to launch simulation, start cleaning,
-pause/resume/stop, query progress, inspect the live map, and drive a Flutter UI
-with WebSocket status updates.
