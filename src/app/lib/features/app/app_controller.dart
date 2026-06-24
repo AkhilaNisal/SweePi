@@ -31,7 +31,6 @@ class AppController extends ChangeNotifier {
   String? lastSavedMapId;
   RectSelection? pendingSelection;
   RobotPose? plannedInitialPose;
-  int sectionBoundaryThicknessCells = 3;
 
   RobotApiClient? _client;
 
@@ -282,6 +281,26 @@ class AppController extends ChangeNotifier {
     return saved;
   }
 
+  void deleteSection(MapSection section) {
+    final metadata = selectedMapMetadata;
+    if (metadata == null) {
+      return;
+    }
+
+    selectedMapMetadata = metadata.copyWith(
+      sections: metadata.sections
+          .where((item) => item.sectionId != section.sectionId)
+          .toList(),
+    );
+    selectedSections = selectedSections
+        .where((item) => item.sectionId != section.sectionId)
+        .toList();
+    pendingSelection = null;
+    _rebuildProcessedSectionPreview();
+    lastMessage = 'Section "${section.name}" deleted locally.';
+    notifyListeners();
+  }
+
   void toggleSectionForCleaning(MapSection section) {
     final exists = selectedSections.any(
       (item) => item.sectionId == section.sectionId,
@@ -457,12 +476,6 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setSectionBoundaryThicknessCells(int value) {
-    sectionBoundaryThicknessCells = value.clamp(1, 24);
-    _rebuildProcessedSectionPreview();
-    notifyListeners();
-  }
-
   RobotApiClient _requireClient() {
     final client = _client;
     if (client == null) {
@@ -507,11 +520,6 @@ class AppController extends ChangeNotifier {
     final client = _requireClient();
     selectedMapData = await client.fetchMap(mapId);
     selectedMapMetadata = await client.fetchMapMetadata(mapId);
-    if (selectedMapData != null && selectedMapData!.available) {
-      sectionBoundaryThicknessCells = defaultSectionBoundaryThicknessCells(
-        selectedMapData!,
-      );
-    }
     selectedSections = selectedMapMetadata!.sections
         .where(
           (section) => selectedSections.any(
@@ -535,7 +543,6 @@ class AppController extends ChangeNotifier {
       processedSectionMapPreview = buildProcessedSectionMap(
         mapData: mapData,
         sections: selectedSections,
-        boundaryThicknessCells: sectionBoundaryThicknessCells,
       );
     } catch (error) {
       processedSectionMapPreview = null;

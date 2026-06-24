@@ -7,7 +7,6 @@ const occupiedCellValue = 100;
 SweePiMapData buildProcessedSectionMap({
   required SweePiMapData mapData,
   required List<MapSection> sections,
-  required int boundaryThicknessCells,
 }) {
   if (!mapData.available) {
     throw ArgumentError('A valid map is required to build a section map.');
@@ -28,30 +27,21 @@ SweePiMapData buildProcessedSectionMap({
   final boundsList = sections
       .map((section) => _sectionCellBounds(mapData, section))
       .toList();
-  final thickness = math.max(1, boundaryThicknessCells);
 
   for (var y = 0; y < mapData.height; y++) {
     for (var x = 0; x < mapData.width; x++) {
       final index = y * mapData.width + x;
-      final insideAny = boundsList.any((bounds) => bounds.contains(x, y));
       final boundary = boundsList.any(
-        (bounds) => bounds.contains(x, y) && bounds.isBoundary(x, y, thickness),
+        (bounds) => bounds.contains(x, y) && bounds.isBoundary(x, y),
       );
 
-      if (!insideAny || boundary) {
+      if (boundary) {
         occupancy[index] = occupiedCellValue;
       }
     }
   }
 
   return mapData.copyWith(occupancy: occupancy);
-}
-
-int defaultSectionBoundaryThicknessCells(SweePiMapData mapData) {
-  if (mapData.resolution <= 0) {
-    return 3;
-  }
-  return math.max(3, (0.15 / mapData.resolution).ceil());
 }
 
 _CellBounds _sectionCellBounds(SweePiMapData mapData, MapSection section) {
@@ -97,11 +87,8 @@ class _CellBounds {
     return x >= left && x <= right && y >= bottom && y <= top;
   }
 
-  bool isBoundary(int x, int y, int thickness) {
-    return x - left < thickness ||
-        right - x < thickness ||
-        y - bottom < thickness ||
-        top - y < thickness;
+  bool isBoundary(int x, int y) {
+    return x == left || x == right || y == bottom || y == top;
   }
 }
 

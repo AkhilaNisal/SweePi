@@ -14,6 +14,8 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> {
+  bool _deleteMode = false;
+
   @override
   Widget build(BuildContext context) {
     final controller = widget.controller;
@@ -70,7 +72,18 @@ class _MapScreenState extends State<MapScreen> {
                   selection: selection,
                   robotPose: controller.robotStatus.pose,
                   sections: metadata?.sections ?? const [],
-                  onSelectionChanged: controller.setPendingSelection,
+                  onSelectionChanged: _deleteMode
+                      ? (_) {}
+                      : controller.setPendingSelection,
+                  selectionEnabled: !_deleteMode,
+                  onSectionTap: _deleteMode
+                      ? (section) {
+                          if (section != null) {
+                            controller.deleteSection(section);
+                            setState(() => _deleteMode = false);
+                          }
+                        }
+                      : null,
                 ),
               ),
             ),
@@ -101,8 +114,34 @@ class _MapScreenState extends State<MapScreen> {
                 icon: const Icon(Icons.clear),
                 label: const Text('Clear Selection'),
               ),
+              OutlinedButton.icon(
+                onPressed: metadata == null ||
+                        metadata.sections.isEmpty ||
+                        controller.isBusy
+                    ? null
+                    : () {
+                        controller.setPendingSelection(null);
+                        setState(() => _deleteMode = true);
+                      },
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('Delete Section'),
+              ),
             ],
           ),
+          if (_deleteMode) ...[
+            const SizedBox(height: 8),
+            MaterialBanner(
+              padding: EdgeInsets.zero,
+              leading: const Icon(Icons.touch_app_rounded),
+              content: const Text('Tap a section to delete it.'),
+              actions: [
+                TextButton(
+                  onPressed: () => setState(() => _deleteMode = false),
+                  child: const Text('Cancel'),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 12),
           _MetadataAndSections(controller: controller),
         ],

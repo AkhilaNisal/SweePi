@@ -42,6 +42,8 @@ class MapCanvas extends StatefulWidget {
 }
 
 class _MapCanvasState extends State<MapCanvas> {
+  static const double _initialPoseGrabHitRadius = 34;
+
   ui.Image? _raster;
   Offset? _poseDragStart;
 
@@ -121,6 +123,7 @@ class _MapCanvasState extends State<MapCanvas> {
             child: LayoutBuilder(
               builder: (context, paintConstraints) {
                 return GestureDetector(
+                  behavior: HitTestBehavior.opaque,
                   onTapUp:
                       widget.onSectionTap == null || widget.initialPoseEnabled
                       ? null
@@ -163,10 +166,17 @@ class _MapCanvasState extends State<MapCanvas> {
 
   void _handlePanStart(DragStartDetails details, BoxConstraints constraints) {
     if (widget.initialPoseEnabled) {
-      _poseDragStart = details.localPosition;
+      final initialPoseCenter = _initialPoseCanvasCenter(constraints.biggest);
+      final dragStart =
+          initialPoseCenter != null &&
+              (details.localPosition - initialPoseCenter).distance <=
+                  _initialPoseGrabHitRadius
+          ? initialPoseCenter
+          : details.localPosition;
+      _poseDragStart = dragStart;
       widget.onInitialPoseChanged?.call(
         _poseFromDrag(
-          details.localPosition,
+          dragStart,
           details.localPosition,
           constraints,
         ),
@@ -277,6 +287,14 @@ class _MapCanvasState extends State<MapCanvas> {
       widget.mapData.originY + mapY * widget.mapData.resolution,
     );
   }
+
+  Offset? _initialPoseCanvasCenter(Size size) {
+    final pose = widget.plannedInitialPose;
+    if (pose == null) {
+      return null;
+    }
+    return _worldToCanvas(pose.x, pose.y, size);
+  }
 }
 
 class _MapPainter extends CustomPainter {
@@ -368,22 +386,20 @@ class _MapPainter extends CustomPainter {
 
       final selected = selectedSectionIds.contains(section.sectionId);
 
-      canvas.drawRect(
-        rect,
-        Paint()
-          ..style = PaintingStyle.fill
-          ..color = selected
-              ? const Color(0x6639A275)
-              : const Color(0x33288A63),
-      );
+      if (!selected) {
+        canvas.drawRect(
+          rect,
+          Paint()
+            ..style = PaintingStyle.fill
+            ..color = const Color(0x33288A63),
+        );
+      }
       canvas.drawRect(
         rect,
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = selected ? 3 : 1.5
-          ..color = selected
-              ? const Color(0xFF0D67B5)
-              : const Color(0xFF288A63),
+          ..color = selected ? Colors.black : const Color(0xFF288A63),
       );
     }
   }

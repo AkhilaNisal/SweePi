@@ -166,93 +166,101 @@ class _CleaningActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        if (!isCleaningActive)
-          SizedBox(
-            width: 144,
-            height: 52,
-            child: FilledButton.icon(
-              onPressed: controller.isBusy || metadata == null || !canStart
-                  ? null
-                  : onStart,
-              icon: const Icon(Icons.play_arrow_rounded, size: 22),
-              label: const Text('Start'),
-            ),
-          )
-        else ...[
-          SizedBox(
-            width: 132,
-            height: 52,
-            child: FilledButton.tonal(
-              onPressed: controller.isBusy
-                  ? null
-                  : () {
-                      if (isPaused) {
-                        controller.resumeCleaning();
-                      } else {
-                        controller.pauseCleaning();
-                      }
-                    },
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
-                      size: 21,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(isPaused ? 'Resume' : 'Pause'),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          SizedBox(
-            width: 112,
-            height: 52,
-            child: FilledButton.icon(
-              onPressed: controller.isBusy ? null : controller.stopCleaning,
-              icon: const Icon(Icons.stop_rounded, size: 22),
-              label: const FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text('Stop'),
-              ),
-            ),
-          ),
-        ],
+    final primaryButtons = <Widget>[
+      if (!isCleaningActive)
         SizedBox(
-          width: 52,
+          width: 144,
           height: 52,
-          child: IconButton.filledTonal(
-            tooltip: 'Refresh state',
+          child: FilledButton.icon(
+            onPressed: controller.isBusy || metadata == null || !canStart
+                ? null
+                : onStart,
+            icon: const Icon(Icons.play_arrow_rounded, size: 22),
+            label: const Text('Start'),
+          ),
+        )
+      else ...[
+        SizedBox(
+          width: 132,
+          height: 52,
+          child: FilledButton.tonal(
             onPressed: controller.isBusy
                 ? null
-                : controller.refreshCleaningStatus,
-            icon: const Icon(Icons.refresh_rounded),
+                : () {
+                    if (isPaused) {
+                      controller.resumeCleaning();
+                    } else {
+                      controller.pauseCleaning();
+                    }
+                  },
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                    size: 21,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(isPaused ? 'Resume' : 'Pause'),
+                ],
+              ),
+            ),
           ),
         ),
         SizedBox(
-          width: 52,
+          width: 112,
           height: 52,
-          child: IconButton.filledTonal(
-            tooltip: 'Reset cleaning',
-            onPressed: controller.isBusy ? null : controller.resetCleaning,
-            icon: const Icon(Icons.restart_alt_rounded),
+          child: FilledButton.icon(
+            onPressed: controller.isBusy ? null : controller.stopCleaning,
+            icon: const Icon(Icons.stop_rounded, size: 22),
+            label: const FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text('Stop'),
+            ),
           ),
         ),
-        SizedBox(
-          width: 52,
-          height: 52,
-          child: IconButton.filledTonal(
-            tooltip: 'Return home',
-            onPressed: controller.isBusy ? null : controller.returnHome,
-            icon: const Icon(Icons.home_rounded),
-          ),
+      ],
+      SizedBox(
+        width: 52,
+        height: 52,
+        child: IconButton.filledTonal(
+          tooltip: 'Refresh state',
+          onPressed: controller.isBusy ? null : controller.refreshCleaningStatus,
+          icon: const Icon(Icons.refresh_rounded),
+        ),
+      ),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(spacing: 8, runSpacing: 8, children: primaryButtons),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            SizedBox(
+              width: 52,
+              height: 52,
+              child: IconButton.filledTonal(
+                tooltip: 'Return home',
+                onPressed: controller.isBusy ? null : controller.returnHome,
+                icon: const Icon(Icons.home_rounded),
+              ),
+            ),
+            SizedBox(
+              width: 52,
+              height: 52,
+              child: IconButton.filledTonal(
+                tooltip: 'Reset cleaning',
+                onPressed: controller.isBusy ? null : controller.resetCleaning,
+                icon: const Icon(Icons.restart_alt_rounded),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -396,31 +404,6 @@ class _ProcessedSectionPreview extends StatelessWidget {
           style: Theme.of(context).textTheme.titleSmall,
         ),
         const SizedBox(height: 8),
-        Row(
-          children: [
-            const Text('Boundary'),
-            Expanded(
-              child: Slider(
-                min: 1,
-                max: 24,
-                divisions: 23,
-                label: '${controller.sectionBoundaryThicknessCells} cells',
-                value: controller.sectionBoundaryThicknessCells.toDouble(),
-                onChanged: controller.isBusy
-                    ? null
-                    : (value) {
-                        controller.setSectionBoundaryThicknessCells(
-                          value.round(),
-                        );
-                      },
-              ),
-            ),
-            SizedBox(
-              width: 64,
-              child: Text('${controller.sectionBoundaryThicknessCells} cells'),
-            ),
-          ],
-        ),
         SizedBox(
           height: 280,
           child: DecoratedBox(

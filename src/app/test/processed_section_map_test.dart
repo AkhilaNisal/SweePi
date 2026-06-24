@@ -3,9 +3,11 @@ import 'package:sweepi/core/map/processed_section_map.dart';
 import 'package:sweepi/core/models/map_models.dart';
 
 void main() {
-  test('buildProcessedSectionMap blocks outside rectangular section', () {
+  test('buildProcessedSectionMap marks only rectangular section boundary', () {
     final occupancy = List<int>.filled(8 * 8, 0);
     occupancy[3 * 8 + 3] = occupiedCellValue;
+    occupancy[1 * 8 + 3] = -1;
+    occupancy[3 * 8 + 6] = 42;
 
     final mapData = SweePiMapData(
       mapId: 'room_map',
@@ -27,7 +29,6 @@ void main() {
     final processed = buildProcessedSectionMap(
       mapData: mapData,
       sections: [section],
-      boundaryThicknessCells: 1,
     );
 
     expect(processed.mapId, mapData.mapId);
@@ -38,10 +39,10 @@ void main() {
     expect(processed.originY, mapData.originY);
     expect(processed.originYaw, mapData.originYaw);
 
-    expect(_cell(processed, 1, 3), occupiedCellValue);
-    expect(_cell(processed, 6, 3), occupiedCellValue);
-    expect(_cell(processed, 3, 1), occupiedCellValue);
-    expect(_cell(processed, 3, 6), occupiedCellValue);
+    expect(_cell(processed, 1, 3), 0);
+    expect(_cell(processed, 6, 3), 42);
+    expect(_cell(processed, 3, 1), -1);
+    expect(_cell(processed, 3, 6), 0);
 
     for (var x = 2; x <= 5; x++) {
       expect(_cell(processed, x, 2), occupiedCellValue);
@@ -56,7 +57,7 @@ void main() {
     expect(_cell(processed, 4, 4), 0);
   });
 
-  test('buildProcessedSectionMap preserves multiple rectangular sections', () {
+  test('buildProcessedSectionMap marks multiple rectangular section outlines', () {
     final mapData = SweePiMapData(
       mapId: 'room_map',
       name: 'Room',
@@ -81,16 +82,17 @@ void main() {
     final processed = buildProcessedSectionMap(
       mapData: mapData,
       sections: [first, second],
-      boundaryThicknessCells: 1,
     );
 
     expect(_cell(processed, 2, 2), 0);
     expect(_cell(processed, 7, 7), 0);
-    expect(_cell(processed, 5, 5), occupiedCellValue);
-    expect(_cell(processed, 0, 0), occupiedCellValue);
+    expect(_cell(processed, 1, 2), occupiedCellValue);
+    expect(_cell(processed, 8, 7), occupiedCellValue);
+    expect(_cell(processed, 5, 5), 0);
+    expect(_cell(processed, 0, 0), 0);
   });
 
-  test('buildProcessedSectionMap applies boundary thickness', () {
+  test('buildProcessedSectionMap keeps interior and exterior cells unchanged', () {
     final mapData = SweePiMapData(
       mapId: 'room_map',
       name: 'Room',
@@ -110,12 +112,13 @@ void main() {
     final processed = buildProcessedSectionMap(
       mapData: mapData,
       sections: [section],
-      boundaryThicknessCells: 2,
     );
 
-    expect(_cell(processed, 2, 3), occupiedCellValue);
-    expect(_cell(processed, 3, 2), occupiedCellValue);
+    expect(_cell(processed, 2, 3), 0);
+    expect(_cell(processed, 3, 2), 0);
     expect(_cell(processed, 4, 4), 0);
+    expect(_cell(processed, 1, 4), occupiedCellValue);
+    expect(_cell(processed, 6, 4), occupiedCellValue);
   });
 }
 
