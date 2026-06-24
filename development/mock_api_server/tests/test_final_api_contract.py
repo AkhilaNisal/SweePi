@@ -78,12 +78,21 @@ class FinalApiContractTest(unittest.TestCase):
         self.assertEqual(response.json()["error"]["code"], "INVALID_STATE")
 
     def test_cleaning_validation_errors(self):
-        missing_pose = self.client.post(
+        early_pose = self.client.post(
             "/api/cleaning/start",
-            json={"map_id": "my_room_map", "cleaning_mode": "full-map", "sections": []},
+            json={
+                "map_id": "my_room_map",
+                "cleaning_mode": "full-map",
+                "sections": [],
+                "initial_pose": {"x": 0, "y": 0, "yaw": 0, "frame": "map"},
+            },
         )
-        self.assertEqual(missing_pose.status_code, 400)
-        self.assertEqual(missing_pose.json()["error"]["details"]["field"], "initial_pose")
+        self.assertEqual(early_pose.status_code, 400)
+        self.assertEqual(early_pose.json()["error"]["details"]["field"], "initial_pose")
+        self.assertEqual(
+            early_pose.json()["error"]["details"]["use_endpoint"],
+            "/api/localization/initial-pose",
+        )
 
         missing_sections = self.client.post(
             "/api/cleaning/start",
@@ -91,7 +100,6 @@ class FinalApiContractTest(unittest.TestCase):
                 "map_id": "my_room_map",
                 "cleaning_mode": "sections",
                 "sections": [],
-                "initial_pose": {"x": 0, "y": 0, "yaw": 0, "frame": "map"},
             },
         )
         self.assertEqual(missing_sections.status_code, 400)
@@ -103,7 +111,6 @@ class FinalApiContractTest(unittest.TestCase):
                 "map_id": "my_room_map",
                 "cleaning_mode": "room",
                 "sections": [],
-                "initial_pose": {"x": 0, "y": 0, "yaw": 0, "frame": "map"},
             },
         )
         self.assertEqual(invalid_mode.status_code, 400)
@@ -116,11 +123,27 @@ class FinalApiContractTest(unittest.TestCase):
                 "map_id": "my_room_map",
                 "cleaning_mode": "full-map",
                 "sections": [],
-                "initial_pose": {"x": 0, "y": 0, "yaw": 0, "frame": "map"},
             },
         )
         self.assertEqual(start.status_code, 200)
         self.assertEqual(start.json()["cleaning_mode"], "full-map")
+        self.assertEqual(start.json()["state"], "waiting_for_initial_pose")
+        self.assertIsNone(start.json()["initial_pose"])
+
+        pose = self.client.post(
+            "/api/localization/initial-pose",
+            json={"map_id": "my_room_map", "x": 0, "y": 0, "yaw": 0, "frame": "map"},
+        )
+        self.assertEqual(pose.status_code, 200)
+        self.assertTrue(pose.json()["initial_pose_received"])
+
+        validate = self.client.post("/api/cleaning/validate")
+        self.assertEqual(validate.status_code, 200)
+        self.assertEqual(validate.json()["state"], "validated")
+
+        motion = self.client.post("/api/cleaning/start-motion")
+        self.assertEqual(motion.status_code, 200)
+        self.assertEqual(motion.json()["state"], "cleaning")
 
         status = self.client.get("/api/cleaning/status")
         self.assertEqual(status.status_code, 200)
@@ -148,7 +171,6 @@ class FinalApiContractTest(unittest.TestCase):
                     "bounds": {"x": 2, "y": 2, "width": 1, "height": 1},
                 },
             ],
-            "initial_pose": {"x": 0, "y": 0, "yaw": 0, "frame": "map"},
         }
         start = self.client.post("/api/cleaning/start", json=request)
         self.assertEqual(start.status_code, 200)

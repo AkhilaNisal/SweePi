@@ -88,11 +88,21 @@ class _CleaningScreenState extends State<CleaningScreen> {
                 const SizedBox(height: 8),
                 _InitialPosePicker(
                   controller: controller,
-                  mapData:
-                      (!_fullMap &&
-                          controller.processedSectionMapPreview != null)
-                      ? controller.processedSectionMapPreview!
-                      : controller.selectedMapData ?? SweePiMapData.empty,
+                  mapData: controller.selectedMapData ?? SweePiMapData.empty,
+                  sections: !_fullMap
+                      ? controller.selectedSections
+                      : const <MapSection>[],
+                  selectedSectionIds: !_fullMap
+                      ? controller.selectedSections
+                            .map((section) => section.sectionId)
+                            .toSet()
+                      : const <String>{},
+                  onSectionTap: !_fullMap
+                      ? (section) {
+                          controller.toggleSectionForCleaning(section);
+                          setState(() => _sectionMessage = null);
+                        }
+                      : null,
                 ),
                 const SizedBox(height: 12),
                 _CleaningActions(
@@ -166,77 +176,79 @@ class _CleaningActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primaryButtons = <Widget>[
-      if (!isCleaningActive)
-        SizedBox(
-          width: 144,
-          height: 52,
-          child: FilledButton.icon(
-            onPressed: controller.isBusy || metadata == null || !canStart
-                ? null
-                : onStart,
-            icon: const Icon(Icons.play_arrow_rounded, size: 22),
-            label: const Text('Start'),
-          ),
-        )
-      else ...[
-        SizedBox(
-          width: 132,
-          height: 52,
-          child: FilledButton.tonal(
-            onPressed: controller.isBusy
-                ? null
-                : () {
-                    if (isPaused) {
-                      controller.resumeCleaning();
-                    } else {
-                      controller.pauseCleaning();
-                    }
-                  },
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
-                    size: 21,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(isPaused ? 'Resume' : 'Pause'),
-                ],
-              ),
-            ),
-          ),
-        ),
-        SizedBox(
-          width: 112,
-          height: 52,
-          child: FilledButton.icon(
-            onPressed: controller.isBusy ? null : controller.stopCleaning,
-            icon: const Icon(Icons.stop_rounded, size: 22),
-            label: const FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text('Stop'),
-            ),
-          ),
-        ),
-      ],
-      SizedBox(
-        width: 52,
-        height: 52,
-        child: IconButton.filledTonal(
-          tooltip: 'Refresh state',
-          onPressed: controller.isBusy ? null : controller.refreshCleaningStatus,
-          icon: const Icon(Icons.refresh_rounded),
-        ),
-      ),
-    ];
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Wrap(spacing: 8, runSpacing: 8, children: primaryButtons),
+        Row(
+          children: [
+            if (!isCleaningActive)
+              Expanded(
+                child: SizedBox(
+                  height: 52,
+                  child: FilledButton.icon(
+                    onPressed: controller.isBusy || metadata == null || !canStart
+                        ? null
+                        : onStart,
+                    icon: const Icon(Icons.play_arrow_rounded, size: 22),
+                    label: const Text('Start'),
+                  ),
+                ),
+              )
+            else ...[
+              Expanded(
+                child: SizedBox(
+                  height: 52,
+                  child: FilledButton.tonal(
+                    onPressed: controller.isBusy
+                        ? null
+                        : () {
+                            if (isPaused) {
+                              controller.resumeCleaning();
+                            } else {
+                              controller.pauseCleaning();
+                            }
+                          },
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isPaused
+                                ? Icons.play_arrow_rounded
+                                : Icons.pause_rounded,
+                            size: 21,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(isPaused ? 'Resume' : 'Pause'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                height: 52,
+                child: FilledButton.icon(
+                  onPressed: controller.isBusy ? null : controller.stopCleaning,
+                  icon: const Icon(Icons.stop_rounded, size: 22),
+                  label: const Text('Stop'),
+                ),
+              ),
+            ],
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 52,
+              height: 52,
+              child: IconButton.filledTonal(
+                tooltip: 'Reset cleaning',
+                onPressed: controller.isBusy ? null : controller.resetCleaning,
+                icon: const Icon(Icons.restart_alt_rounded),
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -255,9 +267,11 @@ class _CleaningActions extends StatelessWidget {
               width: 52,
               height: 52,
               child: IconButton.filledTonal(
-                tooltip: 'Reset cleaning',
-                onPressed: controller.isBusy ? null : controller.resetCleaning,
-                icon: const Icon(Icons.restart_alt_rounded),
+                tooltip: 'Refresh state',
+                onPressed: controller.isBusy
+                    ? null
+                    : controller.refreshCleaningStatus,
+                icon: const Icon(Icons.refresh_rounded),
               ),
             ),
           ],
@@ -281,7 +295,6 @@ class _SectionMapPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final metadata = controller.selectedMapMetadata;
-    final mapData = controller.selectedMapData ?? SweePiMapData.empty;
     final sections = metadata?.sections ?? const <MapSection>[];
     final selectedSectionIds = controller.selectedSections
         .map((section) => section.sectionId)
@@ -305,37 +318,6 @@ class _SectionMapPicker extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          height: 280,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: colorScheme.surface,
-              border: Border.all(color: colorScheme.outlineVariant),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: MapCanvas(
-                mapData: mapData,
-                selection: null,
-                onSelectionChanged: (_) {},
-                robotPose: controller.robotStatus.pose,
-                sections: sections,
-                selectedSectionIds: selectedSectionIds,
-                selectionEnabled: false,
-                onSectionTap: (section) {
-                  if (section != null) {
-                    controller.toggleSectionForCleaning(section);
-                  }
-                  if (section != null) {
-                    onSectionSelected();
-                  }
-                },
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -354,7 +336,7 @@ class _SectionMapPicker extends StatelessWidget {
         const SizedBox(height: 8),
         if (controller.selectedSections.isEmpty)
           Text(
-            message ?? 'Tap one or more saved sections on the map to clean.',
+            message ?? 'Choose one or more saved sections to clean.',
             style: TextStyle(
               color: message == null
                   ? colorScheme.onSurfaceVariant
@@ -370,70 +352,25 @@ class _SectionMapPicker extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
-        if (controller.selectedSections.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          _ProcessedSectionPreview(controller: controller),
-        ],
-      ],
-    );
-  }
-}
-
-class _ProcessedSectionPreview extends StatelessWidget {
-  const _ProcessedSectionPreview({required this.controller});
-
-  final AppController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final previewMap = controller.processedSectionMapPreview;
-    final colorScheme = Theme.of(context).colorScheme;
-
-    if (previewMap == null) {
-      return Text(
-        'Processed map preview is not available.',
-        style: TextStyle(color: colorScheme.error),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Processed map preview',
-          style: Theme.of(context).textTheme.titleSmall,
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 280,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: colorScheme.surface,
-              border: Border.all(color: colorScheme.outlineVariant),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: MapCanvas(
-                mapData: previewMap,
-                selection: null,
-                onSelectionChanged: (_) {},
-                robotPose: controller.robotStatus.pose,
-                selectionEnabled: false,
-              ),
-            ),
-          ),
-        ),
       ],
     );
   }
 }
 
 class _InitialPosePicker extends StatelessWidget {
-  const _InitialPosePicker({required this.controller, required this.mapData});
+  const _InitialPosePicker({
+    required this.controller,
+    required this.mapData,
+    required this.sections,
+    required this.selectedSectionIds,
+    required this.onSectionTap,
+  });
 
   final AppController controller;
   final SweePiMapData mapData;
+  final List<MapSection> sections;
+  final Set<String> selectedSectionIds;
+  final ValueChanged<MapSection>? onSectionTap;
 
   @override
   Widget build(BuildContext context) {
@@ -462,6 +399,15 @@ class _InitialPosePicker extends StatelessWidget {
                 selection: null,
                 onSelectionChanged: (_) {},
                 robotPose: controller.robotStatus.pose,
+                sections: sections,
+                selectedSectionIds: selectedSectionIds,
+                onSectionTap: onSectionTap == null
+                    ? null
+                    : (section) {
+                        if (section != null) {
+                          onSectionTap!(section);
+                        }
+                      },
                 plannedInitialPose: controller.plannedInitialPose,
                 onInitialPoseChanged: controller.setPlannedInitialPose,
                 initialPoseEnabled: !controller.isBusy,

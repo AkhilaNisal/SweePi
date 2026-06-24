@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sweepi/core/models/cleaning_models.dart';
 import 'package:sweepi/core/models/map_models.dart';
-import 'package:sweepi/core/models/robot_models.dart';
 import 'package:sweepi/core/network/robot_api_client.dart';
 
 void main() {
@@ -54,13 +53,12 @@ void main() {
       mapId: 'my_room',
       cleaningMode: 'full-map',
       sections: const [],
-      initialPose: const RobotPose(x: 0, y: 0, yaw: 0, frame: 'map'),
     );
 
     expect(body['map_id'], 'my_room');
     expect(body['cleaning_mode'], 'full-map');
     expect(body['sections'], isEmpty);
-    expect(body['initial_pose'], {'x': 0.0, 'y': 0.0, 'yaw': 0.0, 'frame': 'map'});
+    expect(body.containsKey('initial_pose'), isFalse);
     expect(body.containsKey('auto_start'), isFalse);
   });
 
@@ -93,7 +91,6 @@ void main() {
       cleaningMode: 'sections',
       sections: sections,
       processedMap: mapData,
-      initialPose: const RobotPose(x: 0, y: 0, yaw: 0, frame: 'map'),
     );
 
     expect(body['cleaning_mode'], 'sections');
@@ -110,17 +107,27 @@ void main() {
   test('standard API error fields parse from response wrapper', () {
     final fields = ApiResponseFields.fromJson({
       'success': false,
-      'message': 'initial_pose is required.',
+      'message': 'initial_pose must be sent separately after cleaning/start.',
       'error': {
         'code': 'VALIDATION_ERROR',
-        'details': {'field': 'initial_pose'},
+        'details': {
+          'field': 'initial_pose',
+          'use_endpoint': '/api/localization/initial-pose',
+        },
       },
       'timestamp': '2026-06-24T12:00:00Z',
     });
 
     expect(fields.success, isFalse);
-    expect(fields.message, 'initial_pose is required.');
+    expect(
+      fields.message,
+      'initial_pose must be sent separately after cleaning/start.',
+    );
     expect(fields.error?.code, 'VALIDATION_ERROR');
     expect(fields.error?.details['field'], 'initial_pose');
+    expect(
+      fields.error?.details['use_endpoint'],
+      '/api/localization/initial-pose',
+    );
   });
 }

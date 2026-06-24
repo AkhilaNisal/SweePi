@@ -40,12 +40,15 @@ def start_cleaning(req: CleaningStartRequest):
             },
             accepted=False,
         )
-    if req.initial_pose is None:
+    if req.initial_pose is not None:
         fail(
             400,
-            "initial_pose is required.",
+            "initial_pose must be sent separately after cleaning/start.",
             "VALIDATION_ERROR",
-            {"field": "initial_pose"},
+            {
+                "field": "initial_pose",
+                "use_endpoint": "/api/localization/initial-pose",
+            },
             accepted=False,
         )
     if req.cleaning_mode == "sections" and not req.sections:
@@ -74,10 +77,9 @@ def start_cleaning(req: CleaningStartRequest):
             )
 
     sections = [_model_to_dict(section) for section in req.sections]
-    initial_pose = _model_to_dict(req.initial_pose)
     task_id = f"cleaning_{uuid.uuid4().hex[:8]}"
 
-    robot_state["state"] = "cleaning"
+    robot_state["state"] = "waiting_for_initial_pose"
     robot_state["cleaning"]["active"] = True
     robot_state["cleaning"]["task_id"] = task_id
     robot_state["cleaning"]["map_id"] = map_id
@@ -86,21 +88,81 @@ def start_cleaning(req: CleaningStartRequest):
     robot_state["cleaning"]["processed_map"] = (
         _model_to_dict(req.processed_map) if req.processed_map is not None else None
     )
-    robot_state["cleaning"]["initial_pose"] = initial_pose
+    robot_state["cleaning"]["initial_pose"] = None
+    robot_state["cleaning"]["validated"] = False
     robot_state["cleaning"]["progress_percent"] = 0.0
-    robot_state["pose"] = initial_pose
-    robot_state["nav"]["execution_status"] = "RUNNING"
+    robot_state["nav"]["execution_status"] = "WAITING_FOR_INITIAL_POSE"
 
     return ok(
-        "Cleaning started.",
+        "Coverage prepared. Waiting for initial pose from mobile app or RViz.",
         accepted=True,
         task_id=task_id,
-        state="cleaning",
+        state="waiting_for_initial_pose",
         map_id=map_id,
         cleaning_mode=req.cleaning_mode,
         sections=sections,
-        initial_pose=initial_pose,
+        initial_pose=None,
+        initial_pose_required=True,
         progress_percent=0.0,
+    )
+
+
+@router.post("/validate")
+def validate_cleaning():
+    cleaning = robot_state["cleaning"]
+    if not cleaning["active"]:
+        fail(409, "No cleaning task is prepared.", "INVALID_STATE", accepted=False)
+    if cleaning["initial_pose"] is None:
+        fail(
+            409,
+            "Initial pose is required before validation.",
+            "INVALID_STATE",
+            {"required_endpoint": "/api/localization/initial-pose"},
+            accepted=False,
+        )
+
+    robot_state["state"] = "validated"
+    robot_state["cleaning"]["validated"] = True
+    robot_state["nav"]["execution_status"] = "VALIDATED"
+
+    return ok(
+        "Cleaning path validated.",
+        accepted=True,
+        state="validated",
+        task_id=cleaning["task_id"],
+    )
+
+
+@router.post("/start-motion")
+def start_cleaning_motion():
+    cleaning = robot_state["cleaning"]
+    if not cleaning["active"]:
+        fail(409, "No cleaning task is prepared.", "INVALID_STATE", accepted=False)
+    if cleaning["initial_pose"] is None:
+        fail(
+            409,
+            "Initial pose is required before starting motion.",
+            "INVALID_STATE",
+            {"required_endpoint": "/api/localization/initial-pose"},
+            accepted=False,
+        )
+    if not cleaning["validated"]:
+        fail(
+            409,
+            "Cleaning path must be validated before starting motion.",
+            "INVALID_STATE",
+            {"required_endpoint": "/api/cleaning/validate"},
+            accepted=False,
+        )
+
+    robot_state["state"] = "cleaning"
+    robot_state["nav"]["execution_status"] = "RUNNING"
+
+    return ok(
+        "Cleaning motion started.",
+        accepted=True,
+        state="cleaning",
+        task_id=cleaning["task_id"],
     )
 
 

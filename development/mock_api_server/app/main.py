@@ -3,7 +3,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.routers import robot, exploration, maps, cleaning
+from app.routers import robot, exploration, maps, cleaning, localization
 from app.core.responses import error_body, ok
 
 
@@ -27,6 +27,7 @@ app.add_middleware(
 app.include_router(robot.router)
 app.include_router(exploration.router)
 app.include_router(maps.router)
+app.include_router(localization.router)
 app.include_router(cleaning.router)
 
 

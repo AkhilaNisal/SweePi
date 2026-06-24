@@ -339,17 +339,39 @@ class AppController extends ChangeNotifier {
       if (!fullMap && processedSectionMapPreview == null) {
         _rebuildProcessedSectionPreview();
       }
-      final response = await _requireClient().startCleaning(
+      final client = _requireClient();
+      final response = await client.startCleaning(
         mapId: metadata.mapId,
         cleaningMode: fullMap ? 'full-map' : 'sections',
         sections: sectionsToClean,
         processedMap: fullMap ? null : processedSectionMapPreview,
-        initialPose: plannedInitialPose!,
       );
       accepted = response.accepted;
       lastMessage = response.message;
       if (!response.accepted) {
         errorMessage = response.message;
+        return;
+      }
+      final poseResponse = await client.setCleaningInitialPose(
+        mapId: metadata.mapId,
+        initialPose: plannedInitialPose!,
+      );
+      lastMessage = poseResponse.message;
+      if (!poseResponse.accepted) {
+        errorMessage = poseResponse.message;
+        return;
+      }
+      final validationResponse = await client.validateCleaning();
+      lastMessage = validationResponse.message;
+      if (!validationResponse.accepted) {
+        errorMessage = validationResponse.message;
+        return;
+      }
+      final motionResponse = await client.startCleaningMotion();
+      accepted = motionResponse.accepted;
+      lastMessage = motionResponse.message;
+      if (!motionResponse.accepted) {
+        errorMessage = motionResponse.message;
         return;
       }
       await _refreshRobotStatusOnly();

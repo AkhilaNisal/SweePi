@@ -748,11 +748,11 @@ Fields:
 POST /api/cleaning/start
 ```
 
-Starts a cleaning task.
+Prepares a cleaning task.
 
-The robot must start automatically from this endpoint. There is no `auto_start` field in the request body.
-
-The request must include `initial_pose`.
+The robot must not move from this endpoint. After this call, the API bridge
+launches coverage and waits for an initial pose from either the mobile app or
+RViz. The app must then call validation and start-motion as separate steps.
 
 The request must include `cleaning_mode`.
 
@@ -765,13 +765,15 @@ sections
 
 Rules:
 
-1. `initial_pose` is mandatory for all cleaning modes.
-2. `cleaning_mode` is mandatory.
+1. `cleaning_mode` is mandatory.
+2. `initial_pose` must not be sent in this request.
 3. If `cleaning_mode` is `full-map`, `sections` may be empty or omitted.
 4. If `cleaning_mode` is `sections`, `sections` is mandatory and must contain at least one section.
 5. If `cleaning_mode` is `sections`, more than one section is allowed.
 6. If `processed_map` is provided, the robot bridge should use it as the selected-section bounded map.
-7. The robot should start the cleaning task automatically after validating the request.
+7. After this call, set initial pose with `POST /api/localization/initial-pose` or RViz `2D Pose Estimate`.
+8. Then call `POST /api/cleaning/validate`.
+9. Then call `POST /api/cleaning/start-motion`.
 
 ---
 
@@ -781,13 +783,7 @@ Rules:
 {
   "map_id": "my_room",
   "cleaning_mode": "full-map",
-  "sections": [],
-  "initial_pose": {
-    "x": 0.0,
-    "y": 0.0,
-    "yaw": 0.0,
-    "frame": "map"
-  }
+  "sections": []
 }
 ```
 
@@ -831,12 +827,6 @@ Rules:
       "yaw": 0.0
     },
     "occupancy": [0, 0, 0, 100, -1]
-  },
-  "initial_pose": {
-    "x": 0.0,
-    "y": 0.0,
-    "yaw": 0.0,
-    "frame": "map"
   }
 }
 ```
@@ -849,11 +839,11 @@ Rules:
 {
   "success": true,
   "accepted": true,
-  "message": "Cleaning started.",
+  "message": "Coverage prepared. Waiting for initial pose from mobile app or RViz.",
   "error": null,
   "timestamp": "2026-06-24T12:00:00Z",
   "task_id": "cleaning_20260624_001",
-  "state": "cleaning",
+  "state": "waiting_for_initial_pose",
   "map_id": "my_room",
   "cleaning_mode": "sections",
   "sections": [
@@ -878,29 +868,26 @@ Rules:
       }
     }
   ],
-  "initial_pose": {
-    "x": 0.0,
-    "y": 0.0,
-    "yaw": 0.0,
-    "frame": "map"
-  },
+  "initial_pose": null,
+  "initial_pose_required": true,
   "progress_percent": 0.0
 }
 ```
 
 ---
 
-#### Error: Missing Initial Pose
+#### Error: Initial Pose Sent Too Early
 
 ```json
 {
   "success": false,
   "accepted": false,
-  "message": "initial_pose is required.",
+  "message": "initial_pose must be sent separately after cleaning/start.",
   "error": {
     "code": "VALIDATION_ERROR",
     "details": {
-      "field": "initial_pose"
+      "field": "initial_pose",
+      "use_endpoint": "/api/localization/initial-pose"
     }
   },
   "timestamp": "2026-06-24T12:00:00Z"
@@ -949,7 +936,70 @@ Rules:
 
 ---
 
-### 8.2 Get Cleaning Status
+### 8.2 Set Cleaning Initial Pose
+
+```http
+POST /api/localization/initial-pose
+```
+
+Sets the initial pose after `POST /api/cleaning/start`. The pose may also be
+set from RViz with `2D Pose Estimate`.
+
+#### Request Body
+
+```json
+{
+  "map_id": "my_room",
+  "x": 0.0,
+  "y": 0.0,
+  "yaw": 0.0,
+  "frame": "map"
+}
+```
+
+#### Response
+
+```json
+{
+  "success": true,
+  "accepted": true,
+  "message": "Initial pose published.",
+  "error": null,
+  "timestamp": "2026-06-24T12:00:00Z",
+  "initial_pose_received": true,
+  "initial_pose_source": "api",
+  "initial_pose": {
+    "x": 0.0,
+    "y": 0.0,
+    "yaw": 0.0,
+    "frame": "map"
+  }
+}
+```
+
+---
+
+### 8.3 Validate Cleaning Path
+
+```http
+POST /api/cleaning/validate
+```
+
+Requests validation after the initial pose is set and coverage path is available.
+
+---
+
+### 8.4 Start Cleaning Motion
+
+```http
+POST /api/cleaning/start-motion
+```
+
+Starts robot motion after `cleaning/start`, initial pose, and validation.
+
+---
+
+### 8.5 Get Cleaning Status
 
 ```http
 GET /api/cleaning/status
@@ -1010,7 +1060,7 @@ Recommended `state` values:
 
 ---
 
-### 8.3 Pause Cleaning
+### 8.6 Pause Cleaning
 
 ```http
 POST /api/cleaning/pause
@@ -1032,7 +1082,7 @@ POST /api/cleaning/pause
 
 ---
 
-### 8.4 Resume Cleaning
+### 8.7 Resume Cleaning
 
 ```http
 POST /api/cleaning/resume
@@ -1054,7 +1104,7 @@ POST /api/cleaning/resume
 
 ---
 
-### 8.5 Stop Cleaning
+### 8.8 Stop Cleaning
 
 ```http
 POST /api/cleaning/stop
@@ -1078,7 +1128,7 @@ Stops the current cleaning task.
 
 ---
 
-### 8.6 Reset Cleaning
+### 8.9 Reset Cleaning
 
 ```http
 POST /api/cleaning/reset
@@ -1102,7 +1152,7 @@ Clears the current cleaning task state.
 
 ---
 
-### 8.7 Return Home
+### 8.10 Return Home
 
 ```http
 POST /api/cleaning/return-home
@@ -1196,10 +1246,7 @@ Rules:
 | `map_id` is missing or empty                          | `VALIDATION_ERROR` |
 | `cleaning_mode` is missing                            | `VALIDATION_ERROR` |
 | `cleaning_mode` is not `full-map` or `sections`       | `VALIDATION_ERROR` |
-| `initial_pose` is missing                             | `VALIDATION_ERROR` |
-| `initial_pose.x` is missing                           | `VALIDATION_ERROR` |
-| `initial_pose.y` is missing                           | `VALIDATION_ERROR` |
-| `initial_pose.yaw` is missing                         | `VALIDATION_ERROR` |
+| `initial_pose` is included in `cleaning/start`        | `VALIDATION_ERROR` |
 | `cleaning_mode` is `sections` and `sections` is empty | `VALIDATION_ERROR` |
 | Robot is already cleaning                             | `ROBOT_BUSY`       |
 | Robot is already exploring                            | `ROBOT_BUSY`       |
@@ -1264,13 +1311,15 @@ The robot API bridge must implement this same API.
 For cleaning:
 
 1. Receive `POST /api/cleaning/start`.
-2. Validate `map_id`, `cleaning_mode`, `sections`, and `initial_pose`.
-3. Set the robot initial pose from `initial_pose`.
+2. Validate `map_id`, `cleaning_mode`, and `sections`.
+3. Launch coverage but do not start robot motion.
 4. If `cleaning_mode` is `full-map`, clean the full map.
 5. If `cleaning_mode` is `sections`, clean only the selected section rectangles.
 6. If `processed_map` is provided, use it as the selected-section bounded map.
-7. Start the robot automatically.
-8. Continuously update `/api/cleaning/status`.
+7. Wait for initial pose from `POST /api/localization/initial-pose` or RViz.
+8. Validate the path with `POST /api/cleaning/validate`.
+9. Start robot motion with `POST /api/cleaning/start-motion`.
+10. Continuously update `/api/cleaning/status`.
 
 For exploration:
 
@@ -1298,8 +1347,11 @@ For exploration:
 | `POST` | `/api/exploration/switch`       |      yes |
 | `POST` | `/api/exploration/manual-drive` |      yes |
 | `POST` | `/api/exploration/stop`         |      yes |
+| `POST` | `/api/localization/initial-pose`|      yes |
 | `POST` | `/api/cleaning/start`           |      yes |
 | `GET`  | `/api/cleaning/status`          |      yes |
+| `POST` | `/api/cleaning/validate`        |      yes |
+| `POST` | `/api/cleaning/start-motion`    |      yes |
 | `POST` | `/api/cleaning/pause`           |      yes |
 | `POST` | `/api/cleaning/resume`          |      yes |
 | `POST` | `/api/cleaning/stop`            |      yes |

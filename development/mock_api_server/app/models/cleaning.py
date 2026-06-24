@@ -31,3 +31,7 @@ class CleaningStartRequest(BaseModel):
     sections: List[MapSection] = Field(default_factory=list)
     processed_map: Optional[ProcessedMap] = None
     initial_pose: Optional[Pose] = None
+
+
+class InitialPoseRequest(Pose):
+    map_id: Optional[str] = Field(default=None, examples=["map_001"])

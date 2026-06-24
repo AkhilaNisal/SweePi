@@ -171,18 +171,39 @@ class RobotApiClient {
     required String cleaningMode,
     required List<MapSection> sections,
     SweePiMapData? processedMap,
-    required RobotPose initialPose,
   }) async {
     final body = buildCleaningStartRequestBody(
       mapId: mapId,
       cleaningMode: cleaningMode,
       sections: sections,
       processedMap: processedMap,
-      initialPose: initialPose,
     );
 
     final json = await postJson('/api/cleaning/start', body: body);
     return CleaningStartResponse.fromJson(json);
+  }
+
+  Future<SimpleCommandResponse> setCleaningInitialPose({
+    required String mapId,
+    required RobotPose initialPose,
+  }) async {
+    final json = await postJson(
+      '/api/localization/initial-pose',
+      body: {'map_id': mapId, ...initialPose.toJson()},
+    );
+    return SimpleCommandResponse.fromJson(json);
+  }
+
+  Future<SimpleCommandResponse> validateCleaning() async {
+    return SimpleCommandResponse.fromJson(
+      await postJson('/api/cleaning/validate'),
+    );
+  }
+
+  Future<SimpleCommandResponse> startCleaningMotion() async {
+    return SimpleCommandResponse.fromJson(
+      await postJson('/api/cleaning/start-motion'),
+    );
   }
 
   Future<CleaningStatus> fetchCleaningStatus() async {
@@ -303,13 +324,11 @@ Map<String, dynamic> buildCleaningStartRequestBody({
   required String cleaningMode,
   required List<MapSection> sections,
   SweePiMapData? processedMap,
-  required RobotPose initialPose,
 }) {
   final body = <String, dynamic>{
     'map_id': mapId,
     'cleaning_mode': cleaningMode,
     'sections': sections.map((section) => section.toJson()).toList(),
-    'initial_pose': initialPose.toJson(),
   };
   if (processedMap != null) {
     body['processed_map'] = processedMap.toProcessedMapJson();

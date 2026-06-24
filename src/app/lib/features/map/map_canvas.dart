@@ -42,10 +42,11 @@ class MapCanvas extends StatefulWidget {
 }
 
 class _MapCanvasState extends State<MapCanvas> {
-  static const double _initialPoseGrabHitRadius = 34;
+  static const double _initialPoseGrabHitRadius = 68;
 
   ui.Image? _raster;
   Offset? _poseDragStart;
+  bool _movingInitialPose = false;
 
   @override
   void initState() {
@@ -124,10 +125,16 @@ class _MapCanvasState extends State<MapCanvas> {
               builder: (context, paintConstraints) {
                 return GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTapUp:
-                      widget.onSectionTap == null || widget.initialPoseEnabled
+                  onTapUp: widget.onSectionTap == null
                       ? null
                       : (details) {
+                          if (widget.initialPoseEnabled &&
+                              _isInsideInitialPoseHitArea(
+                                details.localPosition,
+                                paintConstraints.biggest,
+                              )) {
+                            return;
+                          }
                           widget.onSectionTap!(
                             _sectionAt(details.localPosition, paintConstraints),
                           );
@@ -141,7 +148,22 @@ class _MapCanvasState extends State<MapCanvas> {
                       ? (details) => _handlePanUpdate(details, paintConstraints)
                       : null,
                   onPanEnd: widget.initialPoseEnabled
-                      ? (_) => _poseDragStart = null
+                      ? (_) => _clearInitialPoseGesture()
+                      : null,
+                  onLongPressStart: widget.initialPoseEnabled
+                      ? (details) => _handleInitialPoseLongPressStart(
+                          details,
+                          paintConstraints,
+                        )
+                      : null,
+                  onLongPressMoveUpdate: widget.initialPoseEnabled
+                      ? (details) => _handleInitialPoseLongPressMove(
+                          details,
+                          paintConstraints,
+                        )
+                      : null,
+                  onLongPressEnd: widget.initialPoseEnabled
+                      ? (_) => _clearInitialPoseGesture()
                       : null,
                   child: CustomPaint(
                     painter: _MapPainter(
@@ -191,6 +213,9 @@ class _MapCanvasState extends State<MapCanvas> {
 
   void _handlePanUpdate(DragUpdateDetails details, BoxConstraints constraints) {
     if (widget.initialPoseEnabled) {
+      if (_movingInitialPose) {
+        return;
+      }
       widget.onInitialPoseChanged?.call(
         _poseFromDrag(
           _poseDragStart ?? details.localPosition,
@@ -214,6 +239,38 @@ class _MapCanvasState extends State<MapCanvas> {
         constraints,
       ),
     );
+  }
+
+  void _handleInitialPoseLongPressStart(
+    LongPressStartDetails details,
+    BoxConstraints constraints,
+  ) {
+    final initialPoseCenter = _initialPoseCanvasCenter(constraints.biggest);
+    if (initialPoseCenter == null ||
+        (details.localPosition - initialPoseCenter).distance >
+            _initialPoseGrabHitRadius) {
+      return;
+    }
+
+    _movingInitialPose = true;
+  }
+
+  void _handleInitialPoseLongPressMove(
+    LongPressMoveUpdateDetails details,
+    BoxConstraints constraints,
+  ) {
+    if (!_movingInitialPose) {
+      return;
+    }
+
+    widget.onInitialPoseChanged?.call(
+      _poseAtPoint(details.localPosition, constraints),
+    );
+  }
+
+  void _clearInitialPoseGesture() {
+    _poseDragStart = null;
+    _movingInitialPose = false;
   }
 
   MapSection? _sectionAt(Offset point, BoxConstraints constraints) {
@@ -279,6 +336,16 @@ class _MapCanvasState extends State<MapCanvas> {
     );
   }
 
+  RobotPose _poseAtPoint(Offset point, BoxConstraints constraints) {
+    final world = _canvasToWorld(point, constraints.biggest);
+    return RobotPose(
+      x: world.dx,
+      y: world.dy,
+      yaw: widget.plannedInitialPose?.yaw ?? 0.0,
+      frame: 'map',
+    );
+  }
+
   Offset _canvasToWorld(Offset point, Size size) {
     final mapX = (point.dx / size.width) * widget.mapData.width;
     final mapY = (1 - (point.dy / size.height)) * widget.mapData.height;
@@ -294,6 +361,12 @@ class _MapCanvasState extends State<MapCanvas> {
       return null;
     }
     return _worldToCanvas(pose.x, pose.y, size);
+  }
+
+  bool _isInsideInitialPoseHitArea(Offset point, Size size) {
+    final initialPoseCenter = _initialPoseCanvasCenter(size);
+    return initialPoseCenter != null &&
+        (point - initialPoseCenter).distance <= _initialPoseGrabHitRadius;
   }
 }
 
