@@ -600,7 +600,52 @@ GET /api/exploration/status
 
 ---
 
-### 7.3 Manual Drive During Exploration
+### 7.3 Switch Exploration Mode
+
+```http
+POST /api/exploration/switch
+```
+
+Switches the robot between automatic and manual mode during an active exploration.
+
+#### Request Body
+
+```json
+{
+  "new_mode": "manual"
+}
+```
+
+Fields:
+
+| Field      | Type   | Required | Description             |
+| ---------- | ------ | -------: | ----------------------- |
+| `new_mode` | string |      yes | `automatic` or `manual` |
+
+Allowed `new_mode` values:
+
+```text
+automatic
+manual
+```
+
+#### Response
+
+```json
+{
+  "success": true,
+  "accepted": true,
+  "message": "Exploration mode switched.",
+  "error": null,
+  "timestamp": "2026-06-24T12:00:00Z",
+  "state": "exploring",
+  "mode": "manual"
+}
+```
+
+---
+
+### 7.4 Manual Drive During Exploration
 
 ```http
 POST /api/exploration/manual-drive
@@ -653,7 +698,7 @@ Fields:
 
 ---
 
-### 7.4 Stop Exploration
+### 7.5 Stop Exploration
 
 ```http
 POST /api/exploration/stop
@@ -1119,7 +1164,24 @@ Rules:
 
 ---
 
-### 9.3 Cleaning Start Validation
+### 9.3 Exploration Switch Validation
+
+For:
+
+```http
+POST /api/exploration/switch
+```
+
+Rules:
+
+| Rule                                      | Error              |
+| ----------------------------------------- | ------------------ |
+| Exploration is not active                 | `INVALID_STATE`    |
+| `new_mode` is not `automatic` or `manual` | `VALIDATION_ERROR` |
+
+---
+
+### 9.4 Cleaning Start Validation
 
 For:
 
@@ -1215,8 +1277,9 @@ For exploration:
 1. Receive `POST /api/exploration/start`.
 2. Use `map_name` as the final saved map name.
 3. Start in `automatic` or `manual` mode.
-4. Use `/api/exploration/manual-drive` for app manual movement.
-5. Stop and save through `/api/exploration/stop`.
+4. Use `/api/exploration/switch` to change between `automatic` and `manual` during exploration.
+5. Use `/api/exploration/manual-drive` for app manual movement.
+6. Stop and save through `/api/exploration/stop`.
 
 ---
 
@@ -1232,6 +1295,7 @@ For exploration:
 | `PUT`  | `/api/maps/{map_id}/metadata`   |      yes |
 | `POST` | `/api/exploration/start`        |      yes |
 | `GET`  | `/api/exploration/status`       |      yes |
+| `POST` | `/api/exploration/switch`       |      yes |
 | `POST` | `/api/exploration/manual-drive` |      yes |
 | `POST` | `/api/exploration/stop`         |      yes |
 | `POST` | `/api/cleaning/start`           |      yes |
