@@ -393,15 +393,15 @@ class SweePiApiBridge(Node):
             return 200, self._api_initial_pose(body)
         if method == 'GET' and route == ['status']:
             snapshot = self.state.snapshot()
-            return 200, {
-                'ok': True,
-                'initial_pose_received': snapshot['initial_pose_received'],
-                'initial_pose_source': snapshot['initial_pose_source'],
-                'initial_pose': snapshot['initial_pose'],
-                'pose_available': self.pose_available,
-                'pose': self.robot_pose,
-            }
-        return 404, {'ok': False, 'message': 'Unknown localization route'}
+            return 200, self._success(
+                'Localization status fetched.',
+                initial_pose_received=snapshot['initial_pose_received'],
+                initial_pose_source=snapshot['initial_pose_source'],
+                initial_pose=snapshot['initial_pose'],
+                pose_available=self.pose_available,
+                pose=self.robot_pose,
+            )
+        return 404, self._error('Unknown localization route', 'VALIDATION_ERROR')
 
     def _handle_maps(self, method, route, body):
         if method == 'GET' and route == ['current']:
@@ -746,25 +746,36 @@ class SweePiApiBridge(Node):
         if map_id and snapshot.get('active_map_id'):
             clean_map_id = sanitize_map_id(map_id)
             if clean_map_id != snapshot['active_map_id']:
-                return {
-                    'ok': True,
-                    'accepted': False,
-                    'message': 'Initial pose map_id does not match active map',
-                }
+                return self._error(
+                    'Initial pose map_id does not match active map.',
+                    'VALIDATION_ERROR',
+                    {'field': 'map_id'},
+                    accepted=False,
+                )
         try:
             x = float(body['x'])
             y = float(body['y'])
             yaw = float(body.get('yaw', 0.0))
         except (KeyError, TypeError, ValueError):
-            return {'ok': True, 'accepted': False, 'message': 'x, y, and optional yaw are required'}
+            return self._error(
+                'x, y, and optional yaw are required.',
+                'VALIDATION_ERROR',
+                {'field': 'pose'},
+                accepted=False,
+            )
         self._publish_initial_pose(x, y, yaw, source='api')
-        return {
-            'ok': True,
-            'accepted': True,
-            'initial_pose_received': True,
-            'initial_pose_source': 'api',
-            'message': 'Initial pose published',
-        }
+        return self._success(
+            'Initial pose published.',
+            accepted=True,
+            initial_pose_received=True,
+            initial_pose_source='api',
+            initial_pose={
+                'x': x,
+                'y': y,
+                'yaw': yaw,
+                'frame': body.get('frame', 'map'),
+            },
+        )
 
     def _api_get_map(self, map_id):
         payload = self.map_store.read_map(map_id)
@@ -878,10 +889,16 @@ class SweePiApiBridge(Node):
                 },
                 accepted=False,
             )
-        initial_pose = body.get('initial_pose')
-        pose_validation = self._validate_initial_pose_payload(initial_pose)
-        if pose_validation is not None:
-            return pose_validation
+        if 'initial_pose' in body:
+            return self._error(
+                'initial_pose must be sent separately after cleaning/start.',
+                'VALIDATION_ERROR',
+                {
+                    'field': 'initial_pose',
+                    'use_endpoint': '/api/localization/initial-pose',
+                },
+                accepted=False,
+            )
 
         sections = body.get('sections', [])
         if cleaning_mode == 'sections':
@@ -946,19 +963,10 @@ class SweePiApiBridge(Node):
                 accepted=False,
             )
 
-        pose_result = self._api_initial_pose({'map_id': map_id, **initial_pose})
-        if not pose_result.get('accepted'):
-            return self._error(
-                pose_result.get('message', 'initial_pose is invalid.'),
-                'VALIDATION_ERROR',
-                {'field': 'initial_pose'},
-                accepted=False,
-            )
-
         self._clear_coverage_cache()
         self.validated_for_current_path = False
         self.state.update(
-            robot_state='cleaning',
+            robot_state='waiting_for_initial_pose',
             active_task='cleaning',
             cleaning_active=True,
             cleaning_paused=False,
@@ -970,14 +978,15 @@ class SweePiApiBridge(Node):
             coverage_validated=False,
             coverage_path_available=False,
             coverage_map_available=False,
-            initial_pose_received=True,
-            initial_pose_source='api',
+            initial_pose_received=False,
+            initial_pose_source=None,
+            initial_pose=None,
         )
 
         request = StartTask.Request()
         request.map_name = coverage_map_id
         request.mode = ''
-        request.auto_start = True
+        request.auto_start = False
         result = self._call_start_task(self.start_coverage_client, request)
         if not result['success']:
             self.state.reset_cleaning()
@@ -985,50 +994,72 @@ class SweePiApiBridge(Node):
 
         self._update_coverage_readiness()
         return self._success(
-            'Cleaning started.',
+            'Coverage prepared. Waiting for initial pose from mobile app or RViz.',
             accepted=True,
             task_id=task_id,
-            state='cleaning',
+            state='waiting_for_initial_pose',
             map_id=map_id,
             cleaning_mode=cleaning_mode,
             sections=sections or [],
-            initial_pose={
-                'x': float(initial_pose['x']),
-                'y': float(initial_pose['y']),
-                'yaw': float(initial_pose['yaw']),
-                'frame': initial_pose.get('frame', 'map'),
-            },
+            initial_pose=None,
+            initial_pose_required=True,
             progress_percent=0.0,
             coverage_map_id=coverage_map_id,
+            next_steps=[
+                'Set initial pose from RViz or POST /api/localization/initial-pose.',
+                'Call POST /api/cleaning/validate.',
+                'Call POST /api/cleaning/start-motion.',
+            ],
         )
 
     def _api_validate_cleaning(self):
         ready = self._cleaning_preconditions(require_path=False)
         if not ready['accepted']:
-            return ready
+            return self._error(
+                ready['message'],
+                'INVALID_STATE',
+                accepted=False,
+            )
         result = self._call_trigger('/sweepi_robot_manager/coverage/validate')
         if result['success']:
             self.validated_for_current_path = True
             self.state.update(coverage_validated=True)
-        return self._accepted_from_service(result)
+        return self._service_payload(
+            result,
+            success_message='Cleaning path validation requested.',
+            state=self.state.snapshot()['robot_state'],
+            task_id=self.state.snapshot().get('active_task_id'),
+            map_id=self.state.snapshot().get('active_map_id'),
+        )
 
     def _api_start_cleaning_motion(self):
         ready = self._cleaning_preconditions(require_path=False)
         if not ready['accepted']:
-            return ready
+            return self._error(
+                ready['message'],
+                'INVALID_STATE',
+                accepted=False,
+            )
         if not self.validated_for_current_path:
             validate_result = self._call_trigger('/sweepi_robot_manager/coverage/validate')
             if not validate_result['success']:
-                return self._accepted_from_service(validate_result)
+                return self._error(
+                    validate_result['message'],
+                    'TASK_FAILED',
+                    accepted=False,
+                )
             self.validated_for_current_path = True
             self.state.update(coverage_validated=True)
         result = self._call_trigger('/sweepi_robot_manager/coverage/start')
         if result['success']:
             self.state.update(robot_state='cleaning', cleaning_paused=False)
-        payload = self._accepted_from_service(result)
-        payload['state'] = self.state.snapshot()['robot_state']
-        payload['map_id'] = self.state.snapshot().get('active_map_id')
-        return payload
+        return self._service_payload(
+            result,
+            success_message='Cleaning started.',
+            state=self.state.snapshot()['robot_state'],
+            task_id=self.state.snapshot().get('active_task_id'),
+            map_id=self.state.snapshot().get('active_map_id'),
+        )
 
     def _api_store_sections(self, map_id, body):
         if not self.map_store.exists(map_id):

@@ -140,28 +140,38 @@ curl -X PUT http://localhost:8080/api/maps/kitchen_first_floor/metadata \
 
 ## Cleaning
 
-Start full-map cleaning. `initial_pose` is required and motion starts
-automatically after the coverage stack is ready.
+Prepare full-map cleaning. This launches coverage and waits for an initial pose;
+the robot does not move yet.
 
 ```bash
 curl -X POST http://localhost:8080/api/cleaning/start \
   -H 'Content-Type: application/json' \
-  -d '{"map_id":"kitchen_first_floor","cleaning_mode":"full-map","initial_pose":{"x":0.0,"y":0.0,"yaw":0.0,"frame":"map"}}'
+  -d '{"map_id":"kitchen_first_floor","cleaning_mode":"full-map"}'
 ```
 
 Start selected-section cleaning. If `processed_map` is supplied, the bridge
 writes it as the temporary coverage map. If not, the bridge derives a bounded
-coverage map from the selected section rectangles.
+coverage map from the selected section rectangles. This also prepares coverage
+only; initial pose and motion start remain separate steps.
 
 ```bash
 curl -X POST http://localhost:8080/api/cleaning/start \
   -H 'Content-Type: application/json' \
-  -d '{"map_id":"kitchen_first_floor","cleaning_mode":"sections","sections":[{"section_id":"s1","name":"Section 1","bounds":{"x":1.2,"y":0.8,"width":2.0,"height":1.5}}],"initial_pose":{"x":0.0,"y":0.0,"yaw":0.0,"frame":"map"}}'
+  -d '{"map_id":"kitchen_first_floor","cleaning_mode":"sections","sections":[{"section_id":"s1","name":"Section 1","bounds":{"x":1.2,"y":0.8,"width":2.0,"height":1.5}}]}'
 ```
 
-Check progress:
+Set the initial pose from the mobile app:
 
 ```bash
+curl -X POST http://localhost:8080/api/localization/initial-pose \
+  -H 'Content-Type: application/json' \
+  -d '{"map_id":"kitchen_first_floor","x":0.0,"y":0.0,"yaw":0.0,"frame":"map"}'
+```
+
+You can also set the initial pose in RViz with `2D Pose Estimate`, then check:
+
+```bash
+curl http://localhost:8080/api/localization/status
 curl http://localhost:8080/api/cleaning/status
 ```
 
@@ -170,6 +180,13 @@ Get the generated coverage path:
 ```bash
 curl http://localhost:8080/api/cleaning/path
 curl 'http://localhost:8080/api/cleaning/path?stride=5'
+```
+
+Validate the generated path and start motion:
+
+```bash
+curl -X POST http://localhost:8080/api/cleaning/validate
+curl -X POST http://localhost:8080/api/cleaning/start-motion
 ```
 
 Check progress and coverage map:
