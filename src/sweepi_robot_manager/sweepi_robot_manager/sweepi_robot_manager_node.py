@@ -117,6 +117,11 @@ class SweePiRobotManager(Node):
             self._start_coverage_callback,
         )
         self.create_service(
+            StartTask,
+            '/sweepi_robot_manager/exploration/switch_mode',
+            self._exploration_switch_mode_callback,
+        )
+        self.create_service(
             Trigger,
             '/sweepi_robot_manager/stop_task',
             self._stop_task_callback,
@@ -203,10 +208,12 @@ class SweePiRobotManager(Node):
             response.message = 'map_name is required to start exploration'
             return response
 
-        mode = str(request.mode or 'auto').strip().lower()
+        mode = self._normalize_exploration_mode(request.mode or 'auto')
         if mode not in ('auto', 'manual', 'stopped'):
             response.success = False
-            response.message = 'Exploration mode must be auto, manual, or stopped'
+            response.message = (
+                'Exploration mode must be auto/automatic, manual, or stopped'
+            )
             return response
 
         return self._start_task(
@@ -601,6 +608,132 @@ class SweePiRobotManager(Node):
                 'Exploration motion stopped. Task remains active for mode '
                 'switching or stop-and-save.'
             )
+
+    def _exploration_switch_mode_callback(self, request, response):
+        if not self._task_is_active('exploration'):
+            response.success = False
+            response.message = 'exploration is not active'
+            return response
+
+        mode = self._normalize_exploration_mode(request.mode)
+        if mode not in ('auto', 'manual'):
+            response.success = False
+            response.message = 'mode must be auto/automatic or manual'
+            return response
+
+        stop_service = '/stop_exploration'
+        target_service = (
+            '/switch_to_auto_exploration'
+            if mode == 'auto'
+            else '/switch_to_manual_control'
+        )
+        stop_client = self._trigger_clients.get(stop_service)
+        if stop_client is None:
+            stop_client = self.create_client(Trigger, stop_service)
+            self._trigger_clients[stop_service] = stop_client
+
+        target_client = self._trigger_clients.get(target_service)
+        if target_client is None:
+            target_client = self.create_client(Trigger, target_service)
+            self._trigger_clients[target_service] = target_client
+
+        if not stop_client.wait_for_service(timeout_sec=1.0):
+            response.success = False
+            response.message = 'Target service unavailable: %s' % stop_service
+            return response
+        if not target_client.wait_for_service(timeout_sec=1.0):
+            response.success = False
+            response.message = 'Target service unavailable: %s' % target_service
+            return response
+
+        self.exploration_stop_requested = True
+        self.exploration_task_end_requested = False
+        future = stop_client.call_async(Trigger.Request())
+        future.add_done_callback(
+            lambda done_future, requested_mode=mode, service=target_service: (
+                self._exploration_switch_stop_done(
+                    done_future,
+                    requested_mode,
+                    service,
+                )
+            )
+        )
+        response.success = True
+        response.message = (
+            'Exploration switch to %s requested for active map_name=%s. '
+            'Manager will stop current motion without saving, then continue '
+            'exploration in the requested mode.'
+            % (mode, self.active_map_name or '(unset)')
+        )
+        return response
+
+    def _exploration_switch_stop_done(self, future, requested_mode, target_service):
+        try:
+            result = future.result()
+        except Exception as exc:
+            self.get_logger().error(
+                '/stop_exploration failed before mode switch: %s' % exc
+            )
+            return
+
+        if result.success:
+            self.get_logger().info(
+                '/stop_exploration completed before switching to %s: %s'
+                % (requested_mode, result.message)
+            )
+        else:
+            self.get_logger().warn(
+                '/stop_exploration returned failure before switching to %s: %s'
+                % (requested_mode, result.message)
+            )
+
+        if self.active_task != 'exploration':
+            self.get_logger().warn(
+                'Exploration task ended before switch to %s could continue.'
+                % requested_mode
+            )
+            return
+
+        client = self._trigger_clients.get(target_service)
+        if client is None:
+            client = self.create_client(Trigger, target_service)
+            self._trigger_clients[target_service] = client
+
+        if not client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().warn(
+                'Target service unavailable after stop: %s' % target_service
+            )
+            return
+
+        future = client.call_async(Trigger.Request())
+        future.add_done_callback(
+            lambda done_future, mode=requested_mode, service=target_service: (
+                self._exploration_switch_mode_done(done_future, mode, service)
+            )
+        )
+
+    def _exploration_switch_mode_done(self, future, requested_mode, target_service):
+        try:
+            result = future.result()
+        except Exception as exc:
+            self.get_logger().error('%s failed: %s' % (target_service, exc))
+            return
+
+        if result.success:
+            self.latest_exploration_mode = requested_mode
+            self.exploration_stop_requested = False
+            self.exploration_task_end_requested = False
+            self.get_logger().info(
+                'Exploration continued in %s mode for map_name=%s: %s'
+                % (requested_mode, self.active_map_name or '(unset)', result.message)
+            )
+            self._publish_status()
+            return
+
+        self.get_logger().warn(
+            '%s failed while switching exploration to %s: %s'
+            % (target_service, requested_mode, result.message)
+        )
 
     def _exploration_stop_and_save_callback(self, request, response):
         del request
@@ -1015,6 +1148,16 @@ class SweePiRobotManager(Node):
 
     def _clean_map_name(self, value):
         return str(value or '').strip()
+
+    def _normalize_exploration_mode(self, value):
+        mode = str(value or '').strip().lower()
+        if mode in ('auto', 'automatic', 'autonomous'):
+            return 'auto'
+        if mode in ('manual', 'teleop'):
+            return 'manual'
+        if mode == 'stopped':
+            return 'stopped'
+        return ''
 
     def _coverage_map_path(self, map_name):
         name = os.path.basename(str(map_name).strip())

@@ -76,16 +76,25 @@ Exploration controls:
 ```bash
 ros2 service call /sweepi_robot_manager/exploration/start_auto std_srvs/srv/Trigger {}
 ros2 service call /sweepi_robot_manager/exploration/manual std_srvs/srv/Trigger {}
+ros2 service call /sweepi_robot_manager/exploration/switch_mode \
+  sweepi_robot_manager_interfaces/srv/StartTask \
+  "{map_name: '', mode: manual, auto_start: false}"
+ros2 service call /sweepi_robot_manager/exploration/switch_mode \
+  sweepi_robot_manager_interfaces/srv/StartTask \
+  "{map_name: '', mode: auto, auto_start: false}"
 ros2 service call /sweepi_robot_manager/exploration/stop std_srvs/srv/Trigger {}
 ros2 service call /sweepi_robot_manager/exploration/stop_and_save std_srvs/srv/Trigger {}
 ```
 
 `exploration/stop` stops robot motion and pauses further autonomous exploration,
 but it keeps the exploration task active so you can switch back to
-`start_auto` or `manual`. `exploration/stop_and_save` stops motion, saves the
-map with the active map name, closes the exploration launch stack, and returns
-the manager to `idle`. Automatic exploration completion also saves the map and
-returns the manager to `idle`.
+`start_auto` or `manual`. Prefer `exploration/switch_mode` when changing modes
+from an app or bridge because it first calls the exploration stop service
+without saving, then continues in the selected mode under the same active map
+name. `exploration/stop_and_save` stops motion, saves the map with the active
+map name, closes the exploration launch stack, and returns the manager to
+`idle`. Automatic exploration completion also saves the map and returns the
+manager to `idle`.
 
 Coverage controls:
 

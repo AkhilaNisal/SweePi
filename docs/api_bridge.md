@@ -51,6 +51,8 @@ curl -X POST http://localhost:8080/api/exploration/start \
   -d '{"area_name":"living_room","mode":"automatic"}'
 ```
 
+`mode` also accepts `auto`.
+
 Start manual exploration:
 
 ```bash
@@ -58,6 +60,28 @@ curl -X POST http://localhost:8080/api/exploration/start \
   -H 'Content-Type: application/json' \
   -d '{"area_name":"living_room","mode":"manual"}'
 ```
+
+Switch the active exploration session to manual mode without saving:
+
+```bash
+curl -X POST http://localhost:8080/api/exploration/switch-mode \
+  -H 'Content-Type: application/json' \
+  -d '{"mode":"manual"}'
+```
+
+Switch the same active exploration session back to automatic mode:
+
+```bash
+curl -X POST http://localhost:8080/api/exploration/switch-mode \
+  -H 'Content-Type: application/json' \
+  -d '{"mode":"automatic"}'
+```
+
+When switching modes, the bridge asks the robot manager to stop current
+exploration motion without saving, then continue in the selected mode under the
+same map name that was given to `/api/exploration/start`. The older
+`/api/exploration/mode` endpoint is kept as a compatibility alias for
+`/api/exploration/switch-mode`.
 
 Drive manually:
 
@@ -82,8 +106,8 @@ curl -X POST http://localhost:8080/api/exploration/stop
 ```
 
 After this, the robot velocity is zero and autonomous/manual motion is paused,
-but the exploration session remains active. Use `/api/exploration/mode` to
-switch back to `automatic` or `manual`.
+but the exploration session remains active. Use
+`/api/exploration/switch-mode` to continue in `automatic` or `manual`.
 
 Stop and save exploration:
 

@@ -72,6 +72,10 @@ class SweePiApiBridge(Node):
             StartTask,
             '/sweepi_robot_manager/start_coverage',
         )
+        self.switch_exploration_mode_client = self.create_client(
+            StartTask,
+            '/sweepi_robot_manager/exploration/switch_mode',
+        )
         self.trigger_clients = {}
         for service_name in (
             '/sweepi_robot_manager/stop_task',
@@ -276,7 +280,9 @@ class SweePiApiBridge(Node):
         if method == 'GET' and route == ['status']:
             return 200, self._exploration_status()
         if method == 'POST' and route == ['mode']:
-            return 200, self._api_set_exploration_mode(body)
+            return 200, self._api_switch_exploration_mode(body)
+        if method == 'POST' and route == ['switch-mode']:
+            return 200, self._api_switch_exploration_mode(body)
         if method == 'POST' and route == ['manual', 'drive']:
             return 200, self._api_manual_drive(body)
         if method == 'POST' and route == ['manual', 'command']:
@@ -423,10 +429,15 @@ class SweePiApiBridge(Node):
 
         area_name = str(body.get('area_name') or body.get('map_id') or 'map').strip()
         map_id = sanitize_map_id(body.get('map_id') or area_name)
-        api_mode = str(body.get('mode') or 'automatic').strip().lower()
-        if api_mode not in ('automatic', 'manual'):
-            return {'ok': True, 'accepted': False, 'message': 'mode must be automatic or manual'}
-        manager_mode = 'auto' if api_mode == 'automatic' else 'manual'
+        api_mode, manager_mode = self._normalize_exploration_api_mode(
+            body.get('mode') or 'automatic'
+        )
+        if not api_mode:
+            return {
+                'ok': True,
+                'accepted': False,
+                'message': 'mode must be automatic/auto or manual',
+            }
         request = StartTask.Request()
         request.map_name = map_id
         request.mode = manager_mode
@@ -452,21 +463,44 @@ class SweePiApiBridge(Node):
             'message': result['message'],
         }
 
-    def _api_set_exploration_mode(self, body):
-        mode = str(body.get('mode') or '').strip().lower()
-        if mode not in ('manual', 'automatic'):
-            return {'ok': True, 'accepted': False, 'message': 'mode must be manual or automatic'}
+    def _normalize_exploration_api_mode(self, value):
+        mode = str(value or '').strip().lower()
+        if mode in ('auto', 'automatic', 'autonomous'):
+            return 'automatic', 'auto'
+        if mode in ('manual', 'teleop'):
+            return 'manual', 'manual'
+        return '', ''
+
+    def _api_switch_exploration_mode(self, body):
+        api_mode, manager_mode = self._normalize_exploration_api_mode(
+            body.get('mode')
+        )
+        if not api_mode:
+            return {
+                'ok': True,
+                'accepted': False,
+                'message': 'mode must be manual or automatic/auto',
+            }
         snapshot = self.state.snapshot()
         if snapshot['active_task'] != 'exploration':
             return {'ok': True, 'accepted': False, 'message': 'Exploration is not active'}
-        if mode == 'manual':
-            result = self._call_trigger('/sweepi_robot_manager/exploration/manual')
-        else:
-            self._publish_zero_velocity()
-            result = self._call_trigger('/sweepi_robot_manager/exploration/start_auto')
+
+        request = StartTask.Request()
+        request.map_name = snapshot.get('active_map_id') or ''
+        request.mode = manager_mode
+        request.auto_start = False
+        result = self._call_start_task(self.switch_exploration_mode_client, request)
         if result['success']:
-            self.state.update(exploration_mode=mode)
-        return self._accepted_from_service(result)
+            self.state.update(
+                robot_state='exploring',
+                active_task='exploration',
+                exploration_active=True,
+                exploration_mode=api_mode,
+            )
+        payload = self._accepted_from_service(result)
+        payload['mode'] = api_mode
+        payload['map_id'] = snapshot.get('active_map_id')
+        return payload
 
     def _api_manual_drive(self, body):
         if not self._manual_drive_allowed():
