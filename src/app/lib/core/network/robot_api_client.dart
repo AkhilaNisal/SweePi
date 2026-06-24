@@ -155,14 +155,21 @@ class RobotApiClient {
   Future<CleaningStartResponse> startCleaning({
     required String mapId,
     required List<MapSection> sections,
+    SweePiMapData? processedMap,
+    RobotPose? initialPose,
   }) async {
-    final json = await postJson(
-      '/api/cleaning/start',
-      body: {
-        'map_id': mapId,
-        'sections': sections.map((section) => section.toJson()).toList(),
-      },
-    );
+    final body = <String, dynamic>{
+      'map_id': mapId,
+      'sections': sections.map((section) => section.toJson()).toList(),
+    };
+    if (processedMap != null) {
+      body['processed_map'] = processedMap.toJson();
+    }
+    if (initialPose != null) {
+      body['initial_pose'] = initialPose.toJson();
+    }
+
+    final json = await postJson('/api/cleaning/start', body: body);
     return CleaningStartResponse.fromJson(json);
   }
 

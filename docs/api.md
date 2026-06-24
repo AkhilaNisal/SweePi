@@ -107,7 +107,9 @@ http://localhost:8080/docs
    the saved `map_id`.
 8. Add sections locally in the app and save them with
    `PUT /api/maps/{map_id}/metadata`.
-9. Start cleaning with `POST /api/cleaning/start`.
+9. Start cleaning with `POST /api/cleaning/start`. Section cleaning can include
+   an app-generated `processed_map` preview payload while still sending legacy
+   section geometry for compatibility/debug.
 10. Pause, resume, or stop cleaning with the cleaning command endpoints.
 
 ## Response And Error Rules
@@ -496,6 +498,11 @@ Starts cleaning for a selected saved map. An empty `sections` list means
 full-map cleaning in the current app/mock flow. A non-empty list means selected
 section cleaning.
 
+For section cleaning, the mobile app now creates a processed bounded map before
+sending the request. The preview map blocks cells outside the selected rectangle
+and draws a closed occupied boundary around the rectangle. The legacy `sections`
+list is still sent for compatibility, debugging, and history.
+
 Request body for full-map cleaning:
 
 ```json
@@ -520,12 +527,53 @@ Request body for selected-section cleaning:
 }
 ```
 
+Request body for selected-section cleaning with processed map preview and
+optional app-selected initial pose:
+
+```json
+{
+  "map_id": "my_room_map",
+  "sections": [
+    {
+      "section_id": "sec_001",
+      "name": "Left side",
+      "polygon": [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]
+    }
+  ],
+  "processed_map": {
+    "map_id": "my_room_map",
+    "name": "My Room",
+    "resolution": 0.05,
+    "origin": {
+      "x": 0.0,
+      "y": 0.0,
+      "yaw": 0.0
+    },
+    "width": 99,
+    "height": 99,
+    "occupancy": [100, 100, 0]
+  },
+  "initial_pose": {
+    "x": 0.25,
+    "y": 0.25,
+    "yaw": 1.57,
+    "frame": "map"
+  }
+}
+```
+
 Fields:
 
 | Field | Required | Notes |
 |---|---:|---|
 | `map_id` | yes | Must exist in the robot/mock map store. |
 | `sections` | no | Defaults to `[]`; the app sends one selected section for section cleaning. |
+| `processed_map` | no | App-generated processed map using the same map data shape as `GET /api/maps/{map_id}`. Full-map cleaning does not send this field. |
+| `initial_pose` | no | App-selected starting pose with `x`, `y`, `yaw`, and optional `frame`; this is separate from live/current status pose. |
+
+The mock API validates `processed_map.width`, `height`, `resolution`, `origin`,
+and `occupancy.length == width * height`, then stores `processed_map` and
+`initial_pose` in mock cleaning state for testing. It does not publish ROS data.
 
 Curl:
 

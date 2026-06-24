@@ -30,6 +30,8 @@ robot_state: Dict[str, Any] = {
         "task_id": None,
         "map_id": None,
         "sections": [],
+        "processed_map": None,
+        "initial_pose": None,
         "progress_percent": 0.0,
     },
     "nav": {
@@ -141,6 +143,8 @@ def reset_cleaning_state() -> None:
     robot_state["cleaning"]["task_id"] = None
     robot_state["cleaning"]["map_id"] = None
     robot_state["cleaning"]["sections"] = []
+    robot_state["cleaning"]["processed_map"] = None
+    robot_state["cleaning"]["initial_pose"] = None
     robot_state["cleaning"]["progress_percent"] = 0.0
 
 

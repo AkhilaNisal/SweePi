@@ -82,6 +82,12 @@ class _CleaningScreenState extends State<CleaningScreen> {
                       setState(() => _sectionMessage = null);
                     },
                   ),
+                ] else ...[
+                  const SizedBox(height: 8),
+                  _InitialPosePicker(
+                    controller: controller,
+                    mapData: controller.selectedMapData ?? SweePiMapData.empty,
+                  ),
                 ],
                 const SizedBox(height: 12),
                 _CleaningActions(
@@ -331,6 +337,172 @@ class _SectionMapPicker extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
+        if (selectedSection != null) ...[
+          const SizedBox(height: 12),
+          _ProcessedSectionPreview(controller: controller),
+        ],
+      ],
+    );
+  }
+}
+
+class _ProcessedSectionPreview extends StatelessWidget {
+  const _ProcessedSectionPreview({required this.controller});
+
+  final AppController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final previewMap = controller.processedSectionMapPreview;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    if (previewMap == null) {
+      return Text(
+        'Processed map preview is not available.',
+        style: TextStyle(color: colorScheme.error),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Processed map preview',
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            const Text('Boundary'),
+            Expanded(
+              child: Slider(
+                min: 1,
+                max: 24,
+                divisions: 23,
+                label: '${controller.sectionBoundaryThicknessCells} cells',
+                value: controller.sectionBoundaryThicknessCells.toDouble(),
+                onChanged: controller.isBusy
+                    ? null
+                    : (value) {
+                        controller.setSectionBoundaryThicknessCells(
+                          value.round(),
+                        );
+                      },
+              ),
+            ),
+            SizedBox(
+              width: 64,
+              child: Text('${controller.sectionBoundaryThicknessCells} cells'),
+            ),
+          ],
+        ),
+        SizedBox(
+          height: 280,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: colorScheme.surface,
+              border: Border.all(color: colorScheme.outlineVariant),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: MapCanvas(
+                mapData: previewMap,
+                selection: null,
+                onSelectionChanged: (_) {},
+                robotPose: controller.robotStatus.pose,
+                plannedInitialPose: controller.plannedInitialPose,
+                onInitialPoseChanged: controller.setPlannedInitialPose,
+                initialPoseEnabled: !controller.isBusy,
+                selectionEnabled: false,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        _InitialPoseSummary(controller: controller),
+      ],
+    );
+  }
+}
+
+class _InitialPosePicker extends StatelessWidget {
+  const _InitialPosePicker({required this.controller, required this.mapData});
+
+  final AppController controller;
+  final SweePiMapData mapData;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!mapData.available) {
+      return const SizedBox.shrink();
+    }
+
+    final colorScheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Start pose', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 240,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: colorScheme.surface,
+              border: Border.all(color: colorScheme.outlineVariant),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: MapCanvas(
+                mapData: mapData,
+                selection: null,
+                onSelectionChanged: (_) {},
+                robotPose: controller.robotStatus.pose,
+                plannedInitialPose: controller.plannedInitialPose,
+                onInitialPoseChanged: controller.setPlannedInitialPose,
+                initialPoseEnabled: !controller.isBusy,
+                selectionEnabled: false,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        _InitialPoseSummary(controller: controller),
+      ],
+    );
+  }
+}
+
+class _InitialPoseSummary extends StatelessWidget {
+  const _InitialPoseSummary({required this.controller});
+
+  final AppController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final pose = controller.plannedInitialPose;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            pose == null
+                ? 'No start pose set.'
+                : 'Start: ${pose.x.toStringAsFixed(2)}, '
+                      '${pose.y.toStringAsFixed(2)}, '
+                      '${pose.yaw.toStringAsFixed(2)} rad',
+            style: TextStyle(color: colorScheme.onSurfaceVariant),
+          ),
+        ),
+        TextButton.icon(
+          onPressed: pose == null || controller.isBusy
+              ? null
+              : () => controller.setPlannedInitialPose(null),
+          icon: const Icon(Icons.clear_rounded),
+          label: const Text('Clear'),
+        ),
       ],
     );
   }

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -19,6 +20,9 @@ class MapCanvas extends StatefulWidget {
     this.selectedSectionIds = const {},
     this.onSectionTap,
     this.selectionEnabled = true,
+    this.plannedInitialPose,
+    this.onInitialPoseChanged,
+    this.initialPoseEnabled = false,
   });
 
   final SweePiMapData mapData;
@@ -29,6 +33,9 @@ class MapCanvas extends StatefulWidget {
   final Set<String> selectedSectionIds;
   final ValueChanged<MapSection?>? onSectionTap;
   final bool selectionEnabled;
+  final RobotPose? plannedInitialPose;
+  final ValueChanged<RobotPose?>? onInitialPoseChanged;
+  final bool initialPoseEnabled;
 
   @override
   State<MapCanvas> createState() => _MapCanvasState();
@@ -36,6 +43,7 @@ class MapCanvas extends StatefulWidget {
 
 class _MapCanvasState extends State<MapCanvas> {
   ui.Image? _raster;
+  Offset? _poseDragStart;
 
   @override
   void initState() {
@@ -47,7 +55,8 @@ class _MapCanvasState extends State<MapCanvas> {
   void didUpdateWidget(covariant MapCanvas oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.mapData.mapId != widget.mapData.mapId ||
-        oldWidget.mapData.occupancy.length != widget.mapData.occupancy.length) {
+        oldWidget.mapData.occupancy.length != widget.mapData.occupancy.length ||
+        oldWidget.mapData.occupancy != widget.mapData.occupancy) {
       _rebuildRaster();
     }
   }
@@ -112,45 +121,24 @@ class _MapCanvasState extends State<MapCanvas> {
             child: LayoutBuilder(
               builder: (context, paintConstraints) {
                 return GestureDetector(
-                  onTapUp: widget.onSectionTap == null
+                  onTapUp:
+                      widget.onSectionTap == null || widget.initialPoseEnabled
                       ? null
                       : (details) {
                           widget.onSectionTap!(
                             _sectionAt(details.localPosition, paintConstraints),
                           );
                         },
-                  onPanStart: widget.selectionEnabled
-                      ? (details) {
-                          widget.onSelectionChanged(
-                            _selectionFrom(
-                              details.localPosition,
-                              details.localPosition,
-                              paintConstraints,
-                            ),
-                          );
-                        }
+                  onPanStart:
+                      (widget.selectionEnabled || widget.initialPoseEnabled)
+                      ? (details) => _handlePanStart(details, paintConstraints)
                       : null,
-                  onPanUpdate: widget.selectionEnabled
-                      ? (details) {
-                          final current =
-                              widget.selection ??
-                              const RectSelection(
-                                left: 0,
-                                top: 0,
-                                right: 0,
-                                bottom: 0,
-                              );
-                          widget.onSelectionChanged(
-                            _selectionFrom(
-                              Offset(
-                                current.left * paintConstraints.maxWidth,
-                                current.top * paintConstraints.maxHeight,
-                              ),
-                              details.localPosition,
-                              paintConstraints,
-                            ),
-                          );
-                        }
+                  onPanUpdate:
+                      (widget.selectionEnabled || widget.initialPoseEnabled)
+                      ? (details) => _handlePanUpdate(details, paintConstraints)
+                      : null,
+                  onPanEnd: widget.initialPoseEnabled
+                      ? (_) => _poseDragStart = null
                       : null,
                   child: CustomPaint(
                     painter: _MapPainter(
@@ -158,6 +146,7 @@ class _MapCanvasState extends State<MapCanvas> {
                       selection: widget.selection,
                       mapData: widget.mapData,
                       robotPose: widget.robotPose,
+                      plannedInitialPose: widget.plannedInitialPose,
                       sections: widget.sections,
                       selectedSectionIds: widget.selectedSectionIds,
                     ),
@@ -169,6 +158,51 @@ class _MapCanvasState extends State<MapCanvas> {
           ),
         );
       },
+    );
+  }
+
+  void _handlePanStart(DragStartDetails details, BoxConstraints constraints) {
+    if (widget.initialPoseEnabled) {
+      _poseDragStart = details.localPosition;
+      widget.onInitialPoseChanged?.call(
+        _poseFromDrag(
+          details.localPosition,
+          details.localPosition,
+          constraints,
+        ),
+      );
+      return;
+    }
+
+    widget.onSelectionChanged(
+      _selectionFrom(details.localPosition, details.localPosition, constraints),
+    );
+  }
+
+  void _handlePanUpdate(DragUpdateDetails details, BoxConstraints constraints) {
+    if (widget.initialPoseEnabled) {
+      widget.onInitialPoseChanged?.call(
+        _poseFromDrag(
+          _poseDragStart ?? details.localPosition,
+          details.localPosition,
+          constraints,
+        ),
+      );
+      return;
+    }
+
+    final current =
+        widget.selection ??
+        const RectSelection(left: 0, top: 0, right: 0, bottom: 0);
+    widget.onSelectionChanged(
+      _selectionFrom(
+        Offset(
+          current.left * constraints.maxWidth,
+          current.top * constraints.maxHeight,
+        ),
+        details.localPosition,
+        constraints,
+      ),
     );
   }
 
@@ -235,6 +269,35 @@ class _MapCanvasState extends State<MapCanvas> {
       bottom: (end.dy / constraints.maxHeight).clamp(0.0, 1.0),
     );
   }
+
+  RobotPose _poseFromDrag(
+    Offset start,
+    Offset end,
+    BoxConstraints constraints,
+  ) {
+    final worldStart = _canvasToWorld(start, constraints.biggest);
+    final worldEnd = _canvasToWorld(end, constraints.biggest);
+    final dx = worldEnd.dx - worldStart.dx;
+    final dy = worldEnd.dy - worldStart.dy;
+    final yaw = dx.abs() + dy.abs() < 0.0001
+        ? widget.plannedInitialPose?.yaw ?? 0.0
+        : math.atan2(dy, dx);
+    return RobotPose(
+      x: worldStart.dx,
+      y: worldStart.dy,
+      yaw: yaw,
+      frame: 'map',
+    );
+  }
+
+  Offset _canvasToWorld(Offset point, Size size) {
+    final mapX = (point.dx / size.width) * widget.mapData.width;
+    final mapY = (1 - (point.dy / size.height)) * widget.mapData.height;
+    return Offset(
+      widget.mapData.originX + mapX * widget.mapData.resolution,
+      widget.mapData.originY + mapY * widget.mapData.resolution,
+    );
+  }
 }
 
 class _MapPainter extends CustomPainter {
@@ -243,6 +306,7 @@ class _MapPainter extends CustomPainter {
     required this.selection,
     required this.mapData,
     required this.robotPose,
+    required this.plannedInitialPose,
     required this.sections,
     required this.selectedSectionIds,
   });
@@ -251,6 +315,7 @@ class _MapPainter extends CustomPainter {
   final RectSelection? selection;
   final SweePiMapData mapData;
   final RobotPose? robotPose;
+  final RobotPose? plannedInitialPose;
   final List<MapSection> sections;
   final Set<String> selectedSectionIds;
 
@@ -275,14 +340,16 @@ class _MapPainter extends CustomPainter {
     _drawSections(canvas, size);
 
     if (robotPose != null && mapData.width > 0 && mapData.height > 0) {
-      final mapX = (robotPose!.x - mapData.originX) / mapData.resolution;
-      final mapY = (robotPose!.y - mapData.originY) / mapData.resolution;
-      final dx = mapX / mapData.width * size.width;
-      final dy = (1 - (mapY / mapData.height)) * size.height;
-      canvas.drawCircle(
-        Offset(dx, dy),
-        6,
-        Paint()..color = const Color(0xFF0D67B5),
+      _drawPoseMarker(canvas, size, robotPose!, const Color(0xFF0D67B5), 6);
+    }
+
+    if (plannedInitialPose != null && mapData.width > 0 && mapData.height > 0) {
+      _drawPoseMarker(
+        canvas,
+        size,
+        plannedInitialPose!,
+        const Color(0xFFE56B2F),
+        7,
       );
     }
 
@@ -359,6 +426,31 @@ class _MapPainter extends CustomPainter {
     );
   }
 
+  void _drawPoseMarker(
+    Canvas canvas,
+    Size size,
+    RobotPose pose,
+    Color color,
+    double radius,
+  ) {
+    final center = _worldToCanvas(pose.x, pose.y, size);
+    final heading = Offset(math.cos(pose.yaw) * 18, -math.sin(pose.yaw) * 18);
+    final paint = Paint()
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round
+      ..color = color;
+    canvas.drawCircle(center, radius, Paint()..color = color);
+    canvas.drawLine(center, center + heading, paint);
+    canvas.drawCircle(
+      center,
+      radius + 3,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5
+        ..color = Colors.white,
+    );
+  }
+
   void _drawGrid(Canvas canvas, Size size) {
     final paint = Paint()
       ..style = PaintingStyle.stroke
@@ -379,6 +471,7 @@ class _MapPainter extends CustomPainter {
         oldDelegate.selection != selection ||
         oldDelegate.mapData.mapId != mapData.mapId ||
         oldDelegate.robotPose != robotPose ||
+        oldDelegate.plannedInitialPose != plannedInitialPose ||
         oldDelegate.sections != sections ||
         oldDelegate.selectedSectionIds != selectedSectionIds;
   }

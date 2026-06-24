@@ -9,9 +9,8 @@ class MapSection {
     final polygon = ((json['polygon'] as List?) ?? const [])
         .whereType<List>()
         .map(
-          (point) => point
-              .map((value) => (value as num?)?.toDouble() ?? 0.0)
-              .toList(),
+          (point) =>
+              point.map((value) => (value as num?)?.toDouble() ?? 0.0).toList(),
         )
         .where((point) => point.length >= 2)
         .toList();
@@ -28,11 +27,7 @@ class MapSection {
   final List<List<double>> polygon;
 
   Map<String, dynamic> toJson() {
-    return {
-      'section_id': sectionId,
-      'name': name,
-      'polygon': polygon,
-    };
+    return {'section_id': sectionId, 'name': name, 'polygon': polygon};
   }
 }
 
@@ -109,6 +104,7 @@ class SweePiMapData {
     required this.resolution,
     required this.originX,
     required this.originY,
+    this.originYaw = 0,
     required this.width,
     required this.height,
     required this.occupancy,
@@ -121,6 +117,7 @@ class SweePiMapData {
       resolution: (json['resolution'] as num?)?.toDouble() ?? 0.05,
       originX: ((json['origin'] as Map?)?['x'] as num?)?.toDouble() ?? 0.0,
       originY: ((json['origin'] as Map?)?['y'] as num?)?.toDouble() ?? 0.0,
+      originYaw: ((json['origin'] as Map?)?['yaw'] as num?)?.toDouble() ?? 0.0,
       width: (json['width'] as num?)?.toInt() ?? 0,
       height: (json['height'] as num?)?.toInt() ?? 0,
       occupancy: List<int>.from(json['occupancy'] as List? ?? const []),
@@ -133,6 +130,7 @@ class SweePiMapData {
     resolution: 0.05,
     originX: 0,
     originY: 0,
+    originYaw: 0,
     width: 0,
     height: 0,
     occupancy: [],
@@ -143,6 +141,7 @@ class SweePiMapData {
   final double resolution;
   final double originX;
   final double originY;
+  final double originYaw;
   final int width;
   final int height;
   final List<int> occupancy;
@@ -152,4 +151,40 @@ class SweePiMapData {
       width > 0 &&
       height > 0 &&
       occupancy.length >= width * height;
+
+  SweePiMapData copyWith({
+    String? mapId,
+    String? name,
+    double? resolution,
+    double? originX,
+    double? originY,
+    double? originYaw,
+    int? width,
+    int? height,
+    List<int>? occupancy,
+  }) {
+    return SweePiMapData(
+      mapId: mapId ?? this.mapId,
+      name: name ?? this.name,
+      resolution: resolution ?? this.resolution,
+      originX: originX ?? this.originX,
+      originY: originY ?? this.originY,
+      originYaw: originYaw ?? this.originYaw,
+      width: width ?? this.width,
+      height: height ?? this.height,
+      occupancy: occupancy ?? this.occupancy,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'map_id': mapId,
+      'name': name,
+      'resolution': resolution,
+      'origin': {'x': originX, 'y': originY, 'yaw': originYaw},
+      'width': width,
+      'height': height,
+      'occupancy': occupancy,
+    };
+  }
 }

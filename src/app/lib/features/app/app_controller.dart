@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/models/exploration_models.dart';
+import '../../core/map/processed_section_map.dart';
 import '../../core/models/map_models.dart';
 import '../../core/models/robot_models.dart';
 import '../../core/network/robot_api_client.dart';
@@ -25,9 +26,12 @@ class AppController extends ChangeNotifier {
   List<SweePiMapMetadata> savedMaps = const [];
   SweePiMapMetadata? selectedMapMetadata;
   SweePiMapData? selectedMapData;
+  SweePiMapData? processedSectionMapPreview;
   List<MapSection> selectedSections = const [];
   String? lastSavedMapId;
   RectSelection? pendingSelection;
+  RobotPose? plannedInitialPose;
+  int sectionBoundaryThicknessCells = 3;
 
   RobotApiClient? _client;
 
@@ -260,11 +264,13 @@ class AppController extends ChangeNotifier {
               .where((item) => item.sectionId != section.sectionId)
               .toList()
         : [...selectedSections, section];
+    _rebuildProcessedSectionPreview();
     notifyListeners();
   }
 
   void selectSectionForCleaning(MapSection? section) {
     selectedSections = section == null ? const [] : [section];
+    _rebuildProcessedSectionPreview();
     notifyListeners();
   }
 
@@ -282,9 +288,14 @@ class AppController extends ChangeNotifier {
       final sectionsToClean = fullMap
           ? const <MapSection>[]
           : [selectedSections.first];
+      if (!fullMap && processedSectionMapPreview == null) {
+        _rebuildProcessedSectionPreview();
+      }
       final response = await _requireClient().startCleaning(
         mapId: metadata.mapId,
         sections: sectionsToClean,
+        processedMap: fullMap ? null : processedSectionMapPreview,
+        initialPose: plannedInitialPose,
       );
       accepted = response.accepted;
       lastMessage = response.message;
@@ -369,6 +380,17 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setPlannedInitialPose(RobotPose? pose) {
+    plannedInitialPose = pose;
+    notifyListeners();
+  }
+
+  void setSectionBoundaryThicknessCells(int value) {
+    sectionBoundaryThicknessCells = value.clamp(1, 24);
+    _rebuildProcessedSectionPreview();
+    notifyListeners();
+  }
+
   RobotApiClient _requireClient() {
     final client = _client;
     if (client == null) {
@@ -413,6 +435,11 @@ class AppController extends ChangeNotifier {
     final client = _requireClient();
     selectedMapData = await client.fetchMap(mapId);
     selectedMapMetadata = await client.fetchMapMetadata(mapId);
+    if (selectedMapData != null && selectedMapData!.available) {
+      sectionBoundaryThicknessCells = defaultSectionBoundaryThicknessCells(
+        selectedMapData!,
+      );
+    }
     selectedSections = selectedMapMetadata!.sections
         .where(
           (section) => selectedSections.any(
@@ -421,6 +448,29 @@ class AppController extends ChangeNotifier {
         )
         .toList();
     pendingSelection = null;
+    plannedInitialPose = null;
+    _rebuildProcessedSectionPreview();
+  }
+
+  void _rebuildProcessedSectionPreview() {
+    final mapData = selectedMapData;
+    if (mapData == null || selectedSections.isEmpty) {
+      processedSectionMapPreview = null;
+      return;
+    }
+
+    try {
+      processedSectionMapPreview = buildProcessedSectionMap(
+        mapData: mapData,
+        section: selectedSections.first,
+        boundaryThicknessCells: sectionBoundaryThicknessCells,
+      );
+    } catch (error) {
+      processedSectionMapPreview = null;
+      debugPrint(
+        '[AppController] Failed to build processed section map: $error',
+      );
+    }
   }
 }
 

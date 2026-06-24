@@ -1,10 +1,7 @@
 import 'map_models.dart';
 
 class RobotBattery {
-  const RobotBattery({
-    required this.percent,
-    required this.charging,
-  });
+  const RobotBattery({required this.percent, required this.charging});
 
   factory RobotBattery.fromJson(Map<String, dynamic> json) {
     return RobotBattery(
@@ -40,6 +37,10 @@ class RobotPose {
   final double y;
   final double yaw;
   final String frame;
+
+  Map<String, dynamic> toJson() {
+    return {'x': x, 'y': y, 'yaw': yaw, 'frame': frame};
+  }
 }
 
 class RobotMapState {
@@ -70,8 +71,7 @@ class RobotCleaningState {
           .whereType<Map>()
           .map((item) => MapSection.fromJson(item.cast<String, dynamic>()))
           .toList(),
-      progressPercent:
-          (json['progress_percent'] as num?)?.toDouble() ?? 0.0,
+      progressPercent: (json['progress_percent'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
