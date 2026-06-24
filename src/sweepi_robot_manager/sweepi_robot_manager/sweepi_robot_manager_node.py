@@ -54,6 +54,8 @@ class SweePiRobotManager(Node):
         self.exploration_stop_candidate_time = 0.0
         self.exploration_stop_grace_sec = 2.0
         self.exploration_stop_handled = False
+        self.exploration_stop_requested = False
+        self.exploration_task_end_requested = False
 
         self.status_pub = self.create_publisher(
             String,
@@ -358,6 +360,8 @@ class SweePiRobotManager(Node):
             self.active_map_name = ''
             self.active_task_start_monotonic = None
             self.active_task_start_wall = ''
+            self.exploration_stop_requested = False
+            self.exploration_task_end_requested = False
             self._publish_status()
             return False
 
@@ -408,6 +412,8 @@ class SweePiRobotManager(Node):
         self.pending_coverage_start_deadline = 0.0
         self.last_coverage_start_attempt = 0.0
         self.coverage_reset_shutdown_deadline = 0.0
+        self.exploration_stop_requested = False
+        self.exploration_task_end_requested = False
         self._publish_status()
         return True
 
@@ -571,10 +577,13 @@ class SweePiRobotManager(Node):
 
         future = client.call_async(Trigger.Request())
         future.add_done_callback(self._exploration_stop_done)
+        self.exploration_stop_requested = True
+        self.exploration_task_end_requested = False
         response.success = True
         response.message = (
-            'Exploration stop requested. Manager will close the exploration '
-            'launch stack and return to idle.'
+            'Exploration stop requested. Autonomous/manual motion will stop, '
+            'but the exploration task stays active. Use start_auto/manual to '
+            'continue, or stop_and_save to finish the task.'
         )
         return response
 
@@ -589,9 +598,9 @@ class SweePiRobotManager(Node):
 
         if self.active_task == 'exploration':
             self.get_logger().info(
-                'Exploration stopped. Returning manager to idle.'
+                'Exploration motion stopped. Task remains active for mode '
+                'switching or stop-and-save.'
             )
-            self._stop_active_task()
 
     def _exploration_stop_and_save_callback(self, request, response):
         del request
@@ -616,6 +625,8 @@ class SweePiRobotManager(Node):
             response.message = 'Target service unavailable: %s' % target_service
             return response
 
+        self.exploration_task_end_requested = True
+        self.exploration_stop_requested = False
         save_request = SaveMap.Request()
         save_request.map_topic = self.map_topic
         save_request.map_url = self.active_map_name
@@ -711,11 +722,31 @@ class SweePiRobotManager(Node):
         if self.active_task != 'exploration' or self.exploration_stop_handled:
             return
 
+        if mode in ('auto', 'manual'):
+            self.exploration_stop_candidate_time = 0.0
+            self.exploration_stop_requested = False
+            self.exploration_task_end_requested = False
+            return
+
         if mode == 'stopped' and previous_mode in ('auto', 'manual'):
+            if self.exploration_stop_requested and not self.exploration_task_end_requested:
+                self.get_logger().info(
+                    'Exploration reported stopped after a stop request. Keeping '
+                    'the exploration task active.'
+                )
+                self.exploration_stop_candidate_time = 0.0
+                return
+            if self.exploration_task_end_requested:
+                self.get_logger().info(
+                    'Exploration reported stopped during stop-and-save. Waiting '
+                    'for map save to finish before returning manager to idle.'
+                )
+                self.exploration_stop_candidate_time = 0.0
+                return
             self.exploration_stop_candidate_time = time.monotonic()
             self.get_logger().info(
-                'Exploration reported stopped. Waiting briefly before '
-                'returning manager to idle.'
+                'Exploration reported stopped for a task-ending condition. '
+                'Waiting briefly before returning manager to idle.'
             )
 
     def _reset_active_coverage_tracking(self):
@@ -755,6 +786,8 @@ class SweePiRobotManager(Node):
         self.latest_exploration_mode = str(initial_mode or '').strip().lower()
         self.exploration_stop_candidate_time = 0.0
         self.exploration_stop_handled = False
+        self.exploration_stop_requested = False
+        self.exploration_task_end_requested = False
 
     def _finalize_completed_coverage_if_ready(self):
         if self.active_task != 'coverage' or self.active_process is None:
@@ -865,6 +898,8 @@ class SweePiRobotManager(Node):
         self.pending_coverage_start_deadline = 0.0
         self.last_coverage_start_attempt = 0.0
         self.coverage_reset_shutdown_deadline = 0.0
+        self.exploration_stop_requested = False
+        self.exploration_task_end_requested = False
         self._publish_status()
 
     def _timer_callback(self):

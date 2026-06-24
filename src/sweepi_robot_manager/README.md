@@ -80,10 +80,12 @@ ros2 service call /sweepi_robot_manager/exploration/stop std_srvs/srv/Trigger {}
 ros2 service call /sweepi_robot_manager/exploration/stop_and_save std_srvs/srv/Trigger {}
 ```
 
-`exploration/stop`, `exploration/stop_and_save`, and automatic exploration
-completion close the exploration launch stack after the explorer reports
-`/exploration/mode: stopped`. The manager then returns to `idle` so coverage or
-another exploration session can be started.
+`exploration/stop` stops robot motion and pauses further autonomous exploration,
+but it keeps the exploration task active so you can switch back to
+`start_auto` or `manual`. `exploration/stop_and_save` stops motion, saves the
+map with the active map name, closes the exploration launch stack, and returns
+the manager to `idle`. Automatic exploration completion also saves the map and
+returns the manager to `idle`.
 
 Coverage controls:
 

@@ -126,11 +126,14 @@ ros2 service call /set_manual_control std_srvs/srv/SetBool "{data: true}"
 ros2 service call /set_manual_control std_srvs/srv/SetBool "{data: false}"
 ```
 
-Stop without saving:
+Stop motion and pause further autonomous exploration without ending the task:
 
 ```bash
 ros2 service call /stop_exploration std_srvs/srv/Trigger {}
 ```
+
+After this, switch back to automatic or manual mode to continue. To end the
+exploration task, use `/stop_exploration_and_save`.
 
 Save without changing the current mode, mainly for manual teleop sessions:
 

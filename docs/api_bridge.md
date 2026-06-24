@@ -75,11 +75,25 @@ curl -X POST http://localhost:8080/api/exploration/manual/command \
   -d '{"command":"rotate_left","speed":0.4,"duration_ms":500}'
 ```
 
+Stop exploration motion without ending the task:
+
+```bash
+curl -X POST http://localhost:8080/api/exploration/stop
+```
+
+After this, the robot velocity is zero and autonomous/manual motion is paused,
+but the exploration session remains active. Use `/api/exploration/mode` to
+switch back to `automatic` or `manual`.
+
 Stop and save exploration:
 
 ```bash
 curl -X POST http://localhost:8080/api/exploration/stop-and-save
 ```
+
+This is the task-ending exploration command. It stops motion, saves the active
+map name, and lets the manager return to idle so coverage or a new exploration
+task can start.
 
 Check exploration status:
 

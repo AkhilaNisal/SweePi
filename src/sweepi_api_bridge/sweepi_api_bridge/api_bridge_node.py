@@ -288,7 +288,12 @@ class SweePiApiBridge(Node):
             self._publish_zero_velocity()
             result = self._call_trigger('/sweepi_robot_manager/exploration/stop')
             if result['success']:
-                self.state.reset_exploration()
+                self.state.update(
+                    robot_state='exploration_stopped',
+                    active_task='exploration',
+                    exploration_active=True,
+                    exploration_mode='stopped',
+                )
             return 200, self._accepted_from_service(result)
         if method == 'POST' and route == ['stop-and-save']:
             self._publish_zero_velocity()
@@ -1043,8 +1048,14 @@ class SweePiApiBridge(Node):
             elif snapshot['active_task'] == 'cleaning' and snapshot['robot_state'] not in ('paused',):
                 self.state.reset_cleaning()
         elif task == 'exploration':
+            mode = fields.get('latest_exploration_mode', '')
+            robot_state = (
+                'exploration_stopped'
+                if mode == 'stopped'
+                else 'exploring'
+            )
             self.state.update(
-                robot_state='exploring',
+                robot_state=robot_state,
                 active_task='exploration',
                 exploration_active=True,
             )
@@ -1060,9 +1071,21 @@ class SweePiApiBridge(Node):
             mode = 'automatic'
         if mode not in ('automatic', 'manual', 'stopped'):
             mode = 'unknown'
-        updates = {'exploration_mode': mode}
+        updates = {
+            'exploration_mode': mode,
+        }
         if mode == 'stopped':
-            updates.update(exploration_active=False)
+            updates.update(
+                robot_state='exploration_stopped',
+                active_task='exploration',
+                exploration_active=True,
+            )
+        elif mode in ('automatic', 'manual'):
+            updates.update(
+                robot_state='exploring',
+                active_task='exploration',
+                exploration_active=True,
+            )
         self.state.update(**updates)
 
     def _map_callback(self, msg):
