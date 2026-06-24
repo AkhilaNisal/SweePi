@@ -94,6 +94,7 @@ class AppController extends ChangeNotifier {
 
     try {
       _client = RobotApiClient(host: host, apiPort: apiPort);
+      await _client!.fetchHealth();
       await _refreshRobotStatusOnly();
       explorationStatus = await _requireClient().fetchExplorationStatus();
       await _refreshMapsOnly();
@@ -143,11 +144,37 @@ class AppController extends ChangeNotifier {
         return;
       }
       explorationStatus = ExplorationStatus(
+        common: response.common,
+        active: true,
         state: response.state,
         mode: response.mode,
         mapName: response.mapName,
         mapAvailable: false,
-        message: response.message,
+        progressPercent: null,
+        pose: null,
+      );
+      await _refreshRobotStatusOnly();
+    });
+    return accepted;
+  }
+
+  Future<bool> switchExplorationMode(String newMode) async {
+    var accepted = false;
+    await _runBusy(() async {
+      final response = await _requireClient().switchExplorationMode(
+        newMode: newMode,
+      );
+      accepted = response.accepted;
+      lastMessage = response.message;
+      explorationStatus = ExplorationStatus(
+        common: response.common,
+        active: true,
+        state: response.state,
+        mode: response.mode,
+        mapName: explorationStatus.mapName,
+        mapAvailable: explorationStatus.mapAvailable,
+        progressPercent: explorationStatus.progressPercent,
+        pose: explorationStatus.pose,
       );
       await _refreshRobotStatusOnly();
     });
@@ -208,9 +235,9 @@ class AppController extends ChangeNotifier {
     await _runBusy(() => _selectMapOnly(mapId));
   }
 
-  Future<void> addSectionFromPolygon(
+  Future<void> addSectionFromBounds(
     String sectionName,
-    List<List<double>> polygon,
+    SectionBounds bounds,
   ) async {
     final metadata = selectedMapMetadata;
     if (metadata == null) {
@@ -223,7 +250,7 @@ class AppController extends ChangeNotifier {
     final section = MapSection(
       sectionId: 'sec_${DateTime.now().millisecondsSinceEpoch}',
       name: sectionName.trim().isEmpty ? 'Section $nextNumber' : sectionName,
-      polygon: polygon,
+      bounds: bounds,
     );
     selectedMapMetadata = metadata.copyWith(
       sections: [...metadata.sections, section],
@@ -285,17 +312,20 @@ class AppController extends ChangeNotifier {
         errorMessage = 'Select a section before starting section cleaning.';
         return;
       }
-      final sectionsToClean = fullMap
-          ? const <MapSection>[]
-          : [selectedSections.first];
+      if (plannedInitialPose == null) {
+        errorMessage = 'Set a start pose before starting cleaning.';
+        return;
+      }
+      final sectionsToClean = fullMap ? const <MapSection>[] : selectedSections;
       if (!fullMap && processedSectionMapPreview == null) {
         _rebuildProcessedSectionPreview();
       }
       final response = await _requireClient().startCleaning(
         mapId: metadata.mapId,
+        cleaningMode: fullMap ? 'full-map' : 'sections',
         sections: sectionsToClean,
         processedMap: fullMap ? null : processedSectionMapPreview,
-        initialPose: plannedInitialPose,
+        initialPose: plannedInitialPose!,
       );
       accepted = response.accepted;
       lastMessage = response.message;
@@ -349,6 +379,48 @@ class AppController extends ChangeNotifier {
       accepted = response.accepted;
       lastMessage = response.message.isEmpty
           ? 'Cleaning stopped.'
+          : response.message;
+      if (!response.accepted) {
+        errorMessage = response.message;
+        return;
+      }
+      await _refreshRobotStatusOnly();
+    });
+    return accepted;
+  }
+
+  Future<void> refreshCleaningStatus() async {
+    await _runBusy(() async {
+      final status = await _requireClient().fetchCleaningStatus();
+      lastMessage = status.message;
+      await _refreshRobotStatusOnly();
+    });
+  }
+
+  Future<bool> resetCleaning() async {
+    var accepted = false;
+    await _runBusy(() async {
+      final response = await _requireClient().resetCleaning();
+      accepted = response.accepted;
+      lastMessage = response.message.isEmpty
+          ? 'Cleaning state reset.'
+          : response.message;
+      if (!response.accepted) {
+        errorMessage = response.message;
+        return;
+      }
+      await _refreshRobotStatusOnly();
+    });
+    return accepted;
+  }
+
+  Future<bool> returnHome() async {
+    var accepted = false;
+    await _runBusy(() async {
+      final response = await _requireClient().returnHome();
+      accepted = response.accepted;
+      lastMessage = response.message.isEmpty
+          ? 'Robot is returning home.'
           : response.message;
       if (!response.accepted) {
         errorMessage = response.message;
@@ -462,7 +534,7 @@ class AppController extends ChangeNotifier {
     try {
       processedSectionMapPreview = buildProcessedSectionMap(
         mapData: mapData,
-        section: selectedSections.first,
+        sections: selectedSections,
         boundaryThicknessCells: sectionBoundaryThicknessCells,
       );
     } catch (error) {
@@ -496,25 +568,22 @@ class RectSelection {
     );
   }
 
-  List<List<double>> toWorldPolygon(SweePiMapData map) {
+  SectionBounds toWorldBounds(SweePiMapData map) {
     final normalizedRect = normalized();
     final topLeft = _toWorldPoint(map, normalizedRect.left, normalizedRect.top);
-    final topRight = _toWorldPoint(
-      map,
-      normalizedRect.right,
-      normalizedRect.top,
-    );
     final bottomRight = _toWorldPoint(
       map,
       normalizedRect.right,
       normalizedRect.bottom,
     );
-    final bottomLeft = _toWorldPoint(
-      map,
-      normalizedRect.left,
-      normalizedRect.bottom,
+    final x = math.min(topLeft[0], bottomRight[0]);
+    final y = math.min(topLeft[1], bottomRight[1]);
+    return SectionBounds(
+      x: x,
+      y: y,
+      width: (topLeft[0] - bottomRight[0]).abs(),
+      height: (topLeft[1] - bottomRight[1]).abs(),
     );
-    return [topLeft, topRight, bottomRight, bottomLeft];
   }
 
   List<double> _toWorldPoint(SweePiMapData map, double dx, double dy) {

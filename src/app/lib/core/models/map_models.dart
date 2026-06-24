@@ -1,33 +1,56 @@
+class SectionBounds {
+  const SectionBounds({
+    required this.x,
+    required this.y,
+    required this.width,
+    required this.height,
+  });
+
+  factory SectionBounds.fromJson(Map<String, dynamic> json) {
+    return SectionBounds(
+      x: (json['x'] as num?)?.toDouble() ?? 0,
+      y: (json['y'] as num?)?.toDouble() ?? 0,
+      width: (json['width'] as num?)?.toDouble() ?? 0,
+      height: (json['height'] as num?)?.toDouble() ?? 0,
+    );
+  }
+
+  final double x;
+  final double y;
+  final double width;
+  final double height;
+
+  bool get isValid => width > 0 && height > 0;
+
+  Map<String, dynamic> toJson() {
+    return {'x': x, 'y': y, 'width': width, 'height': height};
+  }
+}
+
 class MapSection {
   const MapSection({
     required this.sectionId,
     required this.name,
-    required this.polygon,
+    required this.bounds,
   });
 
   factory MapSection.fromJson(Map<String, dynamic> json) {
-    final polygon = ((json['polygon'] as List?) ?? const [])
-        .whereType<List>()
-        .map(
-          (point) =>
-              point.map((value) => (value as num?)?.toDouble() ?? 0.0).toList(),
-        )
-        .where((point) => point.length >= 2)
-        .toList();
-
+    final boundsJson = json['bounds'];
     return MapSection(
       sectionId: json['section_id'] as String? ?? '',
       name: json['name'] as String? ?? 'Unnamed section',
-      polygon: polygon,
+      bounds: boundsJson is Map
+          ? SectionBounds.fromJson(boundsJson.cast<String, dynamic>())
+          : const SectionBounds(x: 0, y: 0, width: 0, height: 0),
     );
   }
 
   final String sectionId;
   final String name;
-  final List<List<double>> polygon;
+  final SectionBounds bounds;
 
   Map<String, dynamic> toJson() {
-    return {'section_id': sectionId, 'name': name, 'polygon': polygon};
+    return {'section_id': sectionId, 'name': name, 'bounds': bounds.toJson()};
   }
 }
 
@@ -40,6 +63,9 @@ class SweePiMapMetadata {
     required this.width,
     required this.height,
     required this.resolution,
+    required this.originX,
+    required this.originY,
+    required this.originYaw,
     required this.sections,
   });
 
@@ -52,6 +78,9 @@ class SweePiMapMetadata {
       width: (json['width'] as num?)?.toInt(),
       height: (json['height'] as num?)?.toInt(),
       resolution: (json['resolution'] as num?)?.toDouble() ?? 0.05,
+      originX: ((json['origin'] as Map?)?['x'] as num?)?.toDouble() ?? 0.0,
+      originY: ((json['origin'] as Map?)?['y'] as num?)?.toDouble() ?? 0.0,
+      originYaw: ((json['origin'] as Map?)?['yaw'] as num?)?.toDouble() ?? 0.0,
       sections: ((json['sections'] as List?) ?? const [])
           .whereType<Map>()
           .map((item) => MapSection.fromJson(item.cast<String, dynamic>()))
@@ -67,6 +96,9 @@ class SweePiMapMetadata {
     width: null,
     height: null,
     resolution: 0.05,
+    originX: 0,
+    originY: 0,
+    originYaw: 0,
     sections: [],
   );
 
@@ -77,6 +109,9 @@ class SweePiMapMetadata {
   final int? width;
   final int? height;
   final double resolution;
+  final double originX;
+  final double originY;
+  final double originYaw;
   final List<MapSection> sections;
 
   SweePiMapMetadata copyWith({
@@ -92,6 +127,9 @@ class SweePiMapMetadata {
       width: width,
       height: height,
       resolution: resolution,
+      originX: originX,
+      originY: originY,
+      originYaw: originYaw,
       sections: sections ?? this.sections,
     );
   }
@@ -108,6 +146,7 @@ class SweePiMapData {
     required this.width,
     required this.height,
     required this.occupancy,
+    this.sections = const [],
   });
 
   factory SweePiMapData.fromJson(Map<String, dynamic> json) {
@@ -121,6 +160,10 @@ class SweePiMapData {
       width: (json['width'] as num?)?.toInt() ?? 0,
       height: (json['height'] as num?)?.toInt() ?? 0,
       occupancy: List<int>.from(json['occupancy'] as List? ?? const []),
+      sections: ((json['sections'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((item) => MapSection.fromJson(item.cast<String, dynamic>()))
+          .toList(),
     );
   }
 
@@ -134,6 +177,7 @@ class SweePiMapData {
     width: 0,
     height: 0,
     occupancy: [],
+    sections: [],
   );
 
   final String mapId;
@@ -145,6 +189,7 @@ class SweePiMapData {
   final int width;
   final int height;
   final List<int> occupancy;
+  final List<MapSection> sections;
 
   bool get available =>
       mapId.isNotEmpty &&
@@ -162,6 +207,7 @@ class SweePiMapData {
     int? width,
     int? height,
     List<int>? occupancy,
+    List<MapSection>? sections,
   }) {
     return SweePiMapData(
       mapId: mapId ?? this.mapId,
@@ -173,6 +219,7 @@ class SweePiMapData {
       width: width ?? this.width,
       height: height ?? this.height,
       occupancy: occupancy ?? this.occupancy,
+      sections: sections ?? this.sections,
     );
   }
 
@@ -184,6 +231,17 @@ class SweePiMapData {
       'origin': {'x': originX, 'y': originY, 'yaw': originYaw},
       'width': width,
       'height': height,
+      'occupancy': occupancy,
+      'sections': sections.map((section) => section.toJson()).toList(),
+    };
+  }
+
+  Map<String, dynamic> toProcessedMapJson() {
+    return {
+      'width': width,
+      'height': height,
+      'resolution': resolution,
+      'origin': {'x': originX, 'y': originY, 'yaw': originYaw},
       'occupancy': occupancy,
     };
   }

@@ -3,7 +3,7 @@ import 'package:sweepi/core/map/processed_section_map.dart';
 import 'package:sweepi/core/models/map_models.dart';
 
 void main() {
-  test('buildProcessedSectionMap blocks outside and preserves metadata', () {
+  test('buildProcessedSectionMap blocks outside rectangular section', () {
     final occupancy = List<int>.filled(8 * 8, 0);
     occupancy[3 * 8 + 3] = occupiedCellValue;
 
@@ -21,17 +21,12 @@ void main() {
     const section = MapSection(
       sectionId: 'sec_1',
       name: 'Center',
-      polygon: [
-        [12, 22],
-        [15, 22],
-        [15, 25],
-        [12, 25],
-      ],
+      bounds: SectionBounds(x: 12, y: 22, width: 3, height: 3),
     );
 
     final processed = buildProcessedSectionMap(
       mapData: mapData,
-      section: section,
+      sections: [section],
       boundaryThicknessCells: 1,
     );
 
@@ -61,6 +56,40 @@ void main() {
     expect(_cell(processed, 4, 4), 0);
   });
 
+  test('buildProcessedSectionMap preserves multiple rectangular sections', () {
+    final mapData = SweePiMapData(
+      mapId: 'room_map',
+      name: 'Room',
+      resolution: 1,
+      originX: 0,
+      originY: 0,
+      width: 10,
+      height: 10,
+      occupancy: List<int>.filled(10 * 10, 0),
+    );
+    const first = MapSection(
+      sectionId: 'sec_1',
+      name: 'First',
+      bounds: SectionBounds(x: 1, y: 1, width: 3, height: 3),
+    );
+    const second = MapSection(
+      sectionId: 'sec_2',
+      name: 'Second',
+      bounds: SectionBounds(x: 6, y: 6, width: 3, height: 3),
+    );
+
+    final processed = buildProcessedSectionMap(
+      mapData: mapData,
+      sections: [first, second],
+      boundaryThicknessCells: 1,
+    );
+
+    expect(_cell(processed, 2, 2), 0);
+    expect(_cell(processed, 7, 7), 0);
+    expect(_cell(processed, 5, 5), occupiedCellValue);
+    expect(_cell(processed, 0, 0), occupiedCellValue);
+  });
+
   test('buildProcessedSectionMap applies boundary thickness', () {
     final mapData = SweePiMapData(
       mapId: 'room_map',
@@ -75,17 +104,12 @@ void main() {
     const section = MapSection(
       sectionId: 'sec_1',
       name: 'Center',
-      polygon: [
-        [1, 1],
-        [6, 1],
-        [6, 6],
-        [1, 6],
-      ],
+      bounds: SectionBounds(x: 1, y: 1, width: 5, height: 5),
     );
 
     final processed = buildProcessedSectionMap(
       mapData: mapData,
-      section: section,
+      sections: [section],
       boundaryThicknessCells: 2,
     );
 

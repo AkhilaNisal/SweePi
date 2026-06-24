@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -25,14 +25,22 @@ robot_state: Dict[str, Any] = {
     },
     "map": {
         "map_id": "my_room_map",
+        "name": "My Room",
     },
     "cleaning": {
+        "active": False,
         "task_id": None,
         "map_id": None,
+        "cleaning_mode": None,
         "sections": [],
         "processed_map": None,
         "initial_pose": None,
         "progress_percent": 0.0,
+    },
+    "exploration": {
+        "active": False,
+        "map_name": None,
+        "mode": None,
     },
     "nav": {
         "execution_status": "IDLE",
@@ -45,7 +53,7 @@ robot_state: Dict[str, Any] = {
 exploration_state: Dict[str, Any] = {
     "active": False,
     "map_name": None,
-    "mode": "automatic",
+    "mode": None,
 }
 
 
@@ -67,6 +75,7 @@ def read_map_metadata(map_id: str) -> Dict[str, Any]:
 
     yaml_data = _read_yaml(map_id)
     width, height = _read_pgm_size(map_id)
+    metadata["origin"] = _origin_from_yaml(yaml_data)
     if metadata.get("width") is None:
         metadata["width"] = width
     if metadata.get("height") is None:
@@ -85,7 +94,7 @@ def update_map_metadata(
     if name is not None:
         metadata["name"] = name
     metadata["sections"] = sections
-    metadata["updated_at"] = datetime.now().isoformat()
+    metadata["updated_at"] = now_iso()
 
     with _metadata_path(map_id).open("w", encoding="utf-8") as file:
         json.dump(metadata, file, indent=2)
@@ -98,17 +107,16 @@ def read_map_data(map_id: str) -> Dict[str, Any]:
     metadata = read_map_metadata(map_id)
     yaml_data = _read_yaml(map_id)
     width, height, pixels = _read_pgm(map_id)
+    metadata_sections = metadata.get("sections", [])
     return {
         "map_id": map_id,
         "name": metadata.get("name", map_id),
         "resolution": float(yaml_data.get("resolution", metadata.get("resolution", 0.05))),
-        "origin": {
-            "x": float(yaml_data.get("origin", [0.0, 0.0, 0.0])[0]),
-            "y": float(yaml_data.get("origin", [0.0, 0.0, 0.0])[1]),
-        },
+        "origin": _origin_from_yaml(yaml_data),
         "width": width,
         "height": height,
         "occupancy": [_pixel_to_occupancy(pixel) for pixel in pixels],
+        "sections": metadata_sections,
     }
 
 
@@ -117,8 +125,10 @@ def create_mock_map(map_name: str) -> str:
     Create a fake saved map and return its generated map_id.
     This simulates the robot saving a map after exploration stops.
     """
-    map_id = f"map_{uuid.uuid4().hex[:6]}"
-    now = datetime.now().isoformat()
+    map_id = _safe_map_id(map_name)
+    if map_exists(map_id):
+        map_id = f"{map_id}_{uuid.uuid4().hex[:6]}"
+    now = now_iso()
     _write_free_pgm(map_id, width=100, height=100)
     _write_yaml(map_id, resolution=0.05, origin=[-2.5, -2.5, 0.0])
 
@@ -130,6 +140,7 @@ def create_mock_map(map_name: str) -> str:
         "width": 100,
         "height": 100,
         "resolution": 0.05,
+        "origin": {"x": -2.5, "y": -2.5, "yaw": 0.0},
         "sections": [],
     }
     with _metadata_path(map_id).open("w", encoding="utf-8") as file:
@@ -140,12 +151,32 @@ def create_mock_map(map_name: str) -> str:
 
 
 def reset_cleaning_state() -> None:
+    robot_state["cleaning"]["active"] = False
     robot_state["cleaning"]["task_id"] = None
     robot_state["cleaning"]["map_id"] = None
+    robot_state["cleaning"]["cleaning_mode"] = None
     robot_state["cleaning"]["sections"] = []
     robot_state["cleaning"]["processed_map"] = None
     robot_state["cleaning"]["initial_pose"] = None
     robot_state["cleaning"]["progress_percent"] = 0.0
+
+
+def now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _safe_map_id(map_name: str) -> str:
+    safe = "".join(char if char.isalnum() or char in {"_", "-"} else "_" for char in map_name.strip())
+    return safe or f"map_{uuid.uuid4().hex[:6]}"
+
+
+def _origin_from_yaml(yaml_data: Dict[str, Any]) -> Dict[str, float]:
+    origin = yaml_data.get("origin", [0.0, 0.0, 0.0])
+    return {
+        "x": float(origin[0]) if len(origin) > 0 else 0.0,
+        "y": float(origin[1]) if len(origin) > 1 else 0.0,
+        "yaw": float(origin[2]) if len(origin) > 2 else 0.0,
+    }
 
 
 def _metadata_path(map_id: str) -> Path:

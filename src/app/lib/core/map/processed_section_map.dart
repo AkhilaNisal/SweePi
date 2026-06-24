@@ -6,14 +6,17 @@ const occupiedCellValue = 100;
 
 SweePiMapData buildProcessedSectionMap({
   required SweePiMapData mapData,
-  required MapSection section,
+  required List<MapSection> sections,
   required int boundaryThicknessCells,
 }) {
   if (!mapData.available) {
     throw ArgumentError('A valid map is required to build a section map.');
   }
-  if (section.polygon.length < 3) {
-    throw ArgumentError('A section polygon must contain at least 3 points.');
+  if (sections.isEmpty) {
+    throw ArgumentError('At least one section is required.');
+  }
+  if (sections.any((section) => !section.bounds.isValid)) {
+    throw ArgumentError('All sections must have valid rectangular bounds.');
   }
 
   final totalCells = mapData.width * mapData.height;
@@ -22,24 +25,20 @@ SweePiMapData buildProcessedSectionMap({
     occupancy.add(0);
   }
 
-  final bounds = _sectionCellBounds(mapData, section);
+  final boundsList = sections
+      .map((section) => _sectionCellBounds(mapData, section))
+      .toList();
   final thickness = math.max(1, boundaryThicknessCells);
 
   for (var y = 0; y < mapData.height; y++) {
     for (var x = 0; x < mapData.width; x++) {
       final index = y * mapData.width + x;
-      final outside =
-          x < bounds.left ||
-          x > bounds.right ||
-          y < bounds.bottom ||
-          y > bounds.top;
-      final boundary =
-          x - bounds.left < thickness ||
-          bounds.right - x < thickness ||
-          y - bounds.bottom < thickness ||
-          bounds.top - y < thickness;
+      final insideAny = boundsList.any((bounds) => bounds.contains(x, y));
+      final boundary = boundsList.any(
+        (bounds) => bounds.contains(x, y) && bounds.isBoundary(x, y, thickness),
+      );
 
-      if (outside || boundary) {
+      if (!insideAny || boundary) {
         occupancy[index] = occupiedCellValue;
       }
     }
@@ -56,27 +55,19 @@ int defaultSectionBoundaryThicknessCells(SweePiMapData mapData) {
 }
 
 _CellBounds _sectionCellBounds(SweePiMapData mapData, MapSection section) {
-  final xs = <int>[];
-  final ys = <int>[];
-
-  for (final point in section.polygon) {
-    if (point.length < 2) {
-      continue;
-    }
-    final cell = _worldToCell(mapData, point[0], point[1]);
-    xs.add(cell.x);
-    ys.add(cell.y);
-  }
-
-  if (xs.isEmpty || ys.isEmpty) {
-    throw ArgumentError('A section polygon must contain valid [x, y] points.');
-  }
+  final bounds = section.bounds;
+  final start = _worldToCell(mapData, bounds.x, bounds.y);
+  final end = _worldToCell(
+    mapData,
+    bounds.x + bounds.width,
+    bounds.y + bounds.height,
+  );
 
   return _CellBounds(
-    left: xs.reduce(math.min),
-    right: xs.reduce(math.max),
-    bottom: ys.reduce(math.min),
-    top: ys.reduce(math.max),
+    left: math.min(start.x, end.x),
+    right: math.max(start.x, end.x),
+    bottom: math.min(start.y, end.y),
+    top: math.max(start.y, end.y),
   );
 }
 
@@ -101,6 +92,17 @@ class _CellBounds {
   final int right;
   final int bottom;
   final int top;
+
+  bool contains(int x, int y) {
+    return x >= left && x <= right && y >= bottom && y <= top;
+  }
+
+  bool isBoundary(int x, int y, int thickness) {
+    return x - left < thickness ||
+        right - x < thickness ||
+        y - bottom < thickness ||
+        top - y < thickness;
+  }
 }
 
 class _CellPoint {

@@ -1,7 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.routers import robot, exploration, maps, cleaning
+from app.core.responses import error_body, ok
 
 
 app = FastAPI(
@@ -25,6 +28,42 @@ app.include_router(robot.router)
 app.include_router(exploration.router)
 app.include_router(maps.router)
 app.include_router(cleaning.router)
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request, exc):
+    if isinstance(exc.detail, dict) and "success" in exc.detail:
+        return JSONResponse(status_code=exc.status_code, content=exc.detail)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=error_body(str(exc.detail), "INTERNAL_ERROR"),
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    first_error = exc.errors()[0] if exc.errors() else {}
+    loc = first_error.get("loc", [])
+    field = loc[-1] if loc else None
+    return JSONResponse(
+        status_code=422,
+        content=error_body(
+            "Request body is invalid.",
+            "VALIDATION_ERROR",
+            {"field": field, "errors": exc.errors()},
+            accepted=False,
+        ),
+    )
+
+
+@app.get("/api/system/health")
+def health():
+    return ok(
+        "API server is healthy.",
+        status="ok",
+        robot_connected=True,
+        server="sweepi_mock_api",
+    )
 
 
 @app.get("/")

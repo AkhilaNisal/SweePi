@@ -64,7 +64,9 @@ class _CleaningScreenState extends State<CleaningScreen> {
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Clean full map'),
-                  subtitle: const Text('Turn off to clean one saved section.'),
+                  subtitle: const Text(
+                    'Turn off to clean selected saved sections.',
+                  ),
                   value: _fullMap,
                   onChanged: (value) {
                     setState(() {
@@ -82,23 +84,28 @@ class _CleaningScreenState extends State<CleaningScreen> {
                       setState(() => _sectionMessage = null);
                     },
                   ),
-                ] else ...[
-                  const SizedBox(height: 8),
-                  _InitialPosePicker(
-                    controller: controller,
-                    mapData: controller.selectedMapData ?? SweePiMapData.empty,
-                  ),
                 ],
+                const SizedBox(height: 8),
+                _InitialPosePicker(
+                  controller: controller,
+                  mapData:
+                      (!_fullMap &&
+                          controller.processedSectionMapPreview != null)
+                      ? controller.processedSectionMapPreview!
+                      : controller.selectedMapData ?? SweePiMapData.empty,
+                ),
                 const SizedBox(height: 12),
                 _CleaningActions(
                   controller: controller,
                   metadata: metadata,
                   isCleaningActive: isCleaningActive,
                   isPaused: isPaused,
+                  canStart: controller.plannedInitialPose != null,
                   onStart: () {
                     if (!_fullMap && controller.selectedSections.isEmpty) {
                       setState(() {
-                        _sectionMessage = 'Select a section before starting.';
+                        _sectionMessage =
+                            'Select at least one section before starting.';
                       });
                       return;
                     }
@@ -127,6 +134,7 @@ class _CleaningScreenState extends State<CleaningScreen> {
                 Text(
                   'Progress: ${cleaning.progressPercent.toStringAsFixed(1)}%',
                 ),
+                Text('Mode: ${cleaning.cleaningMode ?? 'None'}'),
                 Text(
                   'Navigation: ${controller.robotStatus.nav.executionStatus}',
                 ),
@@ -145,6 +153,7 @@ class _CleaningActions extends StatelessWidget {
     required this.metadata,
     required this.isCleaningActive,
     required this.isPaused,
+    required this.canStart,
     required this.onStart,
   });
 
@@ -152,81 +161,97 @@ class _CleaningActions extends StatelessWidget {
   final SweePiMapMetadata? metadata;
   final bool isCleaningActive;
   final bool isPaused;
+  final bool canStart;
   final VoidCallback onStart;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
       children: [
         if (!isCleaningActive)
-          Expanded(
-            child: SizedBox(
-              height: 52,
-              child: FilledButton.icon(
-                onPressed: controller.isBusy || metadata == null
-                    ? null
-                    : onStart,
-                icon: const Icon(Icons.play_arrow_rounded, size: 22),
-                label: const Text('Start'),
-              ),
+          SizedBox(
+            width: 144,
+            height: 52,
+            child: FilledButton.icon(
+              onPressed: controller.isBusy || metadata == null || !canStart
+                  ? null
+                  : onStart,
+              icon: const Icon(Icons.play_arrow_rounded, size: 22),
+              label: const Text('Start'),
             ),
           )
         else ...[
-          Expanded(
-            child: SizedBox(
-              height: 52,
-              child: FilledButton.tonal(
-                onPressed: controller.isBusy
-                    ? null
-                    : () {
-                        if (isPaused) {
-                          controller.resumeCleaning();
-                        } else {
-                          controller.pauseCleaning();
-                        }
-                      },
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        isPaused
-                            ? Icons.play_arrow_rounded
-                            : Icons.pause_rounded,
-                        size: 21,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(isPaused ? 'Resume' : 'Pause'),
-                    ],
-                  ),
+          SizedBox(
+            width: 132,
+            height: 52,
+            child: FilledButton.tonal(
+              onPressed: controller.isBusy
+                  ? null
+                  : () {
+                      if (isPaused) {
+                        controller.resumeCleaning();
+                      } else {
+                        controller.pauseCleaning();
+                      }
+                    },
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                      size: 21,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(isPaused ? 'Resume' : 'Pause'),
+                  ],
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: SizedBox(
-              height: 52,
-              child: FilledButton.icon(
-                onPressed: controller.isBusy ? null : controller.stopCleaning,
-                icon: const Icon(Icons.stop_rounded, size: 22),
-                label: const FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text('Stop'),
-                ),
+          SizedBox(
+            width: 112,
+            height: 52,
+            child: FilledButton.icon(
+              onPressed: controller.isBusy ? null : controller.stopCleaning,
+              icon: const Icon(Icons.stop_rounded, size: 22),
+              label: const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text('Stop'),
               ),
             ),
           ),
         ],
-        const SizedBox(width: 8),
         SizedBox(
           width: 52,
           height: 52,
           child: IconButton.filledTonal(
             tooltip: 'Refresh state',
-            onPressed: controller.isBusy ? null : controller.refreshRobotStatus,
+            onPressed: controller.isBusy
+                ? null
+                : controller.refreshCleaningStatus,
             icon: const Icon(Icons.refresh_rounded),
+          ),
+        ),
+        SizedBox(
+          width: 52,
+          height: 52,
+          child: IconButton.filledTonal(
+            tooltip: 'Reset cleaning',
+            onPressed: controller.isBusy ? null : controller.resetCleaning,
+            icon: const Icon(Icons.restart_alt_rounded),
+          ),
+        ),
+        SizedBox(
+          width: 52,
+          height: 52,
+          child: IconButton.filledTonal(
+            tooltip: 'Return home',
+            onPressed: controller.isBusy ? null : controller.returnHome,
+            icon: const Icon(Icons.home_rounded),
           ),
         ),
       ],
@@ -250,9 +275,9 @@ class _SectionMapPicker extends StatelessWidget {
     final metadata = controller.selectedMapMetadata;
     final mapData = controller.selectedMapData ?? SweePiMapData.empty;
     final sections = metadata?.sections ?? const <MapSection>[];
-    final selectedSection = controller.selectedSections.isEmpty
-        ? null
-        : controller.selectedSections.first;
+    final selectedSectionIds = controller.selectedSections
+        .map((section) => section.sectionId)
+        .toSet();
     final colorScheme = Theme.of(context).colorScheme;
 
     if (metadata == null) {
@@ -288,12 +313,12 @@ class _SectionMapPicker extends StatelessWidget {
                 onSelectionChanged: (_) {},
                 robotPose: controller.robotStatus.pose,
                 sections: sections,
-                selectedSectionIds: {
-                  if (selectedSection != null) selectedSection.sectionId,
-                },
+                selectedSectionIds: selectedSectionIds,
                 selectionEnabled: false,
                 onSectionTap: (section) {
-                  controller.selectSectionForCleaning(section);
+                  if (section != null) {
+                    controller.toggleSectionForCleaning(section);
+                  }
                   if (section != null) {
                     onSectionSelected();
                   }
@@ -310,18 +335,18 @@ class _SectionMapPicker extends StatelessWidget {
             for (final section in sections)
               ChoiceChip(
                 label: Text(section.name),
-                selected: selectedSection?.sectionId == section.sectionId,
+                selected: selectedSectionIds.contains(section.sectionId),
                 onSelected: (_) {
-                  controller.selectSectionForCleaning(section);
+                  controller.toggleSectionForCleaning(section);
                   onSectionSelected();
                 },
               ),
           ],
         ),
         const SizedBox(height: 8),
-        if (selectedSection == null)
+        if (controller.selectedSections.isEmpty)
           Text(
-            message ?? 'Tap a saved section on the map to clean it.',
+            message ?? 'Tap one or more saved sections on the map to clean.',
             style: TextStyle(
               color: message == null
                   ? colorScheme.onSurfaceVariant
@@ -331,13 +356,13 @@ class _SectionMapPicker extends StatelessWidget {
           )
         else
           Text(
-            'Selected section: ${selectedSection.name}',
+            'Selected sections: ${controller.selectedSections.map((section) => section.name).join(', ')}',
             style: TextStyle(
               color: colorScheme.primary,
               fontWeight: FontWeight.w600,
             ),
           ),
-        if (selectedSection != null) ...[
+        if (controller.selectedSections.isNotEmpty) ...[
           const SizedBox(height: 12),
           _ProcessedSectionPreview(controller: controller),
         ],
@@ -411,16 +436,11 @@ class _ProcessedSectionPreview extends StatelessWidget {
                 selection: null,
                 onSelectionChanged: (_) {},
                 robotPose: controller.robotStatus.pose,
-                plannedInitialPose: controller.plannedInitialPose,
-                onInitialPoseChanged: controller.setPlannedInitialPose,
-                initialPoseEnabled: !controller.isBusy,
                 selectionEnabled: false,
               ),
             ),
           ),
         ),
-        const SizedBox(height: 8),
-        _InitialPoseSummary(controller: controller),
       ],
     );
   }

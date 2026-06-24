@@ -208,19 +208,23 @@ class _MapCanvasState extends State<MapCanvas> {
 
   MapSection? _sectionAt(Offset point, BoxConstraints constraints) {
     for (final section in widget.sections.reversed) {
-      final polygon = _sectionPolygon(section, constraints.biggest);
-      if (_containsPoint(polygon, point)) {
+      final rect = _sectionRect(section, constraints.biggest);
+      if (rect.contains(point)) {
         return section;
       }
     }
     return null;
   }
 
-  List<Offset> _sectionPolygon(MapSection section, Size size) {
-    return [
-      for (final point in section.polygon)
-        if (point.length >= 2) _worldToCanvas(point[0], point[1], size),
-    ];
+  Rect _sectionRect(MapSection section, Size size) {
+    final bounds = section.bounds;
+    final first = _worldToCanvas(bounds.x, bounds.y, size);
+    final second = _worldToCanvas(
+      bounds.x + bounds.width,
+      bounds.y + bounds.height,
+      size,
+    );
+    return Rect.fromPoints(first, second);
   }
 
   Offset _worldToCanvas(double worldX, double worldY, Size size) {
@@ -230,31 +234,6 @@ class _MapCanvasState extends State<MapCanvas> {
       (mapX / widget.mapData.width) * size.width,
       (1 - (mapY / widget.mapData.height)) * size.height,
     );
-  }
-
-  bool _containsPoint(List<Offset> polygon, Offset point) {
-    if (polygon.length < 3) {
-      return false;
-    }
-
-    var inside = false;
-    var previous = polygon.length - 1;
-    for (var current = 0; current < polygon.length; current++) {
-      final currentPoint = polygon[current];
-      final previousPoint = polygon[previous];
-      final intersects =
-          (currentPoint.dy > point.dy) != (previousPoint.dy > point.dy) &&
-          point.dx <
-              (previousPoint.dx - currentPoint.dx) *
-                      (point.dy - currentPoint.dy) /
-                      (previousPoint.dy - currentPoint.dy) +
-                  currentPoint.dx;
-      if (intersects) {
-        inside = !inside;
-      }
-      previous = current;
-    }
-    return inside;
   }
 
   RectSelection _selectionFrom(
@@ -382,31 +361,23 @@ class _MapPainter extends CustomPainter {
 
   void _drawSections(Canvas canvas, Size size) {
     for (final section in sections) {
-      final points = [
-        for (final point in section.polygon)
-          if (point.length >= 2) _worldToCanvas(point[0], point[1], size),
-      ];
-      if (points.length < 3) {
+      final rect = _sectionRect(section, size);
+      if (rect.isEmpty) {
         continue;
       }
 
       final selected = selectedSectionIds.contains(section.sectionId);
-      final path = Path()..moveTo(points.first.dx, points.first.dy);
-      for (final point in points.skip(1)) {
-        path.lineTo(point.dx, point.dy);
-      }
-      path.close();
 
-      canvas.drawPath(
-        path,
+      canvas.drawRect(
+        rect,
         Paint()
           ..style = PaintingStyle.fill
           ..color = selected
               ? const Color(0x6639A275)
               : const Color(0x33288A63),
       );
-      canvas.drawPath(
-        path,
+      canvas.drawRect(
+        rect,
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = selected ? 3 : 1.5
@@ -424,6 +395,17 @@ class _MapPainter extends CustomPainter {
       (mapX / mapData.width) * size.width,
       (1 - (mapY / mapData.height)) * size.height,
     );
+  }
+
+  Rect _sectionRect(MapSection section, Size size) {
+    final bounds = section.bounds;
+    final first = _worldToCanvas(bounds.x, bounds.y, size);
+    final second = _worldToCanvas(
+      bounds.x + bounds.width,
+      bounds.y + bounds.height,
+      size,
+    );
+    return Rect.fromPoints(first, second);
   }
 
   void _drawPoseMarker(

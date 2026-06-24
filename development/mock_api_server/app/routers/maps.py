@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 
+from app.core.responses import fail, ok
 from app.core.state import (
     list_map_metadata,
     read_map_data,
@@ -18,7 +19,7 @@ def list_maps():
     Return metadata for all maps currently stored by the mock robot.
     The actual occupancy map is fetched separately using GET /api/maps/{map_id}.
     """
-    return {"items": list_map_metadata()}
+    return ok("Maps fetched.", items=list_map_metadata())
 
 
 @router.get("/{map_id}")
@@ -27,9 +28,9 @@ def get_map(map_id: str):
     Return the actual map data for the given map_id.
     """
     try:
-        return read_map_data(map_id)
+        return ok("Map fetched.", **read_map_data(map_id))
     except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="Map not found")
+        fail(404, "Map not found.", "MAP_NOT_FOUND", {"map_id": map_id})
 
 
 @router.get("/{map_id}/metadata")
@@ -38,9 +39,9 @@ def get_map_metadata(map_id: str):
     Return only the metadata for the given map_id.
     """
     try:
-        return read_map_metadata(map_id)
+        return ok("Map metadata fetched.", **read_map_metadata(map_id))
     except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="Map not found")
+        fail(404, "Map not found.", "MAP_NOT_FOUND", {"map_id": map_id})
 
 
 @router.put("/{map_id}/metadata")
@@ -51,6 +52,19 @@ def update_map_metadata(map_id: str, req: MapMetadataUpdateRequest):
     section metadata under the robot's map storage.
     """
     try:
-        return store_update_map_metadata(map_id, req.name, req.sections)
+        sections = [_model_to_dict(section) for section in req.sections]
+        metadata = store_update_map_metadata(map_id, req.name, sections)
+        return ok(
+            "Map metadata updated.",
+            map_id=metadata["map_id"],
+            name=metadata.get("name", map_id),
+            sections=metadata.get("sections", []),
+        )
     except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="Map not found")
+        fail(404, "Map not found.", "MAP_NOT_FOUND", {"map_id": map_id})
+
+
+def _model_to_dict(model):
+    if hasattr(model, "model_dump"):
+        return model.model_dump()
+    return model.dict()

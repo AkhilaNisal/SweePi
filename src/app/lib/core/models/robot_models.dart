@@ -44,29 +44,37 @@ class RobotPose {
 }
 
 class RobotMapState {
-  const RobotMapState({required this.mapId});
+  const RobotMapState({required this.mapId, required this.name});
 
   factory RobotMapState.fromJson(Map<String, dynamic> json) {
-    return RobotMapState(mapId: json['map_id'] as String?);
+    return RobotMapState(
+      mapId: json['map_id'] as String?,
+      name: json['name'] as String?,
+    );
   }
 
-  static const empty = RobotMapState(mapId: null);
+  static const empty = RobotMapState(mapId: null, name: null);
 
   final String? mapId;
+  final String? name;
 }
 
 class RobotCleaningState {
   const RobotCleaningState({
+    required this.active,
     required this.taskId,
     required this.mapId,
+    required this.cleaningMode,
     required this.sections,
     required this.progressPercent,
   });
 
   factory RobotCleaningState.fromJson(Map<String, dynamic> json) {
     return RobotCleaningState(
+      active: json['active'] as bool? ?? false,
       taskId: json['task_id'] as String?,
       mapId: json['map_id'] as String?,
+      cleaningMode: json['cleaning_mode'] as String?,
       sections: ((json['sections'] as List?) ?? const [])
           .whereType<Map>()
           .map((item) => MapSection.fromJson(item.cast<String, dynamic>()))
@@ -76,16 +84,46 @@ class RobotCleaningState {
   }
 
   static const empty = RobotCleaningState(
+    active: false,
     taskId: null,
     mapId: null,
+    cleaningMode: null,
     sections: [],
     progressPercent: 0,
   );
 
+  final bool active;
   final String? taskId;
   final String? mapId;
+  final String? cleaningMode;
   final List<MapSection> sections;
   final double progressPercent;
+}
+
+class RobotExplorationState {
+  const RobotExplorationState({
+    required this.active,
+    required this.mapName,
+    required this.mode,
+  });
+
+  factory RobotExplorationState.fromJson(Map<String, dynamic> json) {
+    return RobotExplorationState(
+      active: json['active'] as bool? ?? false,
+      mapName: json['map_name'] as String?,
+      mode: json['mode'] as String?,
+    );
+  }
+
+  static const empty = RobotExplorationState(
+    active: false,
+    mapName: null,
+    mode: null,
+  );
+
+  final bool active;
+  final String? mapName;
+  final String? mode;
 }
 
 class RobotNavState {
@@ -111,6 +149,7 @@ class RobotStatus {
     required this.pose,
     required this.map,
     required this.cleaning,
+    required this.exploration,
     required this.nav,
     required this.errors,
     required this.warnings,
@@ -137,6 +176,11 @@ class RobotStatus {
               (json['cleaning'] as Map).cast<String, dynamic>(),
             )
           : RobotCleaningState.empty,
+      exploration: json['exploration'] is Map
+          ? RobotExplorationState.fromJson(
+              (json['exploration'] as Map).cast<String, dynamic>(),
+            )
+          : RobotExplorationState.empty,
       nav: json['nav'] is Map
           ? RobotNavState.fromJson((json['nav'] as Map).cast<String, dynamic>())
           : RobotNavState.empty,
@@ -153,6 +197,7 @@ class RobotStatus {
     pose: null,
     map: RobotMapState.empty,
     cleaning: RobotCleaningState.empty,
+    exploration: RobotExplorationState.empty,
     nav: RobotNavState.empty,
     errors: [],
     warnings: [],
@@ -165,6 +210,7 @@ class RobotStatus {
   final RobotPose? pose;
   final RobotMapState map;
   final RobotCleaningState cleaning;
+  final RobotExplorationState exploration;
   final RobotNavState nav;
   final List<String> errors;
   final List<String> warnings;

@@ -8,8 +8,8 @@ const _manualDriveRepeatInterval = Duration(milliseconds: 200);
 const _holdMovementCommands = {
   'forward',
   'backward',
-  'rotate_left',
-  'rotate_right',
+  'left',
+  'right',
 };
 
 class ExplorationScreen extends StatefulWidget {
@@ -58,7 +58,7 @@ class _ExplorationScreenState extends State<ExplorationScreen> {
                 TextField(
                   controller: _mapNameController,
                   decoration: const InputDecoration(
-                    labelText: 'Map or area name',
+                    labelText: 'Map name',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -79,7 +79,13 @@ class _ExplorationScreenState extends State<ExplorationScreen> {
                   selected: {_mode},
                   onSelectionChanged: controller.isBusy
                       ? null
-                      : (values) => setState(() => _mode = values.first),
+                      : (values) {
+                          final nextMode = values.first;
+                          setState(() => _mode = nextMode);
+                          if (isExploring) {
+                            controller.switchExplorationMode(nextMode);
+                          }
+                        },
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -297,9 +303,9 @@ class _RcControllerState extends State<_RcController> {
                 child: _DriveButton(
                   tooltip: 'Rotate left',
                   icon: Icons.rotate_left_rounded,
-                  enabled: enabledFor('rotate_left'),
-                  active: heldCommand == 'rotate_left',
-                  onHoldStart: () => _startHolding('rotate_left'),
+                  enabled: enabledFor('left'),
+                  active: heldCommand == 'left',
+                  onHoldStart: () => _startHolding('left'),
                   onHoldEnd: _stopHolding,
                 ),
               ),
@@ -322,9 +328,9 @@ class _RcControllerState extends State<_RcController> {
                 child: _DriveButton(
                   tooltip: 'Rotate right',
                   icon: Icons.rotate_right_rounded,
-                  enabled: enabledFor('rotate_right'),
-                  active: heldCommand == 'rotate_right',
-                  onHoldStart: () => _startHolding('rotate_right'),
+                  enabled: enabledFor('right'),
+                  active: heldCommand == 'right',
+                  onHoldStart: () => _startHolding('right'),
                   onHoldEnd: _stopHolding,
                 ),
               ),

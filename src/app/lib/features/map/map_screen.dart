@@ -128,9 +128,9 @@ class _MapScreenState extends State<MapScreen> {
         debugPrint('[MapScreen] Add Section cancelled; selection cleared.');
         return;
       }
-      await widget.controller.addSectionFromPolygon(
+      await widget.controller.addSectionFromBounds(
         sectionName,
-        selection.toWorldPolygon(mapData),
+        selection.toWorldBounds(mapData),
       );
       widget.controller.setPendingSelection(null);
       debugPrint('[MapScreen] Added section "$sectionName".');

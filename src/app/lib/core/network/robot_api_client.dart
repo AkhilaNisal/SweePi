@@ -87,6 +87,10 @@ class RobotApiClient {
     return RobotStatus.fromJson(await getJson('/api/robot/status'));
   }
 
+  Future<Map<String, dynamic>> fetchHealth() async {
+    return getJson('/api/system/health');
+  }
+
   Future<ExplorationStartResponse> startExploration({
     required String mapName,
     required String mode,
@@ -100,6 +104,16 @@ class RobotApiClient {
 
   Future<ExplorationStatus> fetchExplorationStatus() async {
     return ExplorationStatus.fromJson(await getJson('/api/exploration/status'));
+  }
+
+  Future<ExplorationSwitchResponse> switchExplorationMode({
+    required String newMode,
+  }) async {
+    final json = await postJson(
+      '/api/exploration/switch',
+      body: {'new_mode': newMode},
+    );
+    return ExplorationSwitchResponse.fromJson(json);
   }
 
   Future<ExplorationStopResponse> stopExploration() async {
@@ -154,23 +168,25 @@ class RobotApiClient {
 
   Future<CleaningStartResponse> startCleaning({
     required String mapId,
+    required String cleaningMode,
     required List<MapSection> sections,
     SweePiMapData? processedMap,
-    RobotPose? initialPose,
+    required RobotPose initialPose,
   }) async {
-    final body = <String, dynamic>{
-      'map_id': mapId,
-      'sections': sections.map((section) => section.toJson()).toList(),
-    };
-    if (processedMap != null) {
-      body['processed_map'] = processedMap.toJson();
-    }
-    if (initialPose != null) {
-      body['initial_pose'] = initialPose.toJson();
-    }
+    final body = buildCleaningStartRequestBody(
+      mapId: mapId,
+      cleaningMode: cleaningMode,
+      sections: sections,
+      processedMap: processedMap,
+      initialPose: initialPose,
+    );
 
     final json = await postJson('/api/cleaning/start', body: body);
     return CleaningStartResponse.fromJson(json);
+  }
+
+  Future<CleaningStatus> fetchCleaningStatus() async {
+    return CleaningStatus.fromJson(await getJson('/api/cleaning/status'));
   }
 
   Future<SimpleCommandResponse> pauseCleaning() async {
@@ -187,6 +203,18 @@ class RobotApiClient {
 
   Future<SimpleCommandResponse> stopCleaning() async {
     return SimpleCommandResponse.fromJson(await postJson('/api/cleaning/stop'));
+  }
+
+  Future<SimpleCommandResponse> resetCleaning() async {
+    return SimpleCommandResponse.fromJson(
+      await postJson('/api/cleaning/reset'),
+    );
+  }
+
+  Future<SimpleCommandResponse> returnHome() async {
+    return SimpleCommandResponse.fromJson(
+      await postJson('/api/cleaning/return-home'),
+    );
   }
 
   Future<void> close() async {
@@ -225,9 +253,18 @@ class RobotApiClient {
       throw ApiException('Invalid JSON from ${response.statusCode}: $error');
     }
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      final detail = payload['detail'] ?? payload['message'] ?? body;
-      throw ApiException('HTTP ${response.statusCode}: $detail');
+    if (response.statusCode < 200 ||
+        response.statusCode >= 300 ||
+        payload['success'] == false) {
+      final detail = payload['message'] ?? payload['detail'] ?? body;
+      final code = payload['error'] is Map
+          ? (payload['error'] as Map)['code'] as String?
+          : null;
+      throw ApiException(
+        code == null
+            ? 'HTTP ${response.statusCode}: $detail'
+            : 'HTTP ${response.statusCode}: $detail ($code)',
+      );
     }
 
     return payload;
@@ -259,4 +296,23 @@ class RobotApiClient {
     }
     debugPrint('[RobotApiClient] !! $method $uri $error');
   }
+}
+
+Map<String, dynamic> buildCleaningStartRequestBody({
+  required String mapId,
+  required String cleaningMode,
+  required List<MapSection> sections,
+  SweePiMapData? processedMap,
+  required RobotPose initialPose,
+}) {
+  final body = <String, dynamic>{
+    'map_id': mapId,
+    'cleaning_mode': cleaningMode,
+    'sections': sections.map((section) => section.toJson()).toList(),
+    'initial_pose': initialPose.toJson(),
+  };
+  if (processedMap != null) {
+    body['processed_map'] = processedMap.toProcessedMapJson();
+  }
+  return body;
 }
