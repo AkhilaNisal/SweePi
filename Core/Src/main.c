@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "adc.h"
 #include "i2c.h"
 #include "tim.h"
 #include "usart.h"
@@ -47,13 +48,44 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+#define PI 3.14159265f
+#define WHEEL_RADIUS_M 0.033f
 
+// --- KINEMATICS ---
+float target_velocity_mps_L = 0.2f; // Set this in Watch Window
+float target_velocity_mps_R = 0.0f; // KEEP AT 0.0 UNTIL WHEEL IS PLUGGED IN
+
+// --- ENCODERS ---
+uint16_t current_ticks_L = 0, previous_ticks_L = 0;
+int16_t tick_diff_L = 0;
+float current_rpm_L = 0.0f;
+
+uint16_t current_ticks_R = 0, previous_ticks_R = 0;
+int16_t tick_diff_R = 0;
+float current_rpm_R = 0.0f;
+
+// --- PID CONTROLLERS ---
+typedef struct {
+    float Kp;
+    float Ki;
+    float Kd;
+    float setpoint; // Target RPM
+    float integral;
+    float prev_error;
+} PID_Controller;
+
+// Initialized with your tuned Kp=25.0, Ki=0.5
+PID_Controller leftPID  = {25.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.0f};
+PID_Controller rightPID = {25.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.0f};
+
+float current_pwm_L = 0.0f;
+float current_pwm_R = 0.0f;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-
+float PID_Compute(PID_Controller *pid, float current_rpm);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -81,8 +113,8 @@ int main(void)
 
   /* USER CODE END Init */
 
-  /* Configure the system clock */
-  SystemClock_Config();
+/* Configure the system clock */
+ SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
 
@@ -96,20 +128,94 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM3_Init();
   MX_TIM4_Init();
-  MX_USART1_UART_Init();
   MX_USART2_UART_Init();
   MX_USB_Device_Init();
-  /* USER CODE BEGIN 2 */
+  MX_ADC2_Init();
 
-  /* USER CODE END 2 */
+
+
+/* USER CODE BEGIN 2 */
+  // --- Left Motor PWM (Channels 3 & 4) ---
+  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
+  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 0);
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
+
+  // --- Right Motor PWM (Channels 1 & 2) ---
+  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
+  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+
+  // Enable Master Output and the Motor Driver Chip
+  __HAL_TIM_MOE_ENABLE(&htim1); 
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, GPIO_PIN_SET);
+
+  // --- Start Both Hardware Encoders ---
+  HAL_TIM_Encoder_Start(&htim2, TIM_CHANNEL_ALL); // Left
+  HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_ALL); // Right
+/* USER CODE END 2 */
 
   /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
+
+/* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* USER CODE END WHILE */
+    // 1. Convert Linear Velocity (m/s) to Target RPM for both wheels
+    leftPID.setpoint = (target_velocity_mps_L * 60.0f) / (2.0f * PI * WHEEL_RADIUS_M);
+    rightPID.setpoint = (target_velocity_mps_R * 60.0f) / (2.0f * PI * WHEEL_RADIUS_M);
 
-    /* USER CODE BEGIN 3 */
+    // 2. Read Hardware Timers (TIM2 = Left, TIM4 = Right)
+    current_ticks_L = __HAL_TIM_GET_COUNTER(&htim2);
+    current_ticks_R = __HAL_TIM_GET_COUNTER(&htim4);
+
+    // 3. Calculate Deltas
+    tick_diff_L = (int16_t)(current_ticks_L - previous_ticks_L);
+    previous_ticks_L = current_ticks_L;
+    
+    tick_diff_R = (int16_t)(current_ticks_R - previous_ticks_R);
+    previous_ticks_R = current_ticks_R;
+
+    // 4. Calculate Real-World RPM
+    current_rpm_L = ((float)tick_diff_L * 600.0f) / 7392.0f;
+    current_rpm_R = ((float)tick_diff_R * 600.0f) / 7392.0f;
+
+    // 5. SAFETY SWITCH & PID LOGIC
+    if (HAL_GPIO_ReadPin(CHECK_BUTTON_GPIO_Port, CHECK_BUTTON_Pin) == GPIO_PIN_RESET) 
+    {
+        // --- LEFT MOTOR ---
+        current_pwm_L += PID_Compute(&leftPID, current_rpm_L);
+        if (current_pwm_L > 4799.0f) current_pwm_L = 4799.0f;
+        if (current_pwm_L < 0.0f) current_pwm_L = 0.0f; 
+        
+        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, (uint32_t)current_pwm_L);
+        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 0);
+
+        // --- RIGHT MOTOR ---
+        current_pwm_R += PID_Compute(&rightPID, current_rpm_R);
+        if (current_pwm_R > 4799.0f) current_pwm_R = 4799.0f;
+        if (current_pwm_R < 0.0f) current_pwm_R = 0.0f; 
+        
+        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, (uint32_t)current_pwm_R);
+        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
+    } 
+    else 
+    {
+        // --- BRAKES ON ---
+        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
+        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
+        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
+        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 0);
+        
+        // Reset PID Memory
+        current_pwm_L = 0.0f; leftPID.integral = 0.0f; leftPID.prev_error = 0.0f;
+        current_pwm_R = 0.0f; rightPID.integral = 0.0f; rightPID.prev_error = 0.0f;
+    }
+
+    // 6. Strictly timed 100ms calculation window
+    HAL_Delay(100);
+    
+  /* USER CODE END WHILE */
   }
   /* USER CODE END 3 */
 }
@@ -130,15 +236,14 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-  RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV1;
-  RCC_OscInitStruct.PLL.PLLN = 12;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV2;
+  RCC_OscInitStruct.PLL.PLLN = 8;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV4;
+  RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV2;
   RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
@@ -149,19 +254,31 @@ void SystemClock_Config(void)
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
   {
     Error_Handler();
   }
 }
 
 /* USER CODE BEGIN 4 */
-
+float PID_Compute(PID_Controller *pid, float current_rpm) {
+    float error = pid->setpoint - current_rpm;
+    
+    pid->integral += error * 0.1f; // 100ms loop time
+    // Anti-Windup
+    if (pid->integral > 100.0f) pid->integral = 100.0f;
+    if (pid->integral < -100.0f) pid->integral = -100.0f;
+    
+    float derivative = (error - pid->prev_error) / 0.1f;
+    pid->prev_error = error;
+    
+    return (pid->Kp * error) + (pid->Ki * pid->integral) + (pid->Kd * derivative);
+}
 /* USER CODE END 4 */
 
 /**

@@ -1,0 +1,37 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug STM32G474RE st-util",
+      "type": "cortex-debug",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "executable": "${workspaceFolder}/build/Debug/sweepi_motor_fw.elf",
+      "servertype": "stutil",
+      "serverpath": "/usr/bin/st-util",
+      "device": "STM32G474RE",
+      "runToEntryPoint": "main",
+      "armToolchainPath": "/home/heshan-ranasinghe/.local/share/stm32cube/bundles/gnu-tools-for-stm32/14.3.1+st.2/bin",
+      "preLaunchTask": "Build Debug"
+    },
+    {
+      "name": "Debug STM32G474RE ST-LINK",
+      "type": "cortex-debug",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "executable": "${workspaceFolder}/build/Debug/sweepi_motor_fw.elf",
+      "servertype": "stlink",
+      "device": "STM32G474RE",
+      "interface": "swd",
+      "runToEntryPoint": "main",
+      "armToolchainPath": "/home/heshan-ranasinghe/.local/share/stm32cube/bundles/gnu-tools-for-stm32/14.3.1+st.2/bin",
+      "serverpath": "/home/heshan-ranasinghe/.local/share/stm32cube/bundles/stlink-gdbserver/7.13.0+st.3/bin/ST-LINK_gdbserver",
+      "stm32cubeprogrammer": "/home/heshan-ranasinghe/.local/share/stm32cube/bundles/programmer/2.22.0+st.1/bin",
+      "serverArgs": [
+        "--frequency",
+        "1000"
+      ],
+      "preLaunchTask": "Build Debug"
+    }
+  ]
+}
