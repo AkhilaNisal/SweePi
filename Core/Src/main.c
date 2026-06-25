@@ -27,6 +27,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <string.h>
 
 /* USER CODE END Includes */
 
@@ -50,6 +51,17 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+
+// --- COMMUNICATION PROTOCOL ---
+// 3 variables * 4 bytes each = 12 bytes total
+typedef struct {
+    float linear_v;     // 4 bytes
+    float angular_w;    // 4 bytes
+    uint32_t timestamp; // 4 bytes
+} RobotCommand;
+
+RobotCommand latest_cmd;
+uint8_t rx_buffer[sizeof(RobotCommand)]; // Notice the brackets!
 
 // --- KINEMATICS ---
 float target_linear_mps = 0.2f;   // Set this in Watch Window (Forward/Back)
@@ -157,6 +169,9 @@ int main(void)
   // --- Start Both Hardware Encoders ---
   HAL_TIM_Encoder_Start(&htim2, TIM_CHANNEL_ALL); // Left
   HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_ALL); // Right
+
+  // Start listening on USART2 in the background for exactly 12 bytes
+  HAL_UART_Receive_IT(&huart2, rx_buffer, sizeof(rx_buffer));
 /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -288,6 +303,25 @@ float PID_Compute(PID_Controller *pid, float current_rpm) {
     pid->prev_error = error;
     
     return (pid->Kp * error) + (pid->Ki * pid->integral) + (pid->Kd * derivative);
+}
+
+// This function automatically triggers when exactly 12 bytes arrive
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+    if (huart->Instance == USART2)
+    {
+        // 1. Copy the raw bytes directly into our structured variables
+        memcpy(&latest_cmd, rx_buffer, sizeof(RobotCommand));
+        
+        // 2. Safely overwrite the kinematics targets that your while(1) loop uses
+        target_linear_mps = latest_cmd.linear_v;
+        target_angular_rads = latest_cmd.angular_w;
+        
+        // (Optional: You can use latest_cmd.timestamp here later for watchdog timeouts)
+
+        // 3. Restart the background listener to catch the next packet
+        HAL_UART_Receive_IT(&huart2, rx_buffer, sizeof(rx_buffer));
+    }
 }
 /* USER CODE END 4 */
 
