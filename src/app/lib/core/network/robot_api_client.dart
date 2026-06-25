@@ -243,13 +243,27 @@ class RobotApiClient {
   }
 
   Future<Map<String, dynamic>> _sendJson(
-    String method,
-    Uri uri,
-    HttpClientRequest request,
-    Map<String, dynamic>? body,
-  ) async {
-    request.headers.contentType = ContentType.json;
-    request.write(jsonEncode(body ?? const {}));
+      String method,
+      Uri uri,
+      HttpClientRequest request,
+      Map<String, dynamic>? body,
+      ) async {
+    final bodyText = jsonEncode(body ?? const <String, dynamic>{});
+    final bodyBytes = utf8.encode(bodyText);
+
+    request.headers.contentType = ContentType(
+      'application',
+      'json',
+      charset: 'utf-8',
+    );
+
+    request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+
+    // Important: force Content-Length instead of Transfer-Encoding: chunked
+    request.contentLength = bodyBytes.length;
+
+    request.add(bodyBytes);
+
     return _readJsonObject(method, uri, await request.close());
   }
 

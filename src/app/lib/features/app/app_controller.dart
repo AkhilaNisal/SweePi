@@ -361,6 +361,7 @@ class AppController extends ChangeNotifier {
         errorMessage = poseResponse.message;
         return;
       }
+      await Future.delayed(const Duration(seconds: 5));
       final validationResponse = await client.validateCleaning();
       lastMessage = validationResponse.message;
       if (!validationResponse.accepted) {
