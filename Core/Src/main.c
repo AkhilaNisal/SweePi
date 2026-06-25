@@ -37,7 +37,9 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define PI 3.14159265f
+#define WHEEL_RADIUS_M 0.033f // assume 3.3cm radius wheels, adjust as necessary
+#define WHEEL_BASE_M 0.200f // assume 20cm distance between wheels, adjust as necessary
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -48,12 +50,13 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-#define PI 3.14159265f
-#define WHEEL_RADIUS_M 0.033f
 
 // --- KINEMATICS ---
-float target_velocity_mps_L = 0.2f; // Set this in Watch Window
-float target_velocity_mps_R = 0.0f; // KEEP AT 0.0 UNTIL WHEEL IS PLUGGED IN
+float target_linear_mps = 0.2f;   // Set this in Watch Window (Forward/Back)
+float target_angular_rads = 0.1f; // Set this in Watch Window (Turning)
+
+float target_velocity_mps_L = 0.0f; // Now calculated dynamically
+float target_velocity_mps_R = 0.0f; // Now calculated dynamically
 
 // --- ENCODERS ---
 uint16_t current_ticks_L = 0, previous_ticks_L = 0;
@@ -161,9 +164,16 @@ int main(void)
 /* USER CODE BEGIN WHILE */
   while (1)
   {
-    // 1. Convert Linear Velocity (m/s) to Target RPM for both wheels
+// 1. Differential Drive Kinematics
+    target_velocity_mps_L = target_linear_mps - (target_angular_rads * (WHEEL_BASE_M / 2.0f));
+    target_velocity_mps_R = target_linear_mps + (target_angular_rads * (WHEEL_BASE_M / 2.0f));
+
+    // 2. Convert to Target RPM
     leftPID.setpoint = (target_velocity_mps_L * 60.0f) / (2.0f * PI * WHEEL_RADIUS_M);
-    rightPID.setpoint = (target_velocity_mps_R * 60.0f) / (2.0f * PI * WHEEL_RADIUS_M);
+    
+    // TEMPORARY GHOST WHEEL LOCK: Keep Right Motor asleep until hardware is plugged in!
+    rightPID.setpoint = 0.0f; 
+    // UNCOMMENT LATER: rightPID.setpoint = (target_velocity_mps_R * 60.0f) / (2.0f * PI * WHEEL_RADIUS_M);
 
     // 2. Read Hardware Timers (TIM2 = Left, TIM4 = Right)
     current_ticks_L = __HAL_TIM_GET_COUNTER(&htim2);
