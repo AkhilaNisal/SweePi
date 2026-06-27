@@ -54,3 +54,4 @@ CATKIN_IGNORE
 
 maps/
 .codex.codex/
+.codex/
