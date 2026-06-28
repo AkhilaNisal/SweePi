@@ -4636,9 +4636,9 @@ class CoverageFollowPathExecutorNode(Node):
         ) and not after_failure:
             object_imminent = False
         should_stop = (
-            object_imminent
-            or after_failure
-            or not self.dynamic_cancel_only_if_imminent_blocked
+            after_failure
+            and self.dynamic_skip_failure_counter
+            >= self.dynamic_skip_max_consecutive_failures
         )
         text = (
             '[DYNAMIC_SKIP] no valid bypass within %.2fm; '
@@ -4649,37 +4649,134 @@ class CoverageFollowPathExecutorNode(Node):
             )
         )
         if should_stop:
-            text = '%s; stopping as BLOCKED_DYNAMIC_OBJECT' % text
+            text = '%s; repeated controller failures, stopping as FAILED' % text
             self.get_logger().warn(text)
             self._publish_dynamic_skip_status(text)
             self.latest_path_error = (
-                'confirmed dynamic obstacle blocked path and no valid bypass '
-                'within %.2fm: %s'
-                % (self.dynamic_rejoin_max_search_distance_m, reason)
+                'confirmed dynamic obstacle repeatedly blocked path and no valid '
+                'bypass within %.2fm after %d attempts: %s'
+                % (
+                    self.dynamic_rejoin_max_search_distance_m,
+                    self.dynamic_skip_failure_counter,
+                    reason,
+                )
             )
             self.dynamic_skip_pending_rejoin_path = None
             self.dynamic_skip_pending_report = report
             self.dynamic_skip_pending_monitor_resume_index = None
             self.dynamic_skip_finish_after_cancel = False
-            self.dynamic_skip_cancel_final_status = (
-                self.STATUS_BLOCKED_DYNAMIC_OBJECT
-            )
+            self.dynamic_skip_cancel_final_status = self.STATUS_FAILED
             if after_failure or self.current_goal_handle is None:
                 self.dynamic_skip_in_progress = False
-                self._finish_execution(self.STATUS_BLOCKED_DYNAMIC_OBJECT)
+                self._finish_execution(self.STATUS_FAILED)
                 return True
             return self._cancel_current_goal_for_dynamic_skip()
 
-        text = '%s; keeping current FollowPath and monitoring' % text
+        if after_failure and not should_stop:
+            text = (
+                '%s; retrying remaining path after dynamic blockage '
+                '(failure_count=%d/%d)'
+                % (
+                    text,
+                    self.dynamic_skip_failure_counter,
+                    self.dynamic_skip_max_consecutive_failures,
+                )
+            )
+            self.get_logger().warn(text)
+            self._publish_dynamic_skip_status(text)
+            self.latest_path_error = (
+                'dynamic obstacle blocked current path and no bypass is valid '
+                'yet; retrying remaining path instead of finishing coverage: %s'
+                % reason
+            )
+            if self._retry_active_path_after_dynamic_wait(report, reason):
+                return True
+
+        text = (
+            '%s; waiting for obstacle to clear and keeping coverage active '
+            '(failure_count=%d/%d)'
+            % (
+                text,
+                self.dynamic_skip_failure_counter,
+                self.dynamic_skip_max_consecutive_failures,
+            )
+        )
         self.get_logger().warn(text)
         self._publish_dynamic_skip_status(text)
         self.latest_path_error = (
-            'dynamic obstacle confirmed but no non-imminent bypass is valid yet: %s'
-            % reason
+            'dynamic obstacle confirmed but no bypass is valid yet; waiting '
+            'instead of finishing coverage: %s' % reason
         )
         self.dynamic_skip_in_progress = False
-        self._set_status(self.STATUS_EXECUTING)
+        if after_failure:
+            self.goal_in_flight = False
+            self.current_goal_handle = None
+            self._reset_stuck_monitor()
+        else:
+            self._set_status(self.STATUS_EXECUTING)
         return False
+
+    def _retry_active_path_after_dynamic_wait(self, report, reason):
+        del report
+        source_path = self.active_path or self.cached_raw_path
+        if source_path is None or len(source_path.poses) < 2:
+            self.dynamic_skip_in_progress = False
+            self.latest_path_error = (
+                'cannot retry after dynamic blockage because no active path is available'
+            )
+            return False
+
+        retry_report = self._run_preflight_validation(
+            source_path,
+            check_costmap=False,
+        )
+        self._publish_debug(retry_report)
+        if not retry_report['valid']:
+            self.dynamic_skip_in_progress = False
+            self.latest_path_error = (
+                'cannot retry remaining path after dynamic blockage: %s'
+                % retry_report['reason']
+            )
+            self.get_logger().warn(self.latest_path_error)
+            return False
+
+        retry_path, start_report = self._select_start_path(
+            source_path,
+            retry_report,
+        )
+        if retry_path is None:
+            self.dynamic_skip_in_progress = False
+            self.latest_path_error = (
+                'cannot retry remaining path after dynamic blockage: %s'
+                % start_report['reason']
+            )
+            self.get_logger().warn(self.latest_path_error)
+            return False
+
+        self.dynamic_skip_in_progress = False
+        self.dynamic_skip_pending_rejoin_path = None
+        self.dynamic_skip_pending_report = None
+        self.dynamic_skip_pending_monitor_resume_index = None
+        self.dynamic_skip_finish_after_cancel = False
+        self.dynamic_skip_cancel_final_status = None
+        self.dynamic_skip_monitor_suppressed_until_monotonic = (
+            time.monotonic() + self.dynamic_skip_replan_cooldown_sec
+        )
+        text = (
+            '[DYNAMIC_WAIT] retrying remaining active path from index=%d '
+            'poses=%d reason=%s'
+            % (
+                start_report.get('start_index', 0),
+                len(retry_path.poses),
+                reason,
+            )
+        )
+        self.get_logger().warn(text)
+        self._publish_dynamic_skip_status(text)
+        return self._send_follow_path_goal(
+            retry_path,
+            'dynamic_obstacle_wait_retry',
+        )
 
     def _project_temporary_block_to_original_path(self, report):
         if (
