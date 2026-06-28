@@ -231,6 +231,81 @@ class MapStore:
             'occupancy': occupancy,
         }
 
+    def check_pose(self, map_id, x, y, allow_unknown=False, occupied_threshold=50):
+        """Validate a world-frame pose against a saved occupancy map."""
+        clean_id = sanitize_map_id(map_id)
+        saved_map = self.read_map(clean_id)
+        if not saved_map.get('available'):
+            return {
+                'ok': False,
+                'code': 'MAP_NOT_FOUND',
+                'message': saved_map.get('message', 'Map not found'),
+                'map_id': clean_id,
+            }
+
+        width = int(saved_map.get('width') or 0)
+        height = int(saved_map.get('height') or 0)
+        resolution = float(saved_map.get('resolution') or 0.0)
+        occupancy = saved_map.get('occupancy') or []
+        if width <= 0 or height <= 0 or resolution <= 0.0:
+            return {
+                'ok': False,
+                'code': 'MAP_INVALID',
+                'message': 'Map metadata is invalid.',
+                'map_id': clean_id,
+            }
+
+        origin = self._origin_to_dict(saved_map.get('origin'))
+        dx = float(x) - origin['x']
+        dy = float(y) - origin['y']
+        yaw = origin.get('yaw', 0.0)
+        cos_yaw = math.cos(-yaw)
+        sin_yaw = math.sin(-yaw)
+        local_x = (dx * cos_yaw) - (dy * sin_yaw)
+        local_y = (dx * sin_yaw) + (dy * cos_yaw)
+        cell_x = int(math.floor(local_x / resolution))
+        cell_y = int(math.floor(local_y / resolution))
+
+        cell_info = {
+            'x': cell_x,
+            'y': cell_y,
+            'width': width,
+            'height': height,
+            'resolution': resolution,
+        }
+        if cell_x < 0 or cell_y < 0 or cell_x >= width or cell_y >= height:
+            return {
+                'ok': False,
+                'code': 'INITIAL_POSE_OUTSIDE_MAP',
+                'message': 'Initial pose is outside the map bounds.',
+                'map_id': clean_id,
+                'cell': cell_info,
+            }
+
+        index = (cell_y * width) + cell_x
+        value = int(occupancy[index]) if 0 <= index < len(occupancy) else 100
+        result = {
+            'ok': True,
+            'code': 'OK',
+            'message': 'Initial pose is in a free map cell.',
+            'map_id': clean_id,
+            'cell': dict(cell_info, index=index),
+            'occupancy': value,
+        }
+        if value < 0 and not allow_unknown:
+            result.update({
+                'ok': False,
+                'code': 'INITIAL_POSE_UNKNOWN',
+                'message': 'Initial pose is in an unknown map cell.',
+            })
+        elif value >= int(occupied_threshold):
+            result.update({
+                'ok': False,
+                'code': 'INITIAL_POSE_OCCUPIED',
+                'message': 'Initial pose is in an occupied map cell.',
+            })
+        return result
+
     def read_yaml(self, map_id):
         path = self.map_yaml_path(map_id)
         if not os.path.exists(path):

@@ -6,6 +6,18 @@ not launch ROS packages directly.
 
 All routes start with `/api`; there is no `/api/v1` prefix.
 
+## Command Results
+
+Robot command endpoints return top-level lifecycle fields. `accepted=true`
+means the bridge accepted the command and attempted the ROS action;
+`completed=true` means this endpoint's command step was confirmed. Long-running
+tasks still finish through status polling with `task_finished=true`.
+
+The mobile app should proceed to the next cleaning step only when the command
+response has both `success=true` and `completed=true`. See
+[`docs/command_lifecycle.md`](command_lifecycle.md) for the field definitions
+and cleaning sequence.
+
 ## Launch
 
 Build and source:
@@ -168,6 +180,11 @@ curl -X POST http://localhost:8080/api/localization/initial-pose \
   -d '{"map_id":"kitchen_first_floor","x":0.0,"y":0.0,"yaw":0.0,"frame":"map"}'
 ```
 
+This endpoint returns `completed:true` only after localization/TF confirms the
+robot pose near the requested pose. If `/initialpose` is published but
+confirmation times out, the response has `accepted:true`, `completed:false`, and
+`success:false`.
+
 You can also set the initial pose in RViz with `2D Pose Estimate`, then check:
 
 ```bash
@@ -188,6 +205,10 @@ Validate the generated path and start motion:
 curl -X POST http://localhost:8080/api/cleaning/validate
 curl -X POST http://localhost:8080/api/cleaning/start-motion
 ```
+
+`start-motion` does not auto-validate. A failed or missing validation returns
+`VALIDATION_REQUIRED`; call `validate` again after setting a new initial pose or
+after the coverage path changes.
 
 Check progress and coverage map:
 

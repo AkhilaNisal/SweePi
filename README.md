@@ -76,6 +76,30 @@ The system combines **LiDAR-based SLAM navigation** with a **dual-mode cleaning 
 
 ---
 
+## 📡 Mobile API Contract
+
+The robot/mobile contract lives under `/api` and is documented in
+[`docs/final_api_doc.md`](docs/final_api_doc.md). Robot command responses expose
+top-level lifecycle fields including `accepted`, `completed`, `task_finished`,
+`state`, `command`, `next_steps`, and structured `error`.
+
+For cleaning, the app must follow:
+
+```text
+POST /api/cleaning/start
+POST /api/localization/initial-pose
+POST /api/cleaning/validate
+POST /api/cleaning/start-motion
+GET  /api/cleaning/status
+```
+
+The app should advance to the next step only when the previous command returns
+`success=true` and `completed=true`; `accepted=true` only means the command was
+accepted and sent toward ROS/mock logic. See
+[`docs/command_lifecycle.md`](docs/command_lifecycle.md).
+
+---
+
 ## 👥 Team Nexora
 
 - Ranasinghe D.P.H.

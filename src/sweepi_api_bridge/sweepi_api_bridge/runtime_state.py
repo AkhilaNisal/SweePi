@@ -20,13 +20,19 @@ class RuntimeState:
     active_coverage_map_id: str = None
     cleaning_mode: str = None
     initial_pose_received: bool = False
+    initial_pose_confirmed: bool = False
     initial_pose_source: str = None
     initial_pose: dict = None
+    last_command: str = None
+    last_command_result: dict = None
     coverage_validated: bool = False
     coverage_path_available: bool = False
     coverage_map_available: bool = False
     live_map_available: bool = False
-    last_error: str = None
+    last_error: dict = None
+    task_finished: bool = False
+    task_result: str = None
+    task_phase: str = None
     warnings: list = field(default_factory=list)
     last_updated_sec: float = field(default_factory=time.time)
 
@@ -56,6 +62,10 @@ class StateStore:
         with self._lock:
             self._state.cleaning_active = False
             self._state.cleaning_paused = False
+            self._state.initial_pose_received = False
+            self._state.initial_pose_confirmed = False
+            self._state.initial_pose_source = None
+            self._state.initial_pose = None
             self._state.coverage_validated = False
             self._state.coverage_path_available = False
             self._state.coverage_map_available = False
@@ -63,6 +73,10 @@ class StateStore:
             self._state.active_task_id = None
             self._state.active_sections = []
             self._state.active_coverage_map_id = None
+            self._state.last_error = None
+            self._state.task_finished = False
+            self._state.task_result = None
+            self._state.task_phase = None
             if self._state.active_task == 'cleaning':
                 self._state.active_task = 'none'
                 self._state.active_map_id = None
@@ -82,6 +96,10 @@ class StateStore:
         with self._lock:
             self._state.exploration_active = False
             self._state.exploration_mode = 'stopped'
+            self._state.last_error = None
+            self._state.task_finished = False
+            self._state.task_result = None
+            self._state.task_phase = None
             if self._state.active_task == 'exploration':
                 self._state.active_task = 'none'
                 self._state.active_area_name = None
