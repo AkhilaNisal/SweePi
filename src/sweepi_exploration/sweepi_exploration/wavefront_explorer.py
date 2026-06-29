@@ -49,6 +49,7 @@ class WavefrontExplorer(Node):
         # ============================================================
         self.declare_parameter('max_attempts_per_frontier', 3)
         self.declare_parameter('max_consecutive_timeouts', 3)
+        self.declare_parameter('max_total_timeouts', 10)
         self.declare_parameter('max_exploration_time', 600)
 
         # ============================================================
@@ -61,7 +62,7 @@ class WavefrontExplorer(Node):
         # ============================================================
         # NEW: SMARTER PROXIMITY BLOCKING
         # ============================================================
-        self.declare_parameter('unreachable_region_radius', 0.5)  # REDUCED - only very close
+        self.declare_parameter('unreachable_region_radius', 0.6)
         self.declare_parameter('smart_blocking_enabled', True)    # NEW: Check connectivity
 
         # ============================================================
@@ -83,6 +84,7 @@ class WavefrontExplorer(Node):
 
         self.max_attempts_per_frontier = int(self.get_parameter('max_attempts_per_frontier').value)
         self.max_consecutive_timeouts = int(self.get_parameter('max_consecutive_timeouts').value)
+        self.max_total_timeouts = int(self.get_parameter('max_total_timeouts').value)
         self.max_exploration_time = int(self.get_parameter('max_exploration_time').value)
 
         self.goal_offset_distance = float(self.get_parameter('goal_offset_distance').value)
@@ -111,7 +113,10 @@ class WavefrontExplorer(Node):
         self.no_frontier_count = 0
         self.current_goal_start_time = None
         self.current_goal_handle = None
-        self.ignore_current_goal_result = False
+        self.current_goal_frontier = None
+        self.current_goal_sequence = None
+        self.goal_sequence = 0
+        self.ignored_goal_sequences = set()
         self.exploration_mode = self.start_mode if self.start_mode in ('auto', 'manual', 'stopped') else 'auto'
         self.stop_reason = None
 
@@ -135,7 +140,6 @@ class WavefrontExplorer(Node):
         # ============================================================
         self.consecutive_timeout_count = 0
         self.total_timeout_count = 0
-        self.max_total_timeouts = 10
 
         # Setup maps directory
         self.maps_dir = self._setup_maps_directory()
@@ -174,7 +178,8 @@ class WavefrontExplorer(Node):
             SaveMap, '/save_exploration_map', self._save_map_callback)
 
         # Timer
-        self.timer = self.create_timer(self.exploration_frequency, self.explore)
+        self.timer_period = self._timer_period_from_frequency(self.exploration_frequency)
+        self.timer = self.create_timer(self.timer_period, self.explore)
 
         # Log Configuration
         self.get_logger().info('=' * 70)
@@ -182,9 +187,13 @@ class WavefrontExplorer(Node):
         self.get_logger().info('=' * 70)
         self.get_logger().info('   📋 FRONTIER DETECTION:')
         self.get_logger().info(f'      frontier_min_size: {self.frontier_min_size}')
+        self.get_logger().info(
+            f'      exploration_frequency: {self.exploration_frequency} Hz '
+            f'(timer period: {self.timer_period:.2f}s)')
         self.get_logger().info('   🔧 ATTEMPT LIMITS:')
         self.get_logger().info(f'      max_attempts_per_frontier: {self.max_attempts_per_frontier}')
         self.get_logger().info(f'      max_consecutive_timeouts: {self.max_consecutive_timeouts}')
+        self.get_logger().info(f'      max_total_timeouts: {self.max_total_timeouts}')
         self.get_logger().info('   📏 SMART BLOCKING:')
         self.get_logger().info(f'      unreachable_region_radius: {self.unreachable_region_radius}m')
         self.get_logger().info(f'      smart_blocking_enabled: {self.smart_blocking_enabled}')
@@ -218,6 +227,14 @@ class WavefrontExplorer(Node):
         self.map_data = np.array(msg.data, dtype=np.int8).reshape(
             (msg.info.height, msg.info.width))
         self.map_info = msg.info
+
+    def _timer_period_from_frequency(self, frequency_hz):
+        """Convert configured Hz into a ROS timer period in seconds."""
+        if frequency_hz <= 0.0:
+            self.get_logger().warn(
+                'exploration_frequency must be positive; using 1.0 Hz')
+            frequency_hz = 1.0
+        return 1.0 / frequency_hz
 
     # ============================================================
     # MANUAL / AUTO CONTROL
@@ -324,12 +341,15 @@ class WavefrontExplorer(Node):
         """Cancel the current Nav2 goal if one is active."""
         if self.current_goal_handle is not None:
             try:
-                self.ignore_current_goal_result = True
+                if self.current_goal_sequence is not None:
+                    self.ignored_goal_sequences.add(self.current_goal_sequence)
                 self.current_goal_handle.cancel_goal_async()
             except Exception as e:
                 self.get_logger().warn(f'Could not cancel current goal: {e}')
         self.current_goal_handle = None
         self.current_goal_region = None
+        self.current_goal_frontier = None
+        self.current_goal_sequence = None
         self.current_goal_start_time = None
         self.navigating = False
 
@@ -389,65 +409,86 @@ class WavefrontExplorer(Node):
     # ============================================================
     # NEW: CONNECTIVITY-AWARE BLOCKING
     # ============================================================
+    def _nearest_free_cell(self, map_x, map_y, max_radius_cells=4):
+        """Return a nearby free map cell, or None if noise made it non-free."""
+        height, width = self.map_data.shape
+        map_x = max(0, min(map_x, width - 1))
+        map_y = max(0, min(map_y, height - 1))
+
+        if self.map_data[map_y, map_x] == 0:
+            return map_x, map_y
+
+        for radius in range(1, max_radius_cells + 1):
+            for dy in range(-radius, radius + 1):
+                for dx in range(-radius, radius + 1):
+                    nx, ny = map_x + dx, map_y + dy
+                    if 0 <= nx < width and 0 <= ny < height:
+                        if self.map_data[ny, nx] == 0:
+                            return nx, ny
+        return None
+
     def _check_connectivity(self, frontier_x, frontier_y, unreachable_x, unreachable_y):
-        """
-        Check if frontier is in SAME disconnected region as unreachable area.
-        If they're separated by obstacles, allow exploration.
-        """
+        """Check if two nearby frontiers belong to the same free-space patch."""
         if not self.smart_blocking_enabled:
-            return False
-        
-        # Convert to map coordinates
+            return True
+
         fx, fy = self._world_to_map(frontier_x, frontier_y)
         ux, uy = self._world_to_map(unreachable_x, unreachable_y)
-        
+        start = self._nearest_free_cell(fx, fy)
+        target = self._nearest_free_cell(ux, uy)
+
+        # If either endpoint flickered out of free space, treat the nearby failed
+        # patch as still blocked instead of reopening it because of map noise.
+        if start is None or target is None:
+            return True
+
         height, width = self.map_data.shape
-        fx = max(0, min(fx, width - 1))
-        fy = max(0, min(fy, height - 1))
-        ux = max(0, min(ux, width - 1))
-        uy = max(0, min(uy, height - 1))
-        
-        # BFS to check if there's a path between them
-        visited = set()
-        queue = deque([(fx, fy)])
-        visited.add((fx, fy))
-        
+        visited = {start}
+        queue = deque([start])
+
         while queue:
             x, y = queue.popleft()
-            
-            # Found unreachable point - they're connected
-            if x == ux and y == uy:
-                return True  # Same connected region, block
-            
-            # Explore neighbors
+            if (x, y) == target:
+                return True
+
             for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
                 nx, ny = x + dx, y + dy
                 if 0 <= nx < width and 0 <= ny < height and (nx, ny) not in visited:
-                    if self.map_data[ny, nx] == 0:  # Free space
+                    if self.map_data[ny, nx] == 0:
                         visited.add((nx, ny))
                         queue.append((nx, ny))
-        
-        return False  # Separated by obstacles, allow exploration
+
+        return False
 
     def _is_near_unreachable_area(self, world_x, world_y):
-        """Check if frontier is near unreachable area AND in same connected region."""
+        """Check whether a frontier is part of a recently failed patch."""
         for unreachable_x, unreachable_y, _ in self.unreachable_areas:
             distance = math.hypot(world_x - unreachable_x, world_y - unreachable_y)
-            
-            # Close enough to check connectivity
-            if distance < self.unreachable_region_radius * 2:
-                # Check if they're in same connected region
+
+            if distance <= self.unreachable_region_radius:
+                self.get_logger().info(
+                    f'🚫 Frontier ({world_x:.2f}, {world_y:.2f}) too close to failed area '
+                    f'({unreachable_x:.2f}, {unreachable_y:.2f}) - distance: {distance:.2f}m',
+                    throttle_duration_sec=5.0)
+                return True
+
+            if distance <= self.unreachable_region_radius * 2.0:
                 if self._check_connectivity(world_x, world_y, unreachable_x, unreachable_y):
                     self.get_logger().info(
                         f'🚫 Frontier ({world_x:.2f}, {world_y:.2f}) in same unreachable region '
                         f'as ({unreachable_x:.2f}, {unreachable_y:.2f}) - distance: {distance:.2f}m',
                         throttle_duration_sec=5.0)
                     return True
-        
+
         return False
 
     def _add_unreachable_area(self, world_x, world_y):
         """Record a failed frontier location."""
+        for existing_x, existing_y, _ in self.unreachable_areas:
+            distance = math.hypot(world_x - existing_x, world_y - existing_y)
+            if distance <= self.unreachable_region_radius * 0.5:
+                return
+
         self.unreachable_areas.append((world_x, world_y, datetime.now()))
         self.get_logger().warn(f'📍 Unreachable area recorded: ({world_x:.2f}, {world_y:.2f})')
 
@@ -532,8 +573,8 @@ class WavefrontExplorer(Node):
     # ============================================================
     def _get_region_key(self, world_x, world_y):
         """Get stable region key."""
-        region_x = int(world_x / self.region_grid_size) * self.region_grid_size
-        region_y = int(world_y / self.region_grid_size) * self.region_grid_size
+        region_x = math.floor(world_x / self.region_grid_size) * self.region_grid_size
+        region_y = math.floor(world_y / self.region_grid_size) * self.region_grid_size
         return f"{region_x:.1f}_{region_y:.1f}"
 
     def _get_region_attempts(self, region_key):
@@ -707,6 +748,16 @@ class WavefrontExplorer(Node):
 
                 if self.current_goal_region:
                     self.blocked_regions.add(self.current_goal_region)
+                if self.current_goal_frontier:
+                    frontier_x, frontier_y = self.current_goal_frontier
+                    self._mark_frontier_failed(
+                        self.current_goal_region, frontier_x, frontier_y)
+
+                if self.current_goal_sequence is not None:
+                    self.ignored_goal_sequences.add(self.current_goal_sequence)
+                self.current_goal_handle = None
+                self.current_goal_frontier = None
+                self.current_goal_sequence = None
 
                 if self.total_timeout_count >= self.max_total_timeouts:
                     self.get_logger().warn(f'🛑 Max total timeouts')
@@ -714,9 +765,9 @@ class WavefrontExplorer(Node):
                     return
 
                 if self.consecutive_timeout_count >= self.max_consecutive_timeouts:
-                    self.get_logger().warn(f'🛑 Max consecutive timeouts')
-                    self._finish_exploration()
-                    return
+                    self.get_logger().warn(
+                        '🛑 Consecutive navigation timeouts reached; continuing with failed areas blocked')
+                    self.consecutive_timeout_count = 0
             return
 
         if not self.nav_client.wait_for_server(timeout_sec=0.5):
@@ -757,7 +808,11 @@ class WavefrontExplorer(Node):
             self.region_attempts[region_key] = 0
         self.region_attempts[region_key] += 1
 
+        self.goal_sequence += 1
+        goal_sequence = self.goal_sequence
         self.current_goal_region = region_key
+        self.current_goal_frontier = (frontier_x, frontier_y)
+        self.current_goal_sequence = goal_sequence
         attempts = self.region_attempts[region_key]
 
         self.get_logger().info(
@@ -772,12 +827,21 @@ class WavefrontExplorer(Node):
         self.current_goal_start_time = datetime.now()
 
         send_future = self.nav_client.send_goal_async(goal_msg)
-        send_future.add_done_callback(lambda f: self._goal_response(f, region_key, frontier_x, frontier_y))
+        send_future.add_done_callback(
+            lambda f: self._goal_response(
+                f, region_key, frontier_x, frontier_y, goal_sequence))
 
-    def _goal_response(self, future, region_key, frontier_x, frontier_y):
+    def _goal_response(self, future, region_key, frontier_x, frontier_y, goal_sequence):
         """Handle goal response."""
         try:
             goal_handle = future.result()
+            if (goal_sequence in self.ignored_goal_sequences
+                    or self.current_goal_sequence != goal_sequence):
+                self.ignored_goal_sequences.discard(goal_sequence)
+                if goal_handle.accepted:
+                    goal_handle.cancel_goal_async()
+                return
+
             self.current_goal_handle = goal_handle
 
             if not goal_handle.accepted:
@@ -786,34 +850,44 @@ class WavefrontExplorer(Node):
                     self._mark_frontier_failed(region_key, frontier_x, frontier_y)
                 self.navigating = False
                 self.current_goal_handle = None
+                self.current_goal_frontier = None
+                self.current_goal_sequence = None
                 return
 
             if self.exploration_mode != 'auto':
                 self.get_logger().info(
                     'Goal accepted after auto exploration was paused; canceling it.')
-                self.ignore_current_goal_result = True
                 goal_handle.cancel_goal_async()
                 self.current_goal_handle = None
+                self.current_goal_frontier = None
+                self.current_goal_sequence = None
                 self.navigating = False
                 return
 
             result_future = goal_handle.get_result_async()
             result_future.add_done_callback(
-                lambda f: self._goal_result(f, region_key, frontier_x, frontier_y))
+                lambda f: self._goal_result(
+                    f, region_key, frontier_x, frontier_y, goal_sequence))
         except Exception as e:
             self.get_logger().error(f'Goal error: {e}')
             if self.exploration_mode == 'auto':
                 self._mark_frontier_failed(region_key, frontier_x, frontier_y)
             self.navigating = False
+            self.current_goal_frontier = None
+            self.current_goal_sequence = None
 
-    def _goal_result(self, future, region_key, frontier_x, frontier_y):
+    def _goal_result(self, future, region_key, frontier_x, frontier_y, goal_sequence):
         """Handle goal result."""
         try:
             result = future.result()
-            if self.ignore_current_goal_result or self.exploration_mode != 'auto':
+            if goal_sequence in self.ignored_goal_sequences:
+                self.ignored_goal_sequences.discard(goal_sequence)
+                self.get_logger().info('Ignoring late Nav2 result for timed-out goal.')
+                return
+
+            if self.exploration_mode != 'auto':
                 self.get_logger().info(
                     'Ignoring Nav2 goal result because automatic exploration is not active.')
-                self.ignore_current_goal_result = False
                 return
 
             if result.status == GoalStatus.STATUS_SUCCEEDED:
@@ -834,8 +908,11 @@ class WavefrontExplorer(Node):
             if self.exploration_mode == 'auto':
                 self._mark_frontier_failed(region_key, frontier_x, frontier_y)
         finally:
-            self.navigating = False
-            self.current_goal_handle = None
+            if self.current_goal_sequence == goal_sequence:
+                self.navigating = False
+                self.current_goal_handle = None
+                self.current_goal_frontier = None
+                self.current_goal_sequence = None
 
     def _mark_frontier_failed(self, region_key, frontier_x, frontier_y):
         """Mark frontier as failed."""

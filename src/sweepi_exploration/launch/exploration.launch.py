@@ -35,6 +35,8 @@ def generate_launch_description():
         'max_attempts_per_frontier', default_value='2')
     declare_max_consecutive_timeouts = DeclareLaunchArgument(
         'max_consecutive_timeouts', default_value='2')
+    declare_max_total_timeouts = DeclareLaunchArgument(
+        'max_total_timeouts', default_value='10')
     declare_max_exploration_time = DeclareLaunchArgument(
         'max_exploration_time', default_value='600')
     declare_goal_offset_distance = DeclareLaunchArgument(
@@ -47,7 +49,7 @@ def generate_launch_description():
     
     # NEW: Proximity-based blocking parameter
     declare_unreachable_region_radius = DeclareLaunchArgument(
-        'unreachable_region_radius', default_value='0.3',
+        'unreachable_region_radius', default_value='0.6',
         description='Block all frontiers within this distance of failed frontier')
     declare_start_mode = DeclareLaunchArgument(
         'start_mode', default_value='auto',
@@ -84,6 +86,7 @@ def generate_launch_description():
                 'acceleration_limit': LaunchConfiguration('acceleration_limit'),
                 'max_attempts_per_frontier': LaunchConfiguration('max_attempts_per_frontier'),
                 'max_consecutive_timeouts': LaunchConfiguration('max_consecutive_timeouts'),
+                'max_total_timeouts': LaunchConfiguration('max_total_timeouts'),
                 'max_exploration_time': LaunchConfiguration('max_exploration_time'),
                 'goal_offset_distance': LaunchConfiguration('goal_offset_distance'),
                 'robot_radius': LaunchConfiguration('robot_radius'),
@@ -107,6 +110,7 @@ def generate_launch_description():
         declare_acceleration_limit,
         declare_max_attempts_per_frontier,
         declare_max_consecutive_timeouts,
+        declare_max_total_timeouts,
         declare_max_exploration_time,
         declare_goal_offset_distance,
         declare_robot_radius,
