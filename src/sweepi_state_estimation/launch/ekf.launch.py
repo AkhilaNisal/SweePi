@@ -2,9 +2,28 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
+
+
+def validate_params_file(context):
+    params_path = LaunchConfiguration('params_file').perform(context)
+    if not os.path.isfile(params_path):
+        raise RuntimeError(f'EKF parameter file does not exist: {params_path}')
+
+    with open(params_path, 'r', encoding='utf-8') as stream:
+        params_text = stream.read()
+
+    required_entries = ('ekf_filter_node:', 'odom0:', 'imu0:')
+    missing_entries = [entry for entry in required_entries if entry not in params_text]
+    if missing_entries:
+        missing_text = ', '.join(missing_entries)
+        raise RuntimeError(
+            f'EKF parameter file {params_path} is missing required entries: {missing_text}'
+        )
+
+    return []
 
 
 def generate_launch_description():
@@ -25,6 +44,7 @@ def generate_launch_description():
             default_value='false',
             description='Use simulation clock',
         ),
+        OpaqueFunction(function=validate_params_file),
         Node(
             package='robot_localization',
             executable='ekf_node',

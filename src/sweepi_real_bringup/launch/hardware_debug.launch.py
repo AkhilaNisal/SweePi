@@ -19,6 +19,7 @@ def generate_launch_description():
 
     base_launch = os.path.join(base_driver_dir, 'launch', 'base_driver.launch.py')
     ekf_launch = os.path.join(state_estimation_dir, 'launch', 'ekf.launch.py')
+    default_ekf_params = os.path.join(state_estimation_dir, 'config', 'ekf.yaml')
     lidar_launch = os.path.join(lidar_dir, 'launch', 'sllidar_a1_launch.py')
     urdf_path = os.path.join(description_dir, 'urdf', 'sweepi.urdf.xacro')
 
@@ -28,6 +29,7 @@ def generate_launch_description():
     launch_lidar = LaunchConfiguration('launch_lidar')
     publish_robot_description = LaunchConfiguration('publish_robot_description')
     base_serial_port = LaunchConfiguration('base_serial_port')
+    ekf_params_file = LaunchConfiguration('ekf_params_file')
     base_baud_rate = LaunchConfiguration('base_baud_rate')
     lidar_serial_port = LaunchConfiguration('lidar_serial_port')
     lidar_baud_rate = LaunchConfiguration('lidar_baud_rate')
@@ -60,6 +62,11 @@ def generate_launch_description():
             'publish_robot_description',
             default_value='true',
             description='Launch robot_state_publisher for fixed hardware frames',
+        ),
+        DeclareLaunchArgument(
+            'ekf_params_file',
+            default_value=default_ekf_params,
+            description='robot_localization EKF parameter file',
         ),
         DeclareLaunchArgument(
             'base_serial_port',
@@ -98,6 +105,7 @@ def generate_launch_description():
             PythonLaunchDescriptionSource(ekf_launch),
             condition=IfCondition(launch_ekf),
             launch_arguments={
+                'params_file': ekf_params_file,
                 'use_sim_time': use_sim_time,
             }.items(),
         ),

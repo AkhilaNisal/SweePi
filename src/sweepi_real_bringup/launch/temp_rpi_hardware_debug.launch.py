@@ -23,6 +23,7 @@ def generate_launch_description():
 
     temp_launch = os.path.join(temp_hardware_dir, 'launch', 'temp_rpi_hardware.launch.py')
     ekf_launch = os.path.join(state_estimation_dir, 'launch', 'ekf.launch.py')
+    default_ekf_params = os.path.join(state_estimation_dir, 'config', 'ekf.yaml')
     urdf_path = os.path.join(description_dir, 'urdf', 'sweepi.urdf.xacro')
 
     use_sim_time = LaunchConfiguration('use_sim_time')
@@ -31,6 +32,7 @@ def generate_launch_description():
     launch_robot_description = LaunchConfiguration('launch_robot_description')
     launch_lidar = LaunchConfiguration('launch_lidar')
     temp_params_file = LaunchConfiguration('temp_params_file')
+    ekf_params_file = LaunchConfiguration('ekf_params_file')
     dry_run_gpio = LaunchConfiguration('dry_run_gpio')
     lidar_serial_port = LaunchConfiguration('lidar_serial_port')
     lidar_baud_rate = LaunchConfiguration('lidar_baud_rate')
@@ -74,6 +76,11 @@ def generate_launch_description():
             description='Temporary RPi hardware parameter file',
         ),
         DeclareLaunchArgument(
+            'ekf_params_file',
+            default_value=default_ekf_params,
+            description='robot_localization EKF parameter file',
+        ),
+        DeclareLaunchArgument(
             'dry_run_gpio',
             default_value='false',
             description='Simulate step counts without accessing GPIO',
@@ -106,6 +113,7 @@ def generate_launch_description():
             PythonLaunchDescriptionSource(ekf_launch),
             condition=IfCondition(launch_ekf),
             launch_arguments={
+                'params_file': ekf_params_file,
                 'use_sim_time': use_sim_time,
             }.items(),
         ),
