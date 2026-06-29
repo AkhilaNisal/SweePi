@@ -20,7 +20,7 @@ def generate_launch_description():
     base_launch = os.path.join(base_driver_dir, 'launch', 'base_driver.launch.py')
     ekf_launch = os.path.join(state_estimation_dir, 'launch', 'ekf.launch.py')
     default_ekf_params = os.path.join(state_estimation_dir, 'config', 'ekf.yaml')
-    lidar_launch = os.path.join(lidar_dir, 'launch', 'sllidar_a1_launch.py')
+    lidar_launch = os.path.join(lidar_dir, 'launch', 'sllidar_c1_launch.py')
     urdf_path = os.path.join(description_dir, 'urdf', 'sweepi.urdf.xacro')
 
     use_sim_time = LaunchConfiguration('use_sim_time')
@@ -85,8 +85,8 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'lidar_baud_rate',
-            default_value='115200',
-            description='RPLIDAR serial baud rate',
+            default_value='460800',
+            description='SLLidar serial baud rate',
         ),
         DeclareLaunchArgument(
             'lidar_frame_id',

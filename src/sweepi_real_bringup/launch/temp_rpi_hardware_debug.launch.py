@@ -41,7 +41,7 @@ def generate_launch_description():
     robot_description = ParameterValue(Command(['xacro ', str(urdf_path)]), value_type=str)
     lidar_launch = [
         FindPackageShare('sllidar_ros2'),
-        '/launch/sllidar_a1_launch.py',
+        '/launch/sllidar_c1_launch.py',
     ]
 
     return LaunchDescription([
@@ -92,8 +92,8 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'lidar_baud_rate',
-            default_value='115200',
-            description='RPLIDAR serial baud rate',
+            default_value='460800',
+            description='SLLidar serial baud rate',
         ),
         DeclareLaunchArgument(
             'lidar_frame_id',

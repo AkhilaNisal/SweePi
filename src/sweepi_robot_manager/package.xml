@@ -23,7 +23,9 @@
   <exec_depend>sweepi_exploration</exec_depend>
   <exec_depend>sweepi_coverage</exec_depend>
   <exec_depend>sweepi_api_bridge</exec_depend>
+  <exec_depend>sweepi_real_bringup</exec_depend>
   <exec_depend>nav2_bringup</exec_depend>
+  <exec_depend>rviz2</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
