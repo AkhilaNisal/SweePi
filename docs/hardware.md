@@ -29,6 +29,11 @@ debugged by itself.
 - Can launch the base driver, EKF, robot description, and the existing `sllidar_ros2` lidar driver.
 - Does not launch the robot manager, API bridge, coverage, exploration, Nav2, Gazebo, or SLAM.
 
+Temporary Raspberry Pi testing on the old SLRC robot is documented separately in
+[Temporary Raspberry Pi Hardware Testing](temp_rpi_hardware_testing.md). That path uses
+`sweepi_temp_rpi_hardware` to feed `/wheel/odom` and `/imu/data` into the same EKF without replacing the
+final STM32 hardware packages.
+
 ## Expected Topics
 
 | Topic | Publisher | Message | Purpose |

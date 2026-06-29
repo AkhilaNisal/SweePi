@@ -17,6 +17,7 @@
   <exec_depend>sweepi_base_driver</exec_depend>
   <exec_depend>sweepi_description</exec_depend>
   <exec_depend>sweepi_state_estimation</exec_depend>
+  <exec_depend>sweepi_temp_rpi_hardware</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

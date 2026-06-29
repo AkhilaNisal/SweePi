@@ -1,0 +1,86 @@
+sweepi_temp_stepper_driver:
+  ros__parameters:
+    wheel_radius: 0.0325
+    wheel_separation: 0.20
+    steps_per_rev: 200
+    microsteps: 16
+    max_steps_per_sec: 4000.0
+    accel_steps_per_sec2: 3500.0
+    decel_steps_per_sec2: 15000.0
+    cmd_vel_timeout: 0.2
+    steps_publish_rate_hz: 50.0
+
+    chip_name: gpiochip4
+    left_en_pin: 12
+    left_dir_pin: 5
+    left_step_pin: 6
+    right_en_pin: 22
+    right_dir_pin: 23
+    right_step_pin: 24
+
+    enable_active_low: true
+    left_dir_inverted: false
+    right_dir_inverted: true
+
+    cmd_vel_topic: /cmd_vel
+    left_steps_topic: /stepper/left_steps_total
+    right_steps_topic: /stepper/right_steps_total
+
+    dry_run_gpio: false
+    fail_if_gpio_unavailable: true
+
+sweepi_temp_stepper_odom:
+  ros__parameters:
+    wheel_radius: 0.0325
+    wheel_separation: 0.20
+    steps_per_rev: 200
+    microsteps: 16
+    left_step_sign: 1.0
+    right_step_sign: 1.0
+    publish_rate_hz: 50.0
+
+    left_steps_topic: /stepper/left_steps_total
+    right_steps_topic: /stepper/right_steps_total
+    wheel_odom_topic: /wheel/odom
+
+    odom_frame_id: odom
+    base_frame_id: base_footprint
+
+    wheel_odom_pose_covariance_diagonal: [0.05, 0.05, 99999.0, 99999.0, 99999.0, 0.10]
+    wheel_odom_twist_covariance_diagonal: [0.05, 99999.0, 99999.0, 99999.0, 99999.0, 0.10]
+
+sweepi_temp_mpu6050:
+  ros__parameters:
+    i2c_bus: 1
+    i2c_address: 0x68
+    frame_id: imu_link
+    imu_topic: /imu/data
+    publish_rate_hz: 50.0
+
+    calibrate_on_startup: true
+    gyro_calibration_samples: 1000
+    gyro_calibration_delay_sec: 0.002
+    calibration_file: ~/.ros/sweepi_mpu6050_calibration.yaml
+    save_calibration: true
+    load_calibration_if_available: true
+
+    publish_orientation: false
+
+    enable_light_low_pass_filter: true
+    low_pass_alpha: 0.7
+
+    gyro_units_output: rad_s
+    accel_units_output: m_s2
+
+    angular_velocity_signs: [1.0, 1.0, 1.0]
+    linear_acceleration_signs: [1.0, 1.0, 1.0]
+
+    enable_stationary_bias_adaptation: true
+    stationary_gyro_threshold_dps: 0.8
+    stationary_accel_threshold_g: 0.08
+    yaw_bias_adapt_alpha: 0.001
+    zero_gyro_when_stationary: true
+
+    angular_velocity_covariance_diagonal: [0.05, 0.05, 0.02]
+    linear_acceleration_covariance_diagonal: [0.30, 0.30, 0.30]
+    orientation_covariance_diagonal: [99999.0, 99999.0, 99999.0]
