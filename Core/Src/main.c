@@ -25,9 +25,11 @@
 #include "usb_device.h"
 #include "gpio.h"
 
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <string.h>
+#include <stdio.h>
 
 /* USER CODE END Includes */
 
@@ -37,11 +39,24 @@
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
+
+
+
+
+
+
 /* USER CODE BEGIN PD */
 #define PI 3.14159265f
 #define WHEEL_RADIUS_M 0.033f // assume 3.3cm radius wheels, adjust as necessary
 #define WHEEL_BASE_M 0.200f // assume 20cm distance between wheels, adjust as necessary
+#define MOTOR_TEST_ENABLE 1
+#define MOTOR_TEST_LEFT_RPM 30.0f
+#define MOTOR_TEST_RIGHT_RPM 60.0f
 /* USER CODE END PD */
+
+
+
+
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
@@ -50,25 +65,35 @@
 
 /* Private variables ---------------------------------------------------------*/
 
+
+
+
+
+
+
 /* USER CODE BEGIN PV */
+uint8_t mpu6050_address = 0;
+uint8_t mpu6050_ready = 0;
 
-// --- COMMUNICATION PROTOCOL ---
-// 3 variables * 4 bytes each = 12 bytes total
-typedef struct {
-    float linear_v;     // 4 bytes
-    float angular_w;    // 4 bytes
-    uint32_t timestamp; // 4 bytes
-} RobotCommand;
+// --- IMU RAW VARIABLES ---
+int16_t raw_acc_x = 0, raw_acc_y = 0, raw_acc_z = 0;
+int16_t raw_gyro_x = 0, raw_gyro_y = 0, raw_gyro_z = 0;
 
-RobotCommand latest_cmd;
-uint8_t rx_buffer[sizeof(RobotCommand)]; // Notice the brackets!
+// --- IMU CALIBRATION VARIABLES (Gyros Only!) ---
+int32_t gyro_x_offset = 0, gyro_y_offset = 0, gyro_z_offset = 0;
 
-// --- KINEMATICS ---
-float target_linear_mps = 0.2f;   // Set this in Watch Window (Forward/Back)
-float target_angular_rads = 0.1f; // Set this in Watch Window (Turning)
+// --- ASCII COMMUNICATION PROTOCOL ---
+char rx_line_buffer[128]; // Holds the incoming string
+volatile uint8_t rx_byte;          // Holds a single character
+volatile uint8_t rx_index = 0;
+volatile uint8_t new_cmd_ready = 0;
+char tx_buffer[256];      // Holds the outgoing FB string
 
-float target_velocity_mps_L = 0.0f; // Now calculated dynamically
-float target_velocity_mps_R = 0.0f; // Now calculated dynamically
+// Command Variables from Pi
+uint32_t cmd_seq = 0;
+float cmd_left_vel = 0.0f;
+float cmd_right_vel = 0.0f;
+uint8_t motor_enable = 0;
 
 // --- ENCODERS ---
 uint16_t current_ticks_L = 0, previous_ticks_L = 0;
@@ -81,21 +106,17 @@ float current_rpm_R = 0.0f;
 
 // --- PID CONTROLLERS ---
 typedef struct {
-    float Kp;
-    float Ki;
-    float Kd;
-    float setpoint; // Target RPM
-    float integral;
-    float prev_error;
+    float Kp; float Ki; float Kd;
+    float setpoint; float integral; float prev_error;
 } PID_Controller;
 
-// Initialized with your tuned Kp=25.0, Ki=0.5
 PID_Controller leftPID  = {25.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.0f};
 PID_Controller rightPID = {25.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.0f};
 
 float current_pwm_L = 0.0f;
 float current_pwm_R = 0.0f;
 /* USER CODE END PV */
+
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -104,9 +125,19 @@ float PID_Compute(PID_Controller *pid, float current_rpm);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
+
+
+
+
 /* USER CODE BEGIN 0 */
 
 /* USER CODE END 0 */
+
+
+
+
+
+
 
 /**
   * @brief  The application entry point.
@@ -115,25 +146,50 @@ float PID_Compute(PID_Controller *pid, float current_rpm);
 int main(void)
 {
 
+
+
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
+
+
+
+
+
+
 
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
 
+
+
+
+
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
 
-/* Configure the system clock */
- SystemClock_Config();
+
+
+
+
+
+  /* Configure the system clock */
+  SystemClock_Config();
+
+
+
+
 
   /* USER CODE BEGIN SysInit */
 
   /* USER CODE END SysInit */
+
+
+
+
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
@@ -146,6 +202,22 @@ int main(void)
   MX_USART2_UART_Init();
   MX_USB_Device_Init();
   MX_ADC2_Init();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -164,59 +236,150 @@ int main(void)
 
   // Enable Master Output and the Motor Driver Chip
   __HAL_TIM_MOE_ENABLE(&htim1); 
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1|GPIO_PIN_2, GPIO_PIN_SET);
 
   // --- Start Both Hardware Encoders ---
   HAL_TIM_Encoder_Start(&htim2, TIM_CHANNEL_ALL); // Left
   HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_ALL); // Right
 
-  // Start listening on USART2 in the background for exactly 12 bytes
-  HAL_UART_Receive_IT(&huart2, rx_buffer, sizeof(rx_buffer));
-/* USER CODE END 2 */
 
-  /* Infinite loop */
+  // Start listening on USART2 for the first character
+  HAL_UART_Receive_IT(&huart2, (uint8_t *)&rx_byte, 1);
+  // --- Give the MPU6050 time to wake up! ---
+  HAL_Delay(800); 
+  
+  // --- Step 1: I2C Sanity Check Scanner ---
+  HAL_StatusTypeDef result;
+  
+  for (uint8_t i = 1; i < 128; i++)
+  {
+      result = HAL_I2C_IsDeviceReady(&hi2c3, (uint16_t)(i << 1), 2, 10);
+      
+      if (result == HAL_OK)
+      {
+          if ((i == 0x68) || (i == 0x69))
+          {
+              mpu6050_address = i;
+              break;
+          }
+      }
+  }
 
-/* USER CODE BEGIN WHILE */
+  // --- Step 2: Wake up the MPU6050 ---
+  // The MPU6050 boots in Sleep Mode. Write 0x00 to register 0x6B to wake it up!
+  if (mpu6050_address != 0)
+  {
+      uint8_t wake_data = 0x00;
+      if (HAL_I2C_Mem_Write(&hi2c3, (uint16_t)(mpu6050_address << 1), 0x6B, 1, &wake_data, 1, 10) == HAL_OK)
+      {
+          mpu6050_ready = 1;
+      }
+  }
+
+  // --- Step 3: Calibrate MPU6050 Gyroscopes ---
+  // DO NOT MOVE THE ROBOT DURING THIS 1 SECOND WINDOW!
+  if (mpu6050_ready == 1)
+  {
+      int32_t sum_gx = 0, sum_gy = 0, sum_gz = 0;
+      uint8_t calib_buf[6]; 
+      const uint16_t num_samples = 500;
+
+      for (uint16_t i = 0; i < num_samples; i++)
+      {
+          // Register 0x43 is where the Gyro data starts
+          if (HAL_I2C_Mem_Read(&hi2c3, (uint16_t)(mpu6050_address << 1), 0x43, 1, calib_buf, 6, 10) == HAL_OK)
+          {
+              sum_gx += (int16_t)((calib_buf[0] << 8) | calib_buf[1]);
+              sum_gy += (int16_t)((calib_buf[2] << 8) | calib_buf[3]);
+              sum_gz += (int16_t)((calib_buf[4] << 8) | calib_buf[5]);
+          }
+          HAL_Delay(2); 
+      }
+      
+      // Calculate the average offsets
+      gyro_x_offset = sum_gx / num_samples;
+      gyro_y_offset = sum_gy / num_samples;
+      gyro_z_offset = sum_gz / num_samples;
+  }
+
+  // --- Manual motor test mode ---
+  // Change MOTOR_TEST_LEFT_RPM / MOTOR_TEST_RIGHT_RPM above for bench testing.
+  // The CHECK_BUTTON safety switch must still be pressed for PWM output.
+  if (MOTOR_TEST_ENABLE != 0)
+  {
+      motor_enable = 1;
+      leftPID.setpoint = MOTOR_TEST_LEFT_RPM;
+      rightPID.setpoint = MOTOR_TEST_RIGHT_RPM;
+  }
+
+  /* USER CODE END 2 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* Infinite loop */
+  /* USER CODE BEGIN WHILE */
   while (1)
   {
-// 1. Differential Drive Kinematics
-    target_velocity_mps_L = target_linear_mps - (target_angular_rads * (WHEEL_BASE_M / 2.0f));
-    target_velocity_mps_R = target_linear_mps + (target_angular_rads * (WHEEL_BASE_M / 2.0f));
-
-    // 2. Convert to Target RPM
-    leftPID.setpoint = (target_velocity_mps_L * 60.0f) / (2.0f * PI * WHEEL_RADIUS_M);
+    // --- 1. Read All 6 MPU6050 Axes ---
+    uint8_t i2c_buf[14]; 
     
-    // TEMPORARY GHOST WHEEL LOCK: Keep Right Motor asleep until hardware is plugged in!
-    rightPID.setpoint = 0.0f; 
-    // UNCOMMENT LATER: rightPID.setpoint = (target_velocity_mps_R * 60.0f) / (2.0f * PI * WHEEL_RADIUS_M);
+    // Read 14 bytes starting from register 0x3B (ACCEL_XOUT_H)
+    if ((mpu6050_ready != 0) && (HAL_I2C_Mem_Read(&hi2c3, (uint16_t)(mpu6050_address << 1), 0x3B, 1, i2c_buf, 14, 10) == HAL_OK))
+    {
+        // Accel Data
+        raw_acc_x = (int16_t)((i2c_buf[0] << 8) | i2c_buf[1]);
+        raw_acc_y = (int16_t)((i2c_buf[2] << 8) | i2c_buf[3]);
+        raw_acc_z = (int16_t)((i2c_buf[4] << 8) | i2c_buf[5]);
+        
+        // i2c_buf[6] and [7] are the Temperature sensor (Ignored)
+        
+        // Gyro Data
+        raw_gyro_x = (int16_t)((i2c_buf[8] << 8)  | i2c_buf[9]);
+        raw_gyro_y = (int16_t)((i2c_buf[10] << 8) | i2c_buf[11]);
+        raw_gyro_z = (int16_t)((i2c_buf[12] << 8) | i2c_buf[13]);
+    }
 
-    // 2. Read Hardware Timers (TIM2 = Left, TIM4 = Right)
+    // --- 2. Read Hardware Timers & Deltas ---
     current_ticks_L = __HAL_TIM_GET_COUNTER(&htim2);
     current_ticks_R = __HAL_TIM_GET_COUNTER(&htim4);
 
-    // 3. Calculate Deltas
     tick_diff_L = (int16_t)(current_ticks_L - previous_ticks_L);
     previous_ticks_L = current_ticks_L;
     
     tick_diff_R = (int16_t)(current_ticks_R - previous_ticks_R);
     previous_ticks_R = current_ticks_R;
 
-    // 4. Calculate Real-World RPM
     current_rpm_L = ((float)tick_diff_L * 600.0f) / 7392.0f;
     current_rpm_R = ((float)tick_diff_R * 600.0f) / 7392.0f;
 
-    // 5. SAFETY SWITCH & PID LOGIC
-    if (HAL_GPIO_ReadPin(CHECK_BUTTON_GPIO_Port, CHECK_BUTTON_Pin) == GPIO_PIN_RESET) 
+    // --- 3. SAFETY SWITCH & PID LOGIC ---
+    // Change this line to look for SET instead of RESET!
+    if ((HAL_GPIO_ReadPin(CHECK_BUTTON_GPIO_Port, CHECK_BUTTON_Pin) == GPIO_PIN_SET) && (motor_enable == 1)) 
     {
-        // --- LEFT MOTOR ---
         current_pwm_L += PID_Compute(&leftPID, current_rpm_L);
         if (current_pwm_L > 4799.0f) current_pwm_L = 4799.0f;
         if (current_pwm_L < 0.0f) current_pwm_L = 0.0f; 
         
         __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, (uint32_t)current_pwm_L);
         __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 0);
-
-        // --- RIGHT MOTOR ---
+        
         current_pwm_R += PID_Compute(&rightPID, current_rpm_R);
         if (current_pwm_R > 4799.0f) current_pwm_R = 4799.0f;
         if (current_pwm_R < 0.0f) current_pwm_R = 0.0f; 
@@ -226,24 +389,58 @@ int main(void)
     } 
     else 
     {
-        // --- BRAKES ON ---
         __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
         __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
         __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
         __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 0);
-        
-        // Reset PID Memory
         current_pwm_L = 0.0f; leftPID.integral = 0.0f; leftPID.prev_error = 0.0f;
         current_pwm_R = 0.0f; rightPID.integral = 0.0f; rightPID.prev_error = 0.0f;
     }
 
-    // 6. Strictly timed 100ms calculation window
+    // --- 4. ASCII PROTOCOL FEEDBACK (Pi Telemetry) ---
+    
+    // Apply Gyro offsets and convert to Degrees per Second (/131.0)
+    float gx = (float)(raw_gyro_x - gyro_x_offset) / 131.0f;
+    float gy = (float)(raw_gyro_y - gyro_y_offset) / 131.0f;
+    float gz = (float)(raw_gyro_z - gyro_z_offset) / 131.0f;
+
+    // Convert Accel to m/s^2 (Standard config is +/- 2g -> /16384.0, then * 9.81 gravity)
+    float ax = ((float)raw_acc_x / 16384.0f) * 9.81f;
+    float ay = ((float)raw_acc_y / 16384.0f) * 9.81f;
+    float az = ((float)raw_acc_z / 16384.0f) * 9.81f;
+
+    // Inject all 6 parameters perfectly into Copilot's FB string format!
+    sprintf(tx_buffer, "FB,%lu,%lu,%d,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,12.0,0,OK\r\n", 
+            cmd_seq, HAL_GetTick() * 1000, tick_diff_L, tick_diff_R, gx, gy, gz, ax, ay, az);
+            
+    HAL_UART_Transmit_IT(&huart2, (uint8_t*)tx_buffer, strlen(tx_buffer));
+
+    // --- 5. Strictly timed 100ms calculation window ---
     HAL_Delay(100);
     
-  /* USER CODE END WHILE */
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /**
   * @brief System Clock Configuration
@@ -305,22 +502,38 @@ float PID_Compute(PID_Controller *pid, float current_rpm) {
     return (pid->Kp * error) + (pid->Ki * pid->integral) + (pid->Kd * derivative);
 }
 
-// This function automatically triggers when exactly 12 bytes arrive
+// This triggers every time a single ASCII character arrives
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
     if (huart->Instance == USART2)
     {
-        // 1. Copy the raw bytes directly into our structured variables
-        memcpy(&latest_cmd, rx_buffer, sizeof(RobotCommand));
-        
-        // 2. Safely overwrite the kinematics targets that your while(1) loop uses
-        target_linear_mps = latest_cmd.linear_v;
-        target_angular_rads = latest_cmd.angular_w;
-        
-        // (Optional: You can use latest_cmd.timestamp here later for watchdog timeouts)
+        // Leave the completed line untouched until the main loop parses it.
+        if (new_cmd_ready != 0)
+        {
+            HAL_UART_Receive_IT(&huart2, (uint8_t *)&rx_byte, 1);
+            return;
+        }
 
-        // 3. Restart the background listener to catch the next packet
-        HAL_UART_Receive_IT(&huart2, rx_buffer, sizeof(rx_buffer));
+        // If it's a newline, the string is finished!
+        if (rx_byte == '\n' || rx_byte == '\r')
+        {
+            if (rx_index > 0) 
+            {
+                rx_line_buffer[rx_index] = '\0'; // Add null terminator
+                new_cmd_ready = 1;               // Flag the main loop to parse it
+                rx_index = 0;                    // Reset for the next string
+            }
+        } 
+        else 
+        {
+            // Otherwise, keep adding letters to the buffer
+            if (rx_index < 127) 
+            {
+                rx_line_buffer[rx_index++] = rx_byte;
+            }
+        }
+        // Listen for the next single character
+        HAL_UART_Receive_IT(&huart2, (uint8_t *)&rx_byte, 1);
     }
 }
 /* USER CODE END 4 */
