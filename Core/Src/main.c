@@ -50,8 +50,10 @@
 #define WHEEL_RADIUS_M 0.033f // assume 3.3cm radius wheels, adjust as necessary
 #define WHEEL_BASE_M 0.200f // assume 20cm distance between wheels, adjust as necessary
 #define MOTOR_TEST_ENABLE 1
-#define MOTOR_TEST_LEFT_RPM 30.0f
-#define MOTOR_TEST_RIGHT_RPM 60.0f
+#define MOTOR_TEST_LEFT_RPM 15.0f
+#define MOTOR_TEST_RIGHT_RPM 15.0f
+#define LEFT_ENCODER_SIGN -1
+#define RIGHT_ENCODER_SIGN 1
 /* USER CODE END PD */
 
 
@@ -337,6 +339,49 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    // --- 0. ASCII PROTOCOL PARSER (Pi -> STM32 over USART2) ---
+#if MOTOR_TEST_ENABLE == 0
+    if (new_cmd_ready != 0)
+    {
+        unsigned long parsed_seq = 0;
+        unsigned long parsed_time_ms = 0;
+        float parsed_left_vel = 0.0f;
+        float parsed_right_vel = 0.0f;
+        unsigned int parsed_motor_enable = 0;
+        unsigned int parsed_suction_enable = 0;
+        unsigned int parsed_brush_enable = 0;
+        char mode[16] = {0};
+
+        if (sscanf(rx_line_buffer,
+                   "CMD,%lu,%lu,%f,%f,%u,%u,%u,%15[^,\r\n]",
+                   &parsed_seq,
+                   &parsed_time_ms,
+                   &parsed_left_vel,
+                   &parsed_right_vel,
+                   &parsed_motor_enable,
+                   &parsed_suction_enable,
+                   &parsed_brush_enable,
+                   mode) >= 5)
+        {
+            cmd_seq = (uint32_t)parsed_seq;
+            cmd_left_vel = parsed_left_vel;
+            cmd_right_vel = parsed_right_vel;
+            motor_enable = (parsed_motor_enable != 0U) ? 1U : 0U;
+
+            // Pi sends wheel linear velocity in m/s. PID setpoint is wheel RPM.
+            leftPID.setpoint = (cmd_left_vel * 60.0f) / (2.0f * PI * WHEEL_RADIUS_M);
+            rightPID.setpoint = (cmd_right_vel * 60.0f) / (2.0f * PI * WHEEL_RADIUS_M);
+        }
+
+        new_cmd_ready = 0;
+    }
+#else
+    if (new_cmd_ready != 0)
+    {
+        new_cmd_ready = 0;
+    }
+#endif
+
     // --- 1. Read All 6 MPU6050 Axes ---
     uint8_t i2c_buf[14]; 
     
@@ -360,10 +405,10 @@ int main(void)
     current_ticks_L = __HAL_TIM_GET_COUNTER(&htim2);
     current_ticks_R = __HAL_TIM_GET_COUNTER(&htim4);
 
-    tick_diff_L = (int16_t)(current_ticks_L - previous_ticks_L);
+    tick_diff_L = (int16_t)(LEFT_ENCODER_SIGN * (int16_t)(current_ticks_L - previous_ticks_L));
     previous_ticks_L = current_ticks_L;
     
-    tick_diff_R = (int16_t)(current_ticks_R - previous_ticks_R);
+    tick_diff_R = (int16_t)(RIGHT_ENCODER_SIGN * (int16_t)(current_ticks_R - previous_ticks_R));
     previous_ticks_R = current_ticks_R;
 
     current_rpm_L = ((float)tick_diff_L * 600.0f) / 7392.0f;
@@ -371,21 +416,37 @@ int main(void)
 
     // --- 3. SAFETY SWITCH & PID LOGIC ---
     // Change this line to look for SET instead of RESET!
-    if ((HAL_GPIO_ReadPin(CHECK_BUTTON_GPIO_Port, CHECK_BUTTON_Pin) == GPIO_PIN_SET) && (motor_enable == 1)) 
+    if (motor_enable == 1) 
     {
-        current_pwm_L += PID_Compute(&leftPID, current_rpm_L);
-        if (current_pwm_L > 4799.0f) current_pwm_L = 4799.0f;
-        if (current_pwm_L < 0.0f) current_pwm_L = 0.0f; 
-        
-        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, (uint32_t)current_pwm_L);
-        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 0);
-        
-        current_pwm_R += PID_Compute(&rightPID, current_rpm_R);
-        if (current_pwm_R > 4799.0f) current_pwm_R = 4799.0f;
-        if (current_pwm_R < 0.0f) current_pwm_R = 0.0f; 
-        
-        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, (uint32_t)current_pwm_R);
-        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
+	        current_pwm_L += PID_Compute(&leftPID, current_rpm_L);
+	        if (current_pwm_L > 4799.0f) current_pwm_L = 4799.0f;
+	        if (current_pwm_L < -4799.0f) current_pwm_L = -4799.0f;
+	        
+	        if (current_pwm_L >= 0.0f)
+	        {
+	            __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, (uint32_t)current_pwm_L);
+	            __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 0);
+	        }
+	        else
+	        {
+	            __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
+	            __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, (uint32_t)(-current_pwm_L));
+	        }
+	        
+	        current_pwm_R += PID_Compute(&rightPID, current_rpm_R);
+	        if (current_pwm_R > 4799.0f) current_pwm_R = 4799.0f;
+	        if (current_pwm_R < -4799.0f) current_pwm_R = -4799.0f;
+	        
+	        if (current_pwm_R >= 0.0f)
+	        {
+	            __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, (uint32_t)current_pwm_R);
+	            __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
+	        }
+	        else
+	        {
+	            __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
+	            __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, (uint32_t)(-current_pwm_R));
+	        }
     } 
     else 
     {
