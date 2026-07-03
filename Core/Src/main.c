@@ -25,7 +25,6 @@
 #include "usb_device.h"
 #include "gpio.h"
 
-
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <string.h>
@@ -39,17 +38,11 @@
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
-
-
-
-
-
-
 /* USER CODE BEGIN PD */
 #define PI 3.14159265f
 #define WHEEL_RADIUS_M 0.033f // assume 3.3cm radius wheels, adjust as necessary
 #define WHEEL_BASE_M 0.200f // assume 20cm distance between wheels, adjust as necessary
-#define MOTOR_TEST_ENABLE 1
+#define MOTOR_TEST_ENABLE 0
 #define MOTOR_TEST_LEFT_RPM 15.0f
 #define MOTOR_TEST_RIGHT_RPM 15.0f
 #define LEFT_ENCODER_SIGN -1
@@ -62,22 +55,12 @@
 #define GYRO_DPS_TO_RAD_PER_SEC (PI / 180.0f)
 /* USER CODE END PD */
 
-
-
-
-
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-
-
-
-
-
-
 
 /* USER CODE BEGIN PV */
 uint8_t mpu6050_address = 0;
@@ -127,27 +110,17 @@ float current_pwm_L = 0.0f;
 float current_pwm_R = 0.0f;
 /* USER CODE END PV */
 
-
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 float PID_Compute(PID_Controller *pid, float current_rpm, float dt_sec);
+void UInt64ToDec(uint64_t value, char *buffer, size_t buffer_size);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
-
-
-
-
 /* USER CODE BEGIN 0 */
 
 /* USER CODE END 0 */
-
-
-
-
-
-
 
 /**
   * @brief  The application entry point.
@@ -156,50 +129,25 @@ float PID_Compute(PID_Controller *pid, float current_rpm, float dt_sec);
 int main(void)
 {
 
-
-
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
-
-
-
-
-
-
 
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
 
-
-
-
-
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
 
-
-
-
-
-
   /* Configure the system clock */
   SystemClock_Config();
-
-
-
-
 
   /* USER CODE BEGIN SysInit */
 
   /* USER CODE END SysInit */
-
-
-
-
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
@@ -212,26 +160,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_USB_Device_Init();
   MX_ADC2_Init();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* USER CODE BEGIN 2 */
+  /* USER CODE BEGIN 2 */
   // --- Left Motor PWM (Channels 3 & 4) ---
   __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
   __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 0);
@@ -255,6 +184,10 @@ int main(void)
 
   // Start listening on USART2 for the first character
   HAL_UART_Receive_IT(&huart2, (uint8_t *)&rx_byte, 1);
+
+  // Standalone power-up marker for serial/debug checks.
+  HAL_UART_Transmit(&huart2, (uint8_t *)"BOOT\r\n", 6, 100);
+
   // --- Give the MPU6050 time to wake up! ---
   HAL_Delay(800); 
   
@@ -324,26 +257,7 @@ int main(void)
 
   /* USER CODE END 2 */
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* Infinite loop */
+  /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
@@ -504,12 +418,15 @@ int main(void)
 
     uint32_t fb_seq_out = fb_seq;
     uint64_t stm_time_us = ((uint64_t)HAL_GetTick()) * 1000ULL;
+    char stm_time_us_text[21];
+
     fb_seq = (fb_seq + 1U) % 1000000U;
+    UInt64ToDec(stm_time_us, stm_time_us_text, sizeof(stm_time_us_text));
 
     snprintf(tx_buffer, sizeof(tx_buffer),
-             "FB,%lu,%llu,%d,%d,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,12.0,0,OK\r\n",
+             "FB,%lu,%s,%d,%d,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,12.0,0,OK\r\n",
              (unsigned long)fb_seq_out,
-             (unsigned long long)stm_time_us,
+             stm_time_us_text,
              tick_diff_L,
              tick_diff_R,
              gx,
@@ -518,7 +435,7 @@ int main(void)
              ax,
              ay,
              az);
-    if (HAL_UART_GetState(&huart2) == HAL_UART_STATE_READY)
+    if (huart2.gState == HAL_UART_STATE_READY)
     {
         HAL_UART_Transmit_IT(&huart2, (uint8_t*)tx_buffer, strlen(tx_buffer));
     }
@@ -535,24 +452,7 @@ int main(void)
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
-
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /**
   * @brief System Clock Configuration
@@ -570,12 +470,13 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV2;
-  RCC_OscInitStruct.PLL.PLLN = 8;
+  RCC_OscInitStruct.PLL.PLLN = 12;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV2;
   RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2;
@@ -600,6 +501,41 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void UInt64ToDec(uint64_t value, char *buffer, size_t buffer_size)
+{
+    char reversed[20];
+    size_t reversed_len = 0U;
+    size_t out_len = 0U;
+
+    if (buffer_size == 0U)
+    {
+        return;
+    }
+
+    if (value == 0ULL)
+    {
+        buffer[0] = '0';
+        if (buffer_size > 1U)
+        {
+            buffer[1] = '\0';
+        }
+        return;
+    }
+
+    while ((value > 0ULL) && (reversed_len < sizeof(reversed)))
+    {
+        reversed[reversed_len++] = (char)('0' + (value % 10ULL));
+        value /= 10ULL;
+    }
+
+    while ((reversed_len > 0U) && (out_len < (buffer_size - 1U)))
+    {
+        buffer[out_len++] = reversed[--reversed_len];
+    }
+
+    buffer[out_len] = '\0';
+}
+
 float PID_Compute(PID_Controller *pid, float current_rpm, float dt_sec) {
     float error = pid->setpoint - current_rpm;
     
