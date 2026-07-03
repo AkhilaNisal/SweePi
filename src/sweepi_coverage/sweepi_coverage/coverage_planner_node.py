@@ -418,11 +418,23 @@ class CoveragePlannerNode(Node):
         map_changed = new_checksum != self.coverage_map_checksum
 
         self.coverage_map = msg
+
+        # Path freezing only freezes the generated route. Live progress must
+        # continue tracking the latest /coverage_map as the robot moves.
+        if map_changed:
+            live_stats = dict(self.latest_plan_stats)
+            live_stats.update(self._compute_coverage_counts(msg))
+            self.latest_plan_stats = live_stats
+            self.latest_percentage_msg.data = float(
+                live_stats.get('percentage', 0.0)
+            )
+            self.latest_stats_msg.data = self._format_coverage_stats(live_stats)
+            self.coverage_map_checksum = new_checksum
+
         if self.path_frozen:
             return
 
         if map_changed or not self.replan_on_map_change:
-            self.coverage_map_checksum = new_checksum
             self.plan_dirty = True
 
     def nav_costmap_callback(self, msg):
