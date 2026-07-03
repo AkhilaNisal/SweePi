@@ -53,20 +53,20 @@ class BaseDriverNode(Node):
     def __init__(self):
         super().__init__('base_driver_node')
 
-        self.serial_port = self.declare_parameter('serial_port', '/dev/ttyACM0').value
+        self.serial_port = self.declare_parameter('serial_port', '/dev/serial0').value
         self.baud_rate = int(self.declare_parameter('baud_rate', 115200).value)
         self.serial_timeout = float(self.declare_parameter('serial_timeout', 0.02).value)
         self.reconnect_period = float(self.declare_parameter('reconnect_period', 1.0).value)
 
-        self.wheel_radius = float(self.declare_parameter('wheel_radius', 0.025).value)
-        self.wheel_separation = float(self.declare_parameter('wheel_separation', 0.300).value)
+        self.wheel_radius = float(self.declare_parameter('wheel_radius', 0.033).value)
+        self.wheel_separation = float(self.declare_parameter('wheel_separation', 0.200).value)
         self.ticks_per_revolution = float(
-            self.declare_parameter('ticks_per_revolution', 1440.0).value
+            self.declare_parameter('ticks_per_revolution', 7392.0).value
         )
-        self.left_encoder_sign = float(self.declare_parameter('left_encoder_sign', 1.0).value)
+        self.left_encoder_sign = float(self.declare_parameter('left_encoder_sign', -1.0).value)
         self.right_encoder_sign = float(self.declare_parameter('right_encoder_sign', 1.0).value)
 
-        self.command_rate_hz = float(self.declare_parameter('command_rate_hz', 30.0).value)
+        self.command_rate_hz = float(self.declare_parameter('command_rate_hz', 50.0).value)
         self.feedback_poll_rate_hz = float(
             self.declare_parameter('feedback_poll_rate_hz', 100.0).value
         )
@@ -164,7 +164,25 @@ class BaseDriverNode(Node):
         self.get_logger().info(
             f'SweePi base driver starting on {self.serial_port} at {self.baud_rate} baud'
         )
+        self.log_startup_parameters()
         self.connect_serial()
+
+    def log_startup_parameters(self):
+        self.get_logger().info(
+            'Base driver parameters: '
+            f'serial_port={self.serial_port}, '
+            f'baud_rate={self.baud_rate}, '
+            f'wheel_radius={self.wheel_radius}, '
+            f'wheel_separation={self.wheel_separation}, '
+            f'ticks_per_revolution={self.ticks_per_revolution}, '
+            f'left_encoder_sign={self.left_encoder_sign}, '
+            f'right_encoder_sign={self.right_encoder_sign}, '
+            f'command_rate_hz={self.command_rate_hz}, '
+            f'feedback_poll_rate_hz={self.feedback_poll_rate_hz}, '
+            f'cmd_vel_timeout={self.cmd_vel_timeout}, '
+            f'gyro_units={self.gyro_units}, '
+            f'accel_units={self.accel_units}'
+        )
 
     def connect_serial(self):
         if serial is None:

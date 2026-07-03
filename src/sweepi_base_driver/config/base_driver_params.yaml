@@ -1,17 +1,17 @@
 base_driver_node:
   ros__parameters:
-    serial_port: /dev/ttyACM0
+    serial_port: /dev/serial0
     baud_rate: 115200
     serial_timeout: 0.02
     reconnect_period: 1.0
 
-    wheel_radius: 0.025
-    wheel_separation: 0.300
-    ticks_per_revolution: 1440.0
-    left_encoder_sign: 1.0
+    wheel_radius: 0.033
+    wheel_separation: 0.200
+    ticks_per_revolution: 7392.0
+    left_encoder_sign: -1.0
     right_encoder_sign: 1.0
 
-    command_rate_hz: 30.0
+    command_rate_hz: 50.0
     feedback_poll_rate_hz: 100.0
     cmd_vel_timeout: 0.5
     motor_enable: true

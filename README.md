@@ -100,6 +100,70 @@ accepted and sent toward ROS/mock logic. See
 
 ---
 
+## Real Hardware Bringup
+
+Final STM32-based hardware packages:
+
+```bash
+colcon build --symlink-install --packages-select sweepi_base_driver sweepi_state_estimation sweepi_real_bringup
+source install/setup.bash
+```
+
+Launch the full real robot stack with robot manager and API bridge:
+
+```bash
+ros2 launch sweepi_robot_manager master.launch.py \
+  launch_sim:=false \
+  launch_hardware:=true \
+  use_sim_time:=false \
+  launch_api_bridge:=true \
+  api_host:=0.0.0.0 \
+  api_port:=8080 \
+  base_serial_port:=/dev/ttyAMA0 \
+  base_baud_rate:=115200 \
+  launch_lidar:=false
+```
+
+Launch only the hardware bringup without LiDAR for the first STM32 UART test:
+
+```bash
+ros2 launch sweepi_real_bringup hardware_debug.launch.py base_serial_port:=/dev/ttyAMA0 base_baud_rate:=115200 launch_lidar:=false
+```
+
+Launch with explicit Raspberry Pi UART settings:
+
+```bash
+ros2 launch sweepi_real_bringup hardware_debug.launch.py base_serial_port:=/dev/serial0 base_baud_rate:=115200 launch_lidar:=false
+```
+
+USB debug override:
+
+```bash
+ros2 launch sweepi_real_bringup hardware_debug.launch.py base_serial_port:=/dev/ttyACM0 base_baud_rate:=115200 launch_lidar:=false
+```
+
+Useful checks:
+
+```bash
+ros2 topic echo /hardware/status
+ros2 topic echo /wheel/odom
+ros2 topic echo /imu/data
+ros2 topic echo /odom
+ros2 topic hz /wheel/odom
+ros2 topic hz /imu/data
+```
+
+For a lifted-wheel motor test, publish a small command and then stop:
+
+```bash
+ros2 topic pub -r 10 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.03}, angular: {z: 0.0}}"
+ros2 topic pub -1 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.0}, angular: {z: 0.0}}"
+```
+
+See [`docs/hardware.md`](docs/hardware.md) for Raspberry Pi UART wiring, STM32 constants, and integration warnings.
+
+---
+
 ## 👥 Team Nexora
 
 - Ranasinghe D.P.H.

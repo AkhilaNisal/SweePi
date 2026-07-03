@@ -50,25 +50,35 @@ publish TF.
 
 ## Debug Launch
 
-Build and source the workspace first:
+Build and source the final hardware packages first:
 
 ```bash
-colcon build --symlink-install
+colcon build --symlink-install --packages-select sweepi_base_driver sweepi_state_estimation sweepi_real_bringup
 source install/setup.bash
 ```
 
-Launch the full hardware debug layer:
+Launch without lidar for the first STM32 UART test:
+
+```bash
+ros2 launch sweepi_real_bringup hardware_debug.launch.py launch_lidar:=false
+```
+
+Launch with the explicit Raspberry Pi UART device:
+
+```bash
+ros2 launch sweepi_real_bringup hardware_debug.launch.py base_serial_port:=/dev/serial0 base_baud_rate:=115200 launch_lidar:=false
+```
+
+Use a USB serial adapter or USB CDC device for debugging by overriding the port:
+
+```bash
+ros2 launch sweepi_real_bringup hardware_debug.launch.py base_serial_port:=/dev/ttyACM0 base_baud_rate:=115200 launch_lidar:=false
+```
+
+Launch the full hardware debug layer, including lidar:
 
 ```bash
 ros2 launch sweepi_real_bringup hardware_debug.launch.py
-```
-
-Common launch arguments:
-
-```bash
-ros2 launch sweepi_real_bringup hardware_debug.launch.py \
-  base_serial_port:=/dev/serial/by-id/YOUR_STM32_DEVICE \
-  lidar_serial_port:=/dev/serial/by-id/YOUR_RPLIDAR_DEVICE
 ```
 
 Launch only the STM32 base driver:
@@ -97,6 +107,81 @@ ros2 launch sweepi_real_bringup hardware_debug.launch.py \
   publish_robot_description:=false
 ```
 
+## Raspberry Pi to STM32 UART Connection
+
+The final robot path uses the Raspberry Pi UART pins for the STM32 base controller. The default ROS serial device is `/dev/serial0` at `115200` baud.
+
+Wiring:
+
+```text
+Raspberry Pi GPIO14 / TXD / physical pin 8   -> STM32 RX
+Raspberry Pi GPIO15 / RXD / physical pin 10  -> STM32 TX
+Raspberry Pi GND                             -> STM32 GND
+```
+
+Safety notes:
+
+- Raspberry Pi UART uses `3.3 V` logic.
+- Do not connect a `5 V` UART TX signal into Raspberry Pi RX.
+- Common ground between Raspberry Pi and STM32 is required.
+- Do not power motors from the Raspberry Pi.
+- Motor power and logic power must follow the PCB power design.
+- Keep motor supply noise away from the Pi/STM32 logic supply as much as possible.
+
+Enable the Raspberry Pi UART:
+
+```bash
+sudo raspi-config
+```
+
+Then choose:
+
+```text
+Interface Options -> Serial Port
+Login shell over serial: No
+Enable serial hardware: Yes
+```
+
+Reboot after changing the serial settings:
+
+```bash
+sudo reboot
+```
+
+Verify the UART device exists:
+
+```bash
+ls -l /dev/serial0
+```
+
+## Real Robot Hardware Constants
+
+The final STM32-based hardware path uses these measured robot values:
+
+```text
+wheel_radius: 0.033 m
+wheel_base / wheel_separation: 0.200 m
+encoder_ticks_per_revolution: 7392
+left_encoder_sign: -1
+right_encoder_sign: 1
+stm32_control_loop: 20 ms / 50 Hz
+command_timeout: 500 ms
+default_serial_port: /dev/serial0
+baud_rate: 115200
+gyro_units: rad/s
+accel_units: m/s^2
+```
+
+The STM32 currently has these local motor-test firmware constants:
+
+```c
+#define MOTOR_TEST_ENABLE 1
+#define MOTOR_TEST_LEFT_RPM 15.0f
+#define MOTOR_TEST_RIGHT_RPM 15.0f
+```
+
+For real Raspberry Pi ROS control, STM32 must not permanently override serial `/cmd_vel` commands with fixed test RPM values. During real integration, set `MOTOR_TEST_ENABLE` to `0`, or make test RPM active only in a dedicated local test mode instead of normal serial mode. If `MOTOR_TEST_ENABLE` remains active in normal mode, the robot may ignore `/cmd_vel` even though the serial connection is working.
+
 ## STM32 Serial Protocol
 
 The first implementation uses ASCII packets, one packet per line.
@@ -104,8 +189,10 @@ The first implementation uses ASCII packets, one packet per line.
 Command from Raspberry Pi to STM32:
 
 ```text
-CMD,<seq>,<time_ms>,<left_vel>,<right_vel>,<motor_enable>,<suction_enable>,<brush_enable>,<mode>[,<checksum>]
+CMD,<seq>,<rpi_time_ms>,<left_vel_mps>,<right_vel_mps>,<motor_enable>,<suction_enable>,<brush_enable>,<mode>
 ```
+
+The Raspberry Pi sends left and right wheel linear velocity in `m/s`. It does not send RPM or PWM; the STM32 converts wheel velocity into motor RPM/PID/PWM internally. Every serial message is newline-terminated. Checksum is disabled for now because `use_checksum: false`.
 
 Example:
 
@@ -116,8 +203,11 @@ CMD,552,184230,0.2000,0.2000,1,0,0,NORMAL
 Feedback from STM32 to Raspberry Pi:
 
 ```text
-FB,<seq>,<stm_time_us>,<delta_left>,<delta_right>,<gx>,<gy>,<gz>,<ax>,<ay>,<az>,<battery>,<fault>,<status>[,<checksum>]
+FB,<seq>,<stm_time_us>,<delta_left_ticks>,<delta_right_ticks>,<gx>,<gy>,<gz>,<ax>,<ay>,<az>,<battery_voltage>,<fault>,<status>
 ```
+
+The STM32 sends signed encoder delta ticks since the previous feedback packet. The Raspberry Pi applies `left_encoder_sign` and `right_encoder_sign`, and `stm_time_us` must be monotonic microseconds.
+
 
 Example:
 
@@ -142,17 +232,20 @@ Default parameters live in:
 src/sweepi_base_driver/config/base_driver_params.yaml
 ```
 
-Important tuning values:
+Important final robot values:
 
-- `wheel_radius`
-- `wheel_separation`
-- `ticks_per_revolution`
-- `left_encoder_sign`
-- `right_encoder_sign`
-- `gyro_units`
-- `accel_units`
-- `imu_angular_velocity_signs`
-- `imu_linear_acceleration_signs`
+- `serial_port`: `/dev/serial0`
+- `baud_rate`: `115200`
+- `wheel_radius`: `0.033`
+- `wheel_separation`: `0.200`
+- `ticks_per_revolution`: `7392.0`
+- `left_encoder_sign`: `-1.0`
+- `right_encoder_sign`: `1.0`
+- `command_rate_hz`: `50.0`
+- `feedback_poll_rate_hz`: `100.0`
+- `cmd_vel_timeout`: `0.5`
+- `gyro_units`: `rad_s`
+- `accel_units`: `m_s2`
 - covariance diagonals for `/wheel/odom` and `/imu/data`
 
 If the STM32 sends gyro in degrees per second, set:
@@ -177,12 +270,43 @@ The first EKF config fuses:
 It does not initially fuse IMU orientation or linear acceleration because low-cost IMU acceleration can make
 2D odometry worse until it is calibrated and tuned.
 
+## Hardware Test Commands
+
+Inspect the hardware and odometry topics:
+
+```bash
+ros2 topic echo /hardware/status
+ros2 topic echo /wheel/odom
+ros2 topic echo /imu/data
+ros2 topic echo /odom
+```
+
+Check publish rates:
+
+```bash
+ros2 topic hz /wheel/odom
+ros2 topic hz /imu/data
+```
+
+With the robot lifted from the floor, send a small safe motor command:
+
+```bash
+ros2 topic pub -r 10 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.03}, angular: {z: 0.0}}"
+```
+
+Stop the robot:
+
+```bash
+ros2 topic pub -1 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.0}, angular: {z: 0.0}}"
+```
+
 ## Hardware Test Order
 
-1. Confirm STM32 packets arrive and `/hardware/status` updates.
-2. Send small `/cmd_vel` commands and verify motor direction.
-3. Check encoder direction in `/wheel/odom`.
-4. Check IMU direction in `/imu/data`; counterclockwise rotation should make gyro Z positive.
-5. Start EKF and confirm `/odom` and `odom -> base_footprint`.
-6. Start lidar and confirm `/scan` uses `lidar_link`.
-7. Only after the hardware layer is stable, connect SLAM, AMCL, Nav2, coverage, and the robot manager.
+1. Confirm `/dev/serial0` exists and STM32 packets arrive.
+2. Confirm `/hardware/status` updates.
+3. Send small `/cmd_vel` commands with the robot lifted and verify motor direction.
+4. Check encoder direction in `/wheel/odom`.
+5. Check IMU direction in `/imu/data`; counterclockwise rotation should make gyro Z positive.
+6. Start EKF and confirm `/odom` and `odom -> base_footprint`.
+7. Start lidar and confirm `/scan` uses `lidar_link`.
+8. Only after the hardware layer is stable, connect SLAM, AMCL, Nav2, coverage, and the robot manager.
