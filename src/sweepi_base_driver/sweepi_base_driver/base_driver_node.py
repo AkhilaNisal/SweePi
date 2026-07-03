@@ -53,7 +53,7 @@ class BaseDriverNode(Node):
     def __init__(self):
         super().__init__('base_driver_node')
 
-        self.serial_port = self.declare_parameter('serial_port', '/dev/serial0').value
+        self.serial_port = self.declare_parameter('serial_port', '/dev/ttyAMA0').value
         self.baud_rate = int(self.declare_parameter('baud_rate', 115200).value)
         self.serial_timeout = float(self.declare_parameter('serial_timeout', 0.02).value)
         self.reconnect_period = float(self.declare_parameter('reconnect_period', 1.0).value)

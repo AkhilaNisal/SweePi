@@ -66,7 +66,7 @@ ros2 launch sweepi_real_bringup hardware_debug.launch.py launch_lidar:=false
 Launch with the explicit Raspberry Pi UART device:
 
 ```bash
-ros2 launch sweepi_real_bringup hardware_debug.launch.py base_serial_port:=/dev/serial0 base_baud_rate:=115200 launch_lidar:=false
+ros2 launch sweepi_real_bringup hardware_debug.launch.py base_serial_port:=/dev/ttyAMA0 base_baud_rate:=115200 launch_lidar:=false
 ```
 
 Use a USB serial adapter or USB CDC device for debugging by overriding the port:
@@ -109,7 +109,7 @@ ros2 launch sweepi_real_bringup hardware_debug.launch.py \
 
 ## Raspberry Pi to STM32 UART Connection
 
-The final robot path uses the Raspberry Pi UART pins for the STM32 base controller. The default ROS serial device is `/dev/serial0` at `115200` baud.
+The final robot path uses the Raspberry Pi UART pins for the STM32 base controller. The default ROS serial device is `/dev/ttyAMA0` at `115200` baud.
 
 Wiring:
 
@@ -151,7 +151,7 @@ sudo reboot
 Verify the UART device exists:
 
 ```bash
-ls -l /dev/serial0
+ls -l /dev/ttyAMA0
 ```
 
 ## Real Robot Hardware Constants
@@ -166,7 +166,7 @@ left_encoder_sign: -1
 right_encoder_sign: 1
 stm32_control_loop: 20 ms / 50 Hz
 command_timeout: 500 ms
-default_serial_port: /dev/serial0
+default_serial_port: /dev/ttyAMA0
 baud_rate: 115200
 gyro_units: rad/s
 accel_units: m/s^2
@@ -234,7 +234,7 @@ src/sweepi_base_driver/config/base_driver_params.yaml
 
 Important final robot values:
 
-- `serial_port`: `/dev/serial0`
+- `serial_port`: `/dev/ttyAMA0`
 - `baud_rate`: `115200`
 - `wheel_radius`: `0.033`
 - `wheel_separation`: `0.200`
@@ -302,7 +302,7 @@ ros2 topic pub -1 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.0}, angular: 
 
 ## Hardware Test Order
 
-1. Confirm `/dev/serial0` exists and STM32 packets arrive.
+1. Confirm `/dev/ttyAMA0` exists and STM32 packets arrive.
 2. Confirm `/hardware/status` updates.
 3. Send small `/cmd_vel` commands with the robot lifted and verify motor direction.
 4. Check encoder direction in `/wheel/odom`.

@@ -70,7 +70,7 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'base_serial_port',
-            default_value='/dev/serial0',
+            default_value='/dev/ttyAMA0',
             description='STM32 serial device',
         ),
         DeclareLaunchArgument(

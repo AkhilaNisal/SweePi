@@ -15,39 +15,45 @@ def as_bool(value):
     return PythonExpression(["'", value, "' == 'true'"])
 
 
-def both_true(left, right):
-    return IfCondition(PythonExpression(["'", left, "' == 'true' and '", right, "' == 'true'"]))
-
-
 def generate_launch_description():
     bringup_dir = get_package_share_directory('sweepi_bringup')
     real_bringup_dir = get_package_share_directory('sweepi_real_bringup')
     api_bridge_dir = get_package_share_directory('sweepi_api_bridge')
 
     sim_launch = os.path.join(bringup_dir, 'launch', 'gazebo.launch.xml')
-    temp_hardware_launch = os.path.join(
+    hardware_launch = os.path.join(
         real_bringup_dir,
         'launch',
-        'temp_rpi_hardware_debug.launch.py',
+        'hardware_debug.launch.py',
     )
     api_bridge_launch = os.path.join(api_bridge_dir, 'launch', 'api_bridge.launch.py')
     rviz_config_path = os.path.join(bringup_dir, 'rviz', 'urdf_config.rviz')
 
     use_sim_time = LaunchConfiguration('use_sim_time')
     launch_sim = LaunchConfiguration('launch_sim')
+    launch_hardware = LaunchConfiguration('launch_hardware')
     launch_temp_hardware = LaunchConfiguration('launch_temp_hardware')
+    launch_base = LaunchConfiguration('launch_base')
     launch_ekf = LaunchConfiguration('launch_ekf')
     launch_robot_description = LaunchConfiguration('launch_robot_description')
     launch_lidar = LaunchConfiguration('launch_lidar')
-    dry_run_gpio = LaunchConfiguration('dry_run_gpio')
     headless = LaunchConfiguration('headless')
     launch_rviz = LaunchConfiguration('launch_rviz')
     launch_api_bridge = LaunchConfiguration('launch_api_bridge')
     api_host = LaunchConfiguration('api_host')
     api_port = LaunchConfiguration('api_port')
+    base_serial_port = LaunchConfiguration('base_serial_port')
+    base_baud_rate = LaunchConfiguration('base_baud_rate')
     lidar_serial_port = LaunchConfiguration('lidar_serial_port')
     lidar_baud_rate = LaunchConfiguration('lidar_baud_rate')
     lidar_frame_id = LaunchConfiguration('lidar_frame_id')
+    hardware_enabled = PythonExpression([
+        "'",
+        launch_hardware,
+        "' == 'true' or '",
+        launch_temp_hardware,
+        "' == 'true'",
+    ])
 
     return LaunchDescription([
         DeclareLaunchArgument(
@@ -61,29 +67,44 @@ def generate_launch_description():
             description='Launch Gazebo/robot bringup from sweepi_bringup',
         ),
         DeclareLaunchArgument(
+            'launch_hardware',
+            default_value='false',
+            description='Launch real STM32 base driver, EKF, robot description, and optional lidar',
+        ),
+        DeclareLaunchArgument(
             'launch_temp_hardware',
             default_value='false',
-            description='Launch temporary Raspberry Pi hardware and EKF for physical robot testing',
+            description='Deprecated compatibility alias for launch_hardware',
+        ),
+        DeclareLaunchArgument(
+            'launch_base',
+            default_value='true',
+            description='Launch STM32 base driver when launch_hardware is true',
         ),
         DeclareLaunchArgument(
             'launch_ekf',
             default_value='true',
-            description='Launch robot_localization EKF when launch_temp_hardware is true',
+            description='Launch robot_localization EKF when launch_hardware is true',
         ),
         DeclareLaunchArgument(
             'launch_robot_description',
             default_value='true',
-            description='Launch robot_state_publisher when launch_temp_hardware is true',
+            description='Launch robot_state_publisher when launch_hardware is true',
         ),
         DeclareLaunchArgument(
             'launch_lidar',
-            default_value='false',
-            description='Launch real RPLIDAR when launch_temp_hardware is true',
+            default_value='true',
+            description='Launch real RPLIDAR when launch_hardware is true',
         ),
         DeclareLaunchArgument(
-            'dry_run_gpio',
-            default_value='false',
-            description='Simulate step counts without accessing GPIO',
+            'base_serial_port',
+            default_value='/dev/ttyAMA0',
+            description='STM32 serial device',
+        ),
+        DeclareLaunchArgument(
+            'base_baud_rate',
+            default_value='115200',
+            description='STM32 serial baud rate',
         ),
         DeclareLaunchArgument(
             'lidar_serial_port',
@@ -103,7 +124,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'launch_rviz',
             default_value='true',
-            description='Launch RViz when launch_temp_hardware is true',
+            description='Launch RViz when launch_hardware is true',
         ),
         DeclareLaunchArgument(
             'headless',
@@ -134,15 +155,16 @@ def generate_launch_description():
             }.items(),
         ),
         IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(temp_hardware_launch),
-            condition=IfCondition(launch_temp_hardware),
+            PythonLaunchDescriptionSource(hardware_launch),
+            condition=IfCondition(hardware_enabled),
             launch_arguments={
                 'use_sim_time': use_sim_time,
-                'launch_temp_hardware': 'true',
+                'launch_base': launch_base,
                 'launch_ekf': launch_ekf,
-                'launch_robot_description': launch_robot_description,
+                'publish_robot_description': launch_robot_description,
                 'launch_lidar': launch_lidar,
-                'dry_run_gpio': dry_run_gpio,
+                'base_serial_port': base_serial_port,
+                'base_baud_rate': base_baud_rate,
                 'lidar_serial_port': lidar_serial_port,
                 'lidar_baud_rate': lidar_baud_rate,
                 'lidar_frame_id': lidar_frame_id,
@@ -153,7 +175,13 @@ def generate_launch_description():
             executable='rviz2',
             name='rviz2',
             output='screen',
-            condition=both_true(launch_temp_hardware, launch_rviz),
+            condition=IfCondition(PythonExpression([
+                "(",
+                hardware_enabled,
+                ") and '",
+                launch_rviz,
+                "' == 'true'",
+            ])),
             arguments=['-d', rviz_config_path],
             parameters=[
                 {

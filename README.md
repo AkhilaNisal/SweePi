@@ -105,7 +105,7 @@ accepted and sent toward ROS/mock logic. See
 Final STM32-based hardware packages:
 
 ```bash
-colcon build --symlink-install --packages-select sweepi_base_driver sweepi_state_estimation sweepi_real_bringup
+colcon build --symlink-install --packages-select sweepi_base_driver sweepi_state_estimation sweepi_real_bringup sweepi_robot_manager sweepi_api_bridge
 source install/setup.bash
 ```
 
@@ -119,9 +119,7 @@ ros2 launch sweepi_robot_manager master.launch.py \
   launch_api_bridge:=true \
   api_host:=0.0.0.0 \
   api_port:=8080 \
-  base_serial_port:=/dev/ttyAMA0 \
-  base_baud_rate:=115200 \
-  launch_lidar:=false
+  launch_lidar:=true
 ```
 
 Launch only the hardware bringup without LiDAR for the first STM32 UART test:
@@ -133,7 +131,7 @@ ros2 launch sweepi_real_bringup hardware_debug.launch.py base_serial_port:=/dev/
 Launch with explicit Raspberry Pi UART settings:
 
 ```bash
-ros2 launch sweepi_real_bringup hardware_debug.launch.py base_serial_port:=/dev/serial0 base_baud_rate:=115200 launch_lidar:=false
+ros2 launch sweepi_real_bringup hardware_debug.launch.py base_serial_port:=/dev/ttyAMA0 base_baud_rate:=115200 launch_lidar:=false
 ```
 
 USB debug override:
