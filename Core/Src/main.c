@@ -54,6 +54,12 @@
 #define MOTOR_TEST_RIGHT_RPM 15.0f
 #define LEFT_ENCODER_SIGN -1
 #define RIGHT_ENCODER_SIGN 1
+#define ENCODER_TICKS_PER_REV 7392.0f
+#define PWM_MAX_COUNT 4799.0f
+#define CONTROL_LOOP_MS 20U
+#define CONTROL_LOOP_SEC ((float)CONTROL_LOOP_MS / 1000.0f)
+#define COMMAND_TIMEOUT_MS 500U
+#define GYRO_DPS_TO_RAD_PER_SEC (PI / 180.0f)
 /* USER CODE END PD */
 
 
@@ -93,6 +99,8 @@ char tx_buffer[256];      // Holds the outgoing FB string
 
 // Command Variables from Pi
 uint32_t cmd_seq = 0;
+uint32_t fb_seq = 0;
+uint32_t last_valid_cmd_ms = 0;
 float cmd_left_vel = 0.0f;
 float cmd_right_vel = 0.0f;
 uint8_t motor_enable = 0;
@@ -123,7 +131,7 @@ float current_pwm_R = 0.0f;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-float PID_Compute(PID_Controller *pid, float current_rpm);
+float PID_Compute(PID_Controller *pid, float current_rpm, float dt_sec);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -339,6 +347,20 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    static uint32_t last_loop_start_ms = 0U;
+    uint32_t loop_start_ms = HAL_GetTick();
+    float dt_sec = CONTROL_LOOP_SEC;
+
+    if (last_loop_start_ms != 0U)
+    {
+        uint32_t dt_ms = loop_start_ms - last_loop_start_ms;
+        if ((dt_ms > 0U) && (dt_ms <= COMMAND_TIMEOUT_MS))
+        {
+            dt_sec = (float)dt_ms / 1000.0f;
+        }
+    }
+    last_loop_start_ms = loop_start_ms;
+
     // --- 0. ASCII PROTOCOL PARSER (Pi -> STM32 over USART2) ---
 #if MOTOR_TEST_ENABLE == 0
     if (new_cmd_ready != 0)
@@ -367,6 +389,7 @@ int main(void)
             cmd_left_vel = parsed_left_vel;
             cmd_right_vel = parsed_right_vel;
             motor_enable = (parsed_motor_enable != 0U) ? 1U : 0U;
+            last_valid_cmd_ms = HAL_GetTick();
 
             // Pi sends wheel linear velocity in m/s. PID setpoint is wheel RPM.
             leftPID.setpoint = (cmd_left_vel * 60.0f) / (2.0f * PI * WHEEL_RADIUS_M);
@@ -379,6 +402,15 @@ int main(void)
     if (new_cmd_ready != 0)
     {
         new_cmd_ready = 0;
+    }
+#endif
+
+#if MOTOR_TEST_ENABLE == 0
+    if ((motor_enable != 0U) && ((HAL_GetTick() - last_valid_cmd_ms) > COMMAND_TIMEOUT_MS))
+    {
+        motor_enable = 0U;
+        leftPID.setpoint = 0.0f;
+        rightPID.setpoint = 0.0f;
     }
 #endif
 
@@ -411,16 +443,16 @@ int main(void)
     tick_diff_R = (int16_t)(RIGHT_ENCODER_SIGN * (int16_t)(current_ticks_R - previous_ticks_R));
     previous_ticks_R = current_ticks_R;
 
-    current_rpm_L = ((float)tick_diff_L * 600.0f) / 7392.0f;
-    current_rpm_R = ((float)tick_diff_R * 600.0f) / 7392.0f;
+    current_rpm_L = ((float)tick_diff_L * 60.0f) / (ENCODER_TICKS_PER_REV * dt_sec);
+    current_rpm_R = ((float)tick_diff_R * 60.0f) / (ENCODER_TICKS_PER_REV * dt_sec);
 
     // --- 3. SAFETY SWITCH & PID LOGIC ---
     // Change this line to look for SET instead of RESET!
     if (motor_enable == 1) 
     {
-	        current_pwm_L += PID_Compute(&leftPID, current_rpm_L);
-	        if (current_pwm_L > 4799.0f) current_pwm_L = 4799.0f;
-	        if (current_pwm_L < -4799.0f) current_pwm_L = -4799.0f;
+	        current_pwm_L += PID_Compute(&leftPID, current_rpm_L, dt_sec);
+	        if (current_pwm_L > PWM_MAX_COUNT) current_pwm_L = PWM_MAX_COUNT;
+	        if (current_pwm_L < -PWM_MAX_COUNT) current_pwm_L = -PWM_MAX_COUNT;
 	        
 	        if (current_pwm_L >= 0.0f)
 	        {
@@ -433,9 +465,9 @@ int main(void)
 	            __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, (uint32_t)(-current_pwm_L));
 	        }
 	        
-	        current_pwm_R += PID_Compute(&rightPID, current_rpm_R);
-	        if (current_pwm_R > 4799.0f) current_pwm_R = 4799.0f;
-	        if (current_pwm_R < -4799.0f) current_pwm_R = -4799.0f;
+	        current_pwm_R += PID_Compute(&rightPID, current_rpm_R, dt_sec);
+	        if (current_pwm_R > PWM_MAX_COUNT) current_pwm_R = PWM_MAX_COUNT;
+	        if (current_pwm_R < -PWM_MAX_COUNT) current_pwm_R = -PWM_MAX_COUNT;
 	        
 	        if (current_pwm_R >= 0.0f)
 	        {
@@ -460,24 +492,43 @@ int main(void)
 
     // --- 4. ASCII PROTOCOL FEEDBACK (Pi Telemetry) ---
     
-    // Apply Gyro offsets and convert to Degrees per Second (/131.0)
-    float gx = (float)(raw_gyro_x - gyro_x_offset) / 131.0f;
-    float gy = (float)(raw_gyro_y - gyro_y_offset) / 131.0f;
-    float gz = (float)(raw_gyro_z - gyro_z_offset) / 131.0f;
+    // Apply gyro offsets and convert to rad/s.
+    float gx = ((float)(raw_gyro_x - gyro_x_offset) / 131.0f) * GYRO_DPS_TO_RAD_PER_SEC;
+    float gy = ((float)(raw_gyro_y - gyro_y_offset) / 131.0f) * GYRO_DPS_TO_RAD_PER_SEC;
+    float gz = ((float)(raw_gyro_z - gyro_z_offset) / 131.0f) * GYRO_DPS_TO_RAD_PER_SEC;
 
     // Convert Accel to m/s^2 (Standard config is +/- 2g -> /16384.0, then * 9.81 gravity)
     float ax = ((float)raw_acc_x / 16384.0f) * 9.81f;
     float ay = ((float)raw_acc_y / 16384.0f) * 9.81f;
     float az = ((float)raw_acc_z / 16384.0f) * 9.81f;
 
-    // Inject all 6 parameters perfectly into Copilot's FB string format!
-    sprintf(tx_buffer, "FB,%lu,%lu,%d,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,12.0,0,OK\r\n", 
-            cmd_seq, HAL_GetTick() * 1000, tick_diff_L, tick_diff_R, gx, gy, gz, ax, ay, az);
-            
-    HAL_UART_Transmit_IT(&huart2, (uint8_t*)tx_buffer, strlen(tx_buffer));
+    uint32_t fb_seq_out = fb_seq;
+    uint64_t stm_time_us = ((uint64_t)HAL_GetTick()) * 1000ULL;
+    fb_seq = (fb_seq + 1U) % 1000000U;
 
-    // --- 5. Strictly timed 100ms calculation window ---
-    HAL_Delay(100);
+    snprintf(tx_buffer, sizeof(tx_buffer),
+             "FB,%lu,%llu,%d,%d,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,12.0,0,OK\r\n",
+             (unsigned long)fb_seq_out,
+             (unsigned long long)stm_time_us,
+             tick_diff_L,
+             tick_diff_R,
+             gx,
+             gy,
+             gz,
+             ax,
+             ay,
+             az);
+    if (HAL_UART_GetState(&huart2) == HAL_UART_STATE_READY)
+    {
+        HAL_UART_Transmit_IT(&huart2, (uint8_t*)tx_buffer, strlen(tx_buffer));
+    }
+
+    // --- 5. Keep the full loop close to 50 Hz, compensating for work time ---
+    uint32_t elapsed_ms = HAL_GetTick() - loop_start_ms;
+    if (elapsed_ms < CONTROL_LOOP_MS)
+    {
+        HAL_Delay(CONTROL_LOOP_MS - elapsed_ms);
+    }
     
     /* USER CODE END WHILE */
 
@@ -549,15 +600,15 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-float PID_Compute(PID_Controller *pid, float current_rpm) {
+float PID_Compute(PID_Controller *pid, float current_rpm, float dt_sec) {
     float error = pid->setpoint - current_rpm;
     
-    pid->integral += error * 0.1f; // 100ms loop time
+    pid->integral += error * dt_sec;
     // Anti-Windup
     if (pid->integral > 100.0f) pid->integral = 100.0f;
     if (pid->integral < -100.0f) pid->integral = -100.0f;
     
-    float derivative = (error - pid->prev_error) / 0.1f;
+    float derivative = (error - pid->prev_error) / dt_sec;
     pid->prev_error = error;
     
     return (pid->Kp * error) + (pid->Ki * pid->integral) + (pid->Kd * derivative);
