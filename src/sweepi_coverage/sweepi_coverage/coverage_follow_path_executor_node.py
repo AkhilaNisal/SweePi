@@ -164,6 +164,9 @@ class CoverageFollowPathExecutorNode(Node):
         self.coverage_stopped = False
         self.coverage_pause_requested = False
         self.coverage_control_cancel_reason = None
+        self.pause_resume_path = None
+        self.pause_resume_source_label = ''
+        self.pause_resume_start_index = 0
         self.cleanup_pass_count = 0
         self.cleanup_waiting_for_path = False
         self.cleanup_wait_started_monotonic = 0.0
@@ -1138,6 +1141,8 @@ class CoverageFollowPathExecutorNode(Node):
 
         self.coverage_pause_requested = True
         self.coverage_stopped = False
+        self._snapshot_pause_resume_path()
+        self._abort_dynamic_work_for_control_request('pause')
         canceled, message = self._request_cancel_active_motion('pause')
         self._publish_zero_velocity()
         self._set_status(self.STATUS_PAUSED)
@@ -1169,7 +1174,11 @@ class CoverageFollowPathExecutorNode(Node):
 
         self.coverage_pause_requested = False
         self.coverage_control_cancel_reason = None
-        if self._request_execution('continue_after_pause'):
+        if self.pause_resume_path is not None:
+            requested = self._request_pause_resume_execution()
+        else:
+            requested = self._request_execution('continue_after_pause')
+        if requested:
             response.success = True
             response.message = 'Coverage continuation requested'
         else:
@@ -1181,6 +1190,8 @@ class CoverageFollowPathExecutorNode(Node):
         del request
         self.coverage_stopped = True
         self.coverage_pause_requested = False
+        self._clear_pause_resume_snapshot()
+        self._abort_dynamic_work_for_control_request('stop')
         self._request_cancel_return_home()
         canceled, message = self._request_cancel_active_motion('stop')
         self._publish_zero_velocity()
@@ -1205,6 +1216,8 @@ class CoverageFollowPathExecutorNode(Node):
 
         self.coverage_stopped = True
         self.coverage_pause_requested = False
+        self._clear_pause_resume_snapshot()
+        self._abort_dynamic_work_for_control_request('return_home')
         self._request_cancel_active_motion('return_home')
         self._publish_zero_velocity()
 
@@ -1275,6 +1288,257 @@ class CoverageFollowPathExecutorNode(Node):
         self.current_goal_handle = None
         return False, 'No active SmoothPath or FollowPath goal to cancel'
 
+    def _clear_pause_resume_snapshot(self):
+        self.pause_resume_path = None
+        self.pause_resume_source_label = ''
+        self.pause_resume_start_index = 0
+
+    def _pause_resume_source_path(self):
+        if self.active_path is not None and len(self.active_path.poses) >= 2:
+            return 'active_path', self.active_path
+        if self.pending_follow_path is not None and len(self.pending_follow_path.poses) >= 2:
+            return 'pending_follow_path', self.pending_follow_path
+        if self.smoothed_path is not None and len(self.smoothed_path.poses) >= 2:
+            return 'smoothed_path', self.smoothed_path
+        if self.cached_raw_path is not None and len(self.cached_raw_path.poses) >= 2:
+            return 'cached_raw_path', self.cached_raw_path
+        return '', None
+
+    def _snapshot_pause_resume_path(self):
+        source_label, source_path = self._pause_resume_source_path()
+        if source_path is None:
+            self._clear_pause_resume_snapshot()
+            self.get_logger().info(
+                '[PAUSE_RESUME] no active path available to snapshot',
+                throttle_duration_sec=2.0,
+            )
+            return False
+
+        robot_pose = self._lookup_robot_pose(self._path_frame(source_path))
+        start_index, nearest_distance = self._pause_resume_start_index(
+            source_path,
+            robot_pose,
+        )
+        resume_path = self._build_pause_resume_path(
+            source_path,
+            start_index,
+            robot_pose,
+        )
+        if resume_path is None or len(resume_path.poses) < self.min_path_poses:
+            self._clear_pause_resume_snapshot()
+            self.get_logger().warn(
+                '[PAUSE_RESUME] failed to snapshot remaining path from %s'
+                % source_label
+            )
+            return False
+
+        self.pause_resume_path = resume_path
+        self.pause_resume_source_label = source_label
+        self.pause_resume_start_index = start_index
+        self.get_logger().info(
+            '[PAUSE_RESUME] saved remaining path from %s start_index=%d '
+            'poses=%d length=%.2fm distance_to_path=%.3f'
+            % (
+                source_label,
+                start_index,
+                len(resume_path.poses),
+                self._path_length(resume_path),
+                nearest_distance,
+            )
+        )
+        return True
+
+    def _pause_resume_start_index(self, path, robot_pose):
+        pose_count = len(path.poses)
+        if pose_count <= 2:
+            return 0, 0.0
+
+        seed_candidates = []
+        if (
+            self.last_distance_to_goal is not None
+            and math.isfinite(self.last_distance_to_goal)
+        ):
+            completed_distance = max(
+                0.0,
+                self._path_length(path) - self.last_distance_to_goal,
+            )
+            seed_candidates.append(
+                self._index_after_distance(path, 0, completed_distance)
+            )
+        if self.dynamic_last_nearest_index > 0:
+            seed_candidates.append(self.dynamic_last_nearest_index)
+        if self.stuck_monitor_last_nearest_index is not None:
+            seed_candidates.append(self.stuck_monitor_last_nearest_index)
+
+        seed_index = None
+        if seed_candidates:
+            seed_index = max(
+                0,
+                min(max(seed_candidates), pose_count - 1),
+            )
+
+        if robot_pose is None:
+            start_index = seed_index if seed_index is not None else 0
+            return max(0, min(start_index, pose_count - 2)), float('inf')
+
+        robot_in_path_frame = self._transform_pose_to_frame(
+            robot_pose,
+            self._path_frame(path),
+        )
+        if robot_in_path_frame is None:
+            start_index = seed_index if seed_index is not None else 0
+            return max(0, min(start_index, pose_count - 2)), float('inf')
+
+        position = robot_in_path_frame.pose.position
+        if seed_index is None:
+            nearest_index, nearest_distance = self._nearest_path_pose(
+                path,
+                position.x,
+                position.y,
+            )
+            start_index = nearest_index
+        else:
+            backtrack_m = max(
+                self.dynamic_progress_search_backtrack_m,
+                self.robot_radius_m,
+            )
+            forward_m = max(
+                self.dynamic_progress_search_forward_m,
+                self.robot_radius_m,
+            )
+            search_start = self._index_before_distance(path, seed_index, backtrack_m)
+            search_end = self._index_after_distance(path, seed_index, forward_m)
+            search_end = max(search_start, min(search_end, pose_count - 1))
+
+            nearest_index = search_start
+            nearest_distance = float('inf')
+            for index in range(search_start, search_end + 1):
+                path_position = path.poses[index].pose.position
+                distance = self._distance_2d(
+                    position.x,
+                    position.y,
+                    path_position.x,
+                    path_position.y,
+                )
+                if distance < nearest_distance:
+                    nearest_index = index
+                    nearest_distance = distance
+            start_index = max(seed_index, nearest_index)
+
+        start_index = max(0, min(start_index, pose_count - 2))
+        return start_index, nearest_distance
+
+    def _build_pause_resume_path(self, path, start_index, robot_pose):
+        if path is None or len(path.poses) < 2:
+            return None
+
+        path_frame = self._path_frame(path)
+        start_index = max(0, min(start_index, len(path.poses) - 2))
+        resume_path = Path()
+        resume_path.header = copy.deepcopy(path.header)
+        resume_path.header.frame_id = path_frame
+
+        robot_in_path_frame = None
+        if robot_pose is not None:
+            robot_in_path_frame = self._transform_pose_to_frame(
+                robot_pose,
+                path_frame,
+            )
+        if robot_in_path_frame is not None:
+            robot_in_path_frame.header.frame_id = path_frame
+            self._append_pose_without_duplicate(resume_path, robot_in_path_frame)
+
+        for index in range(start_index, len(path.poses)):
+            self._append_pose_without_duplicate(resume_path, path.poses[index])
+
+        if len(resume_path.poses) < self.min_path_poses:
+            return None
+
+        self._recompute_orientations(resume_path)
+        self._stamp_path(resume_path)
+        return resume_path
+
+    def _request_pause_resume_execution(self):
+        if self.pause_resume_path is None:
+            self.latest_path_error = 'No saved pause path is available'
+            return False
+        if not self._remember_home_pose_if_needed():
+            self.latest_path_error = (
+                'Cannot resume coverage because robot pose is unavailable'
+            )
+            return False
+
+        resume_path = copy.deepcopy(self.pause_resume_path)
+        self.coverage_pause_requested = False
+        self.coverage_control_cancel_reason = None
+        self.cleanup_waiting_for_path = False
+        self.cleanup_auto_start_pending = False
+        self.dynamic_detection_candidate = None
+        self.dynamic_confirmed_marker_report = None
+        self.dynamic_ignored_static_marker_poses = []
+        self.dynamic_candidate_marker_path = None
+        self.dynamic_skip_in_progress = False
+        self.dynamic_skip_cancel_requested = False
+        self.dynamic_skip_cancel_goal_handle = None
+        self.dynamic_skip_pending_rejoin_path = None
+        self.dynamic_skip_pending_report = None
+        self.dynamic_skip_finish_after_cancel = False
+        self.dynamic_skip_cancel_final_status = None
+        self.dynamic_skip_pending_monitor_resume_index = None
+        self.dynamic_skip_monitor_resume_index = None
+        self.dynamic_skip_monitor_suppressed_until_monotonic = 0.0
+        self._clear_dynamic_planner_state()
+
+        self.get_logger().info(
+            '[PAUSE_RESUME] resuming saved path source=%s start_index=%d '
+            'poses=%d length=%.2fm'
+            % (
+                self.pause_resume_source_label,
+                self.pause_resume_start_index,
+                len(resume_path.poses),
+                self._path_length(resume_path),
+            )
+        )
+        if self._send_follow_path_goal(resume_path, 'continue_after_pause_saved_path'):
+            self._clear_pause_resume_snapshot()
+            return True
+        return False
+
+    def _abort_dynamic_work_for_control_request(self, reason):
+        had_dynamic_work = (
+            self.dynamic_skip_in_progress
+            or self.dynamic_planner_in_flight
+            or self.dynamic_planner_goal_handle is not None
+            or self.dynamic_skip_pending_rejoin_path is not None
+        )
+        if self.dynamic_planner_goal_handle is not None:
+            try:
+                self.dynamic_planner_goal_handle.cancel_goal_async()
+            except Exception as exc:
+                self.get_logger().debug(
+                    '[DYNAMIC_SKIP] planner cancel during %s failed: %s'
+                    % (reason, exc)
+                )
+
+        self._clear_dynamic_planner_state()
+        self.dynamic_skip_in_progress = False
+        self.dynamic_skip_cancel_requested = False
+        self.dynamic_skip_cancel_goal_handle = None
+        self.dynamic_skip_pending_rejoin_path = None
+        self.dynamic_skip_pending_report = None
+        self.dynamic_skip_finish_after_cancel = False
+        self.dynamic_skip_cancel_final_status = None
+        self.dynamic_skip_pending_monitor_resume_index = None
+
+        if had_dynamic_work:
+            text = (
+                '[DYNAMIC_SKIP] aborted in-progress dynamic bypass because '
+                'coverage %s was requested'
+                % reason
+            )
+            self.get_logger().info(text)
+            self._publish_dynamic_skip_status(text)
+
     def validate_service_callback(self, request, response):
         del request
         report = self._run_preflight_validation(self.cached_raw_path)
@@ -1341,6 +1605,7 @@ class CoverageFollowPathExecutorNode(Node):
         self.coverage_stopped = False
         self.coverage_pause_requested = False
         self.coverage_control_cancel_reason = None
+        self._clear_pause_resume_snapshot()
         self.cleanup_pass_count = 0
         self.cleanup_waiting_for_path = False
         self.cleanup_wait_started_monotonic = 0.0
@@ -1402,6 +1667,7 @@ class CoverageFollowPathExecutorNode(Node):
 
         self.coverage_pause_requested = False
         self.coverage_control_cancel_reason = None
+        self._clear_pause_resume_snapshot()
         cleanup_run = str(reason).startswith('cleanup_pass')
         if not cleanup_run:
             self.skipped_segments = []
@@ -2001,6 +2267,7 @@ class CoverageFollowPathExecutorNode(Node):
         self.dynamic_last_temporary_rejoin_refresh_monotonic = 0.0
         self._reset_stuck_monitor()
         self.execution_start_monotonic = None
+        self._clear_pause_resume_snapshot()
         self._set_status(final_status)
 
         if final_status == self.STATUS_COMPLETED_WITH_SKIPS:
