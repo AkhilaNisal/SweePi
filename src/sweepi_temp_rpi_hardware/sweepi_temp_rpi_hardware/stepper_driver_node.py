@@ -107,14 +107,14 @@ class StepperDriverNode(Node):
     def __init__(self):
         super().__init__('sweepi_temp_stepper_driver')
 
-        self.declare_parameter('wheel_radius', 0.0325)
-        self.declare_parameter('wheel_separation', 0.20)
+        self.declare_parameter('wheel_radius', 0.0615)
+        self.declare_parameter('wheel_separation', 0.29)
         self.declare_parameter('steps_per_rev', 200)
         self.declare_parameter('microsteps', 16)
         self.declare_parameter('max_steps_per_sec', 4000.0)
         self.declare_parameter('accel_steps_per_sec2', 3500.0)
         self.declare_parameter('decel_steps_per_sec2', 15000.0)
-        self.declare_parameter('cmd_vel_timeout', 0.2)
+        self.declare_parameter('cmd_vel_timeout', 0.5)
         self.declare_parameter('steps_publish_rate_hz', 50.0)
         self.declare_parameter('chip_name', 'gpiochip4')
         self.declare_parameter('left_en_pin', 12)

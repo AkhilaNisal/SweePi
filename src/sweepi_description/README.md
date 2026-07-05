@@ -128,9 +128,9 @@ BODY:
   Mass: 3.0 kg
 
 DRIVE WHEELS:
-  Radius: 0.025 m (2.5 cm)
+  Radius: 0.0615 m (6.15 cm)
   Width: 0.020 m (2 cm)
-  Separation: 0.300 m (30 cm wheel-to-wheel)
+  Separation: 0.290 m (29 cm wheel-to-wheel)
   Mass: 0.15 kg each
 
 CASTERS (Front/Rear):
@@ -156,9 +156,9 @@ SENSORS:
 | `body_radius` | 0.200 m | Robot body diameter | Adjust for different chassis |
 | `body_height` | 0.100 m | Robot height | Affects center of mass |
 | `ground_clearance` | 0.020 m | Gap between body and ground | Increase for rough terrain |
-| `drive_wheel_radius` | 0.025 m | Wheel size | Affects speed and torque |
+| `drive_wheel_radius` | 0.0615 m | Wheel size | Affects speed and torque |
 | `drive_wheel_width` | 0.020 m | Wheel thickness | Affects traction |
-| `wheel_span` | 0.300 m | Distance between wheels | Affects turning radius |
+| `wheel_span` | 0.290 m | Distance between wheels | Affects turning radius |
 | `caster_offset_x` | 0.160 m | Distance from center | Position of casters |
 
 **Larger robot example**:

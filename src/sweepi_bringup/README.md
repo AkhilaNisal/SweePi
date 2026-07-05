@@ -144,8 +144,8 @@ ros2 run tf2_tools view_frames.py
 | Parameter | Current | Range | Description | Tuning |
 |-----------|---------|-------|-------------|--------|
 | `update_rate` | 100 Hz | 50-200 Hz | Controller update frequency | Increase for faster response |
-| `wheel_separation` | 0.300 m | 0.25-0.35 m | Distance between wheels | **Calibrate from actual robot** |
-| `wheel_radius` | 0.025 m | 0.020-0.030 m | Wheel radius | **Critical for odometry** |
+| `wheel_separation` | 0.290 m | 0.25-0.35 m | Distance between wheels | **Calibrate from actual robot** |
+| `wheel_radius` | 0.0615 m | 0.020-0.070 m | Wheel radius | **Critical for odometry** |
 | `pose_covariance` | 0.001 | - | Position uncertainty | Lower = trust odometry more |
 | `linear.x.max_velocity` | 0.5 m/s | 0.1-2.0 m/s | Maximum forward speed | Reduce for stability |
 | `angular.z.max_velocity` | 1.0 rad/s | 0.5-3.0 rad/s | Maximum rotation | Adjust for turning |

@@ -1,7 +1,7 @@
 ekf_filter_node:
   ros__parameters:
-    frequency: 50.0
-    sensor_timeout: 0.1
+    frequency: 75.0
+    sensor_timeout: 0.05
     two_d_mode: true
     transform_time_offset: 0.0
     transform_timeout: 0.0
@@ -15,21 +15,41 @@ ekf_filter_node:
     world_frame: odom
 
     odom0: /wheel/odom
-    odom0_queue_size: 10
-    odom0_nodelay: false
+    odom0_queue_size: 5
+    odom0_nodelay: true
     odom0_differential: false
     odom0_relative: false
     odom0_config: [
-      true,  true,  false,
-      false, false, true,
+      false, false, false,
+      false, false, false,
       true,  false, false,
       false, false, true,
       false, false, false
     ]
 
+    # TEMPORARY:
+    # IMU fusion is disabled for now.
+    # Wheel odom has been verified correct, but IMU gyro scale/covariance/frame still needs calibration.
+    # Keep /imu/data publishing for debugging, but do not fuse it into EKF until fixed.
+    #
+    # Previous IMU gyro-Z fusion config:
+    # imu0: /imu/data
+    # imu0_queue_size: 5
+    # imu0_nodelay: true
+    # imu0_differential: false
+    # imu0_relative: false
+    # imu0_remove_gravitational_acceleration: false
+    # imu0_config: [
+    #   false, false, false,
+    #   false, false, false,
+    #   false, false, false,
+    #   false, false, true,
+    #   false, false, false
+    # ]
+
     imu0: /imu/data
-    imu0_queue_size: 20
-    imu0_nodelay: false
+    imu0_queue_size: 5
+    imu0_nodelay: true
     imu0_differential: false
     imu0_relative: false
     imu0_remove_gravitational_acceleration: false
@@ -37,6 +57,6 @@ ekf_filter_node:
       false, false, false,
       false, false, false,
       false, false, false,
-      false, false, true,
+      false, false, false,
       false, false, false
     ]

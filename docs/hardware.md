@@ -159,11 +159,13 @@ ls -l /dev/ttyAMA0
 The final STM32-based hardware path uses these measured robot values:
 
 ```text
-wheel_radius: 0.033 m
-wheel_base / wheel_separation: 0.200 m
+wheel_radius: 0.0615 m
+wheel_base / wheel_separation: 0.29 m
 encoder_ticks_per_revolution: 7392
-left_encoder_sign: -1
+left_encoder_sign: 1
 right_encoder_sign: 1
+left_motor_command_sign: 1
+right_motor_command_sign: 1
 stm32_control_loop: 20 ms / 50 Hz
 command_timeout: 500 ms
 default_serial_port: /dev/ttyAMA0
@@ -172,12 +174,23 @@ gyro_units: rad/s
 accel_units: m/s^2
 ```
 
-The STM32 currently has these local motor-test firmware constants:
+The STM32 firmware should use these physical constants:
 
 ```c
-#define MOTOR_TEST_ENABLE 1
+#define PI 3.14159265f
+#define WHEEL_RADIUS_M 0.0615f
+#define WHEEL_BASE_M 0.29f
+#define MOTOR_TEST_ENABLE 0
 #define MOTOR_TEST_LEFT_RPM 15.0f
 #define MOTOR_TEST_RIGHT_RPM 15.0f
+#define LEFT_ENCODER_SIGN 1
+#define RIGHT_ENCODER_SIGN 1
+#define ENCODER_TICKS_PER_REV 7392.0f
+#define PWM_MAX_COUNT 4799.0f
+#define CONTROL_LOOP_MS 20U
+#define CONTROL_LOOP_SEC ((float)CONTROL_LOOP_MS / 1000.0f)
+#define COMMAND_TIMEOUT_MS 500U
+#define GYRO_DPS_TO_RAD_PER_SEC (PI / 180.0f)
 ```
 
 For real Raspberry Pi ROS control, STM32 must not permanently override serial `/cmd_vel` commands with fixed test RPM values. During real integration, set `MOTOR_TEST_ENABLE` to `0`, or make test RPM active only in a dedicated local test mode instead of normal serial mode. If `MOTOR_TEST_ENABLE` remains active in normal mode, the robot may ignore `/cmd_vel` even though the serial connection is working.
@@ -236,11 +249,13 @@ Important final robot values:
 
 - `serial_port`: `/dev/ttyAMA0`
 - `baud_rate`: `115200`
-- `wheel_radius`: `0.033`
-- `wheel_separation`: `0.200`
+- `wheel_radius`: `0.0615`
+- `wheel_separation`: `0.29`
 - `ticks_per_revolution`: `7392.0`
-- `left_encoder_sign`: `-1.0`
+- `left_encoder_sign`: `1.0`
 - `right_encoder_sign`: `1.0`
+- `left_motor_command_sign`: `1.0`
+- `right_motor_command_sign`: `1.0`
 - `command_rate_hz`: `50.0`
 - `feedback_poll_rate_hz`: `100.0`
 - `cmd_vel_timeout`: `0.5`

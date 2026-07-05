@@ -630,17 +630,17 @@
         </axis>
       </joint>
       <link name='left_wheel_link'>
-        <pose>-2.4233807008389483e-27 0.14999999999999999 0.025000000000000008 1.8452825827681945e-32 -5.8511218419939957e-11 -5.3984866123430377e-43</pose>
+        <pose>-2.4233807008389483e-27 0.145 0.0615 1.8452825827681945e-32 -5.8511218419939957e-11 -5.3984866123430377e-43</pose>
         <inertial>
           <pose>0 0 0 1.5707963267948959 0 0</pose>
           <mass>0.14999999999999999</mass>
           <inertia>
-            <ixx>2.843750000000001e-05</ixx>
+            <ixx>0.000146834375</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>2.843750000000001e-05</iyy>
+            <iyy>0.000146834375</iyy>
             <iyz>0</iyz>
-            <izz>4.6875000000000001e-05</izz>
+            <izz>0.00028366875</izz>
           </inertia>
         </inertial>
         <collision name='left_wheel_link_collision'>
@@ -648,7 +648,7 @@
           <geometry>
             <cylinder>
               <length>0.02</length>
-              <radius>0.025000000000000001</radius>
+              <radius>0.0615</radius>
             </cylinder>
           </geometry>
           <surface>
@@ -664,7 +664,7 @@
           <geometry>
             <cylinder>
               <length>0.02</length>
-              <radius>0.025000000000000001</radius>
+              <radius>0.0615</radius>
             </cylinder>
           </geometry>
           <material>
@@ -697,17 +697,17 @@
         </axis>
       </joint>
       <link name='right_wheel_link'>
-        <pose>8.0779356694631609e-28 -0.14999999999999999 0.025000000000000008 1.6422652616699836e-32 -5.8511533459547698e-11 -1.5407439559902459e-33</pose>
+        <pose>8.0779356694631609e-28 -0.145 0.0615 1.6422652616699836e-32 -5.8511533459547698e-11 -1.5407439559902459e-33</pose>
         <inertial>
           <pose>0 0 0 1.5707963267948959 0 0</pose>
           <mass>0.14999999999999999</mass>
           <inertia>
-            <ixx>2.843750000000001e-05</ixx>
+            <ixx>0.000146834375</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>2.843750000000001e-05</iyy>
+            <iyy>0.000146834375</iyy>
             <iyz>0</iyz>
-            <izz>4.6875000000000001e-05</izz>
+            <izz>0.00028366875</izz>
           </inertia>
         </inertial>
         <collision name='right_wheel_link_collision'>
@@ -715,7 +715,7 @@
           <geometry>
             <cylinder>
               <length>0.02</length>
-              <radius>0.025000000000000001</radius>
+              <radius>0.0615</radius>
             </cylinder>
           </geometry>
           <surface>
@@ -731,7 +731,7 @@
           <geometry>
             <cylinder>
               <length>0.02</length>
-              <radius>0.025000000000000001</radius>
+              <radius>0.0615</radius>
             </cylinder>
           </geometry>
           <material>
@@ -744,8 +744,8 @@
       <plugin name='gz::sim::systems::DiffDrive' filename='gz-sim-diff-drive-system'>
         <left_joint>base_left_wheel_joint</left_joint>
         <right_joint>base_right_wheel_joint</right_joint>
-        <wheel_separation>0.300</wheel_separation>
-        <wheel_radius>0.025</wheel_radius>
+        <wheel_separation>0.290</wheel_separation>
+        <wheel_radius>0.0615</wheel_radius>
         <odom_publish_frequency>50</odom_publish_frequency>
         <topic>/model/sweepi/cmd_vel</topic>
         <odom_topic>/odom</odom_topic>
