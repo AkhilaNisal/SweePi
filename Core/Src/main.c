@@ -31,6 +31,40 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+/*
+  STM32G474RET6 PCB servo pins:
+
+  PC6 = TIM3_CH1 = Left tendon servo
+  PC7 = TIM3_CH2 = Right tendon servo
+  PC8 = TIM3_CH3 = spare
+  PC9 = TIM3_CH4 = spare
+*/
+
+#define LEFT_SERVO_CHANNEL       TIM_CHANNEL_1
+#define RIGHT_SERVO_CHANNEL      TIM_CHANNEL_2
+#define SERVO_3_CHANNEL          TIM_CHANNEL_3
+#define SERVO_4_CHANNEL          TIM_CHANNEL_4
+
+/*
+  Safe first-test pulse range.
+  1500 us = center.
+  1400/1600 = small tendon movement.
+
+  Do NOT start with 1000 and 2000 on the real arm.
+*/
+
+#define LEFT_CENTER_PULSE        1500U
+#define RIGHT_CENTER_PULSE       1500U
+
+#define ARM_LEFT_LEFT_PULSE      1600U
+#define ARM_LEFT_RIGHT_PULSE     1400U
+
+#define ARM_RIGHT_LEFT_PULSE     1400U
+#define ARM_RIGHT_RIGHT_PULSE    1600U
+
+#define SERVO_STEP_US            2U
+#define SERVO_STEP_DELAY_MS      25U
+#define ARM_HOLD_DELAY_MS        500U
 
 /* USER CODE END PD */
 
@@ -56,6 +90,80 @@ static void MX_TIM3_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+static uint32_t left_servo_pulse = LEFT_CENTER_PULSE;
+static uint32_t right_servo_pulse = RIGHT_CENTER_PULSE;
+
+static void SetLeftServo(uint32_t pulse)
+{
+  __HAL_TIM_SET_COMPARE(&htim3, LEFT_SERVO_CHANNEL, pulse);
+}
+
+static void SetRightServo(uint32_t pulse)
+{
+  __HAL_TIM_SET_COMPARE(&htim3, RIGHT_SERVO_CHANNEL, pulse);
+}
+
+static void SetArmServos(uint32_t left_pulse, uint32_t right_pulse)
+{
+  SetLeftServo(left_pulse);
+  SetRightServo(right_pulse);
+}
+
+static uint32_t StepToward(uint32_t current, uint32_t target)
+{
+  if (current < target)
+  {
+    current += SERVO_STEP_US;
+
+    if (current > target)
+    {
+      current = target;
+    }
+  }
+  else if (current > target)
+  {
+    if (current > SERVO_STEP_US)
+    {
+      current -= SERVO_STEP_US;
+    }
+
+    if (current < target)
+    {
+      current = target;
+    }
+  }
+
+  return current;
+}
+
+static void MoveArmSmooth(uint32_t target_left_pulse, uint32_t target_right_pulse)
+{
+  while ((left_servo_pulse != target_left_pulse) ||
+         (right_servo_pulse != target_right_pulse))
+  {
+    left_servo_pulse = StepToward(left_servo_pulse, target_left_pulse);
+    right_servo_pulse = StepToward(right_servo_pulse, target_right_pulse);
+
+    SetArmServos(left_servo_pulse, right_servo_pulse);
+
+    HAL_Delay(SERVO_STEP_DELAY_MS);
+  }
+}
+
+static void ArmCenter(void)
+{
+  MoveArmSmooth(LEFT_CENTER_PULSE, RIGHT_CENTER_PULSE);
+}
+
+static void ArmLeft(void)
+{
+  MoveArmSmooth(ARM_LEFT_LEFT_PULSE, ARM_LEFT_RIGHT_PULSE);
+}
+
+static void ArmRight(void)
+{
+  MoveArmSmooth(ARM_RIGHT_LEFT_PULSE, ARM_RIGHT_RIGHT_PULSE);
+}
 
 /* USER CODE END 0 */
 
@@ -90,6 +198,17 @@ int main(void)
   MX_GPIO_Init();
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);  // PC6 - left servo
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);  // PC7 - right servo
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);  // PC8 - spare
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);  // PC9 - spare
+
+  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, LEFT_CENTER_PULSE);
+  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, RIGHT_CENTER_PULSE);
+  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_3, 1500U);
+  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, 1500U);
+
+  HAL_Delay(1000);
 
   /* USER CODE END 2 */
 
@@ -100,6 +219,20 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    ArmCenter();
+    HAL_Delay(ARM_HOLD_DELAY_MS);
+
+    ArmLeft();
+    HAL_Delay(ARM_HOLD_DELAY_MS);
+
+    ArmCenter();
+    HAL_Delay(ARM_HOLD_DELAY_MS);
+
+    ArmRight();
+    HAL_Delay(ARM_HOLD_DELAY_MS);
+
+    ArmCenter();
+    HAL_Delay(ARM_HOLD_DELAY_MS);
   }
   /* USER CODE END 3 */
 }

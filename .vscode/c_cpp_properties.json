@@ -1,0 +1,33 @@
+{
+  "configurations": [
+    {
+      "name": "STM32G474",
+      "compilerPath": "/usr/bin/arm-none-eabi-gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "gnu++17",
+      "intelliSenseMode": "gcc-arm",
+      "defines": [
+        "USE_HAL_DRIVER",
+        "STM32G474xx"
+      ],
+      "includePath": [
+        "${workspaceFolder}/Core/Inc",
+        "${workspaceFolder}/Drivers/STM32G4xx_HAL_Driver/Inc",
+        "${workspaceFolder}/Drivers/STM32G4xx_HAL_Driver/Inc/Legacy",
+        "${workspaceFolder}/Drivers/CMSIS/Device/ST/STM32G4xx/Include",
+        "${workspaceFolder}/Drivers/CMSIS/Include"
+      ],
+      "browse": {
+        "path": [
+          "${workspaceFolder}/Core/Inc",
+          "${workspaceFolder}/Drivers/STM32G4xx_HAL_Driver/Inc",
+          "${workspaceFolder}/Drivers/STM32G4xx_HAL_Driver/Inc/Legacy",
+          "${workspaceFolder}/Drivers/CMSIS/Device/ST/STM32G4xx/Include",
+          "${workspaceFolder}/Drivers/CMSIS/Include"
+        ],
+        "limitSymbolsToIncludedHeaders": true
+      }
+    }
+  ],
+  "version": 4
+}
