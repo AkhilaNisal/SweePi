@@ -18,8 +18,10 @@ from nav2_msgs.srv import SaveMap
 from nav_msgs.msg import OccupancyGrid
 from rclpy.action import ActionClient
 from rclpy.node import Node
+from rclpy.time import Time
 from std_msgs.msg import String
 from std_srvs.srv import SetBool, Trigger
+from tf2_ros import Buffer, TransformException, TransformListener
 from visualization_msgs.msg import Marker, MarkerArray
 
 
@@ -36,6 +38,16 @@ class WavefrontExplorer(Node):
         self.declare_parameter('cluster_distance', 1.5)
         self.declare_parameter('exploration_frequency', 5.0)
         self.declare_parameter('nav_timeout', 25.0)
+        self.declare_parameter('max_frontier_candidates', 0)
+        self.declare_parameter('no_frontier_finish_count', 10)
+        self.declare_parameter('robot_base_frame', 'base_footprint')
+        self.declare_parameter('far_exploration_goal_count', 8)
+        self.declare_parameter('far_min_distance', 1.0)
+        self.declare_parameter('far_distance_weight', 80.0)
+        self.declare_parameter('frontier_size_weight', 2.0)
+        self.declare_parameter('safe_goal_clearance_weight', 250.0)
+        self.declare_parameter('cleanup_size_weight', 5.0)
+        self.declare_parameter('cleanup_distance_weight', 20.0)
 
         # ============================================================
         # SPEED CONTROL PARAMETERS
@@ -77,6 +89,21 @@ class WavefrontExplorer(Node):
         self.cluster_distance = float(self.get_parameter('cluster_distance').value)
         self.exploration_frequency = float(self.get_parameter('exploration_frequency').value)
         self.nav_timeout = float(self.get_parameter('nav_timeout').value)
+        self.max_frontier_candidates = int(
+            self.get_parameter('max_frontier_candidates').value)
+        self.no_frontier_finish_count = int(
+            self.get_parameter('no_frontier_finish_count').value)
+        self.robot_base_frame = str(self.get_parameter('robot_base_frame').value)
+        self.far_exploration_goal_count = int(
+            self.get_parameter('far_exploration_goal_count').value)
+        self.far_min_distance = float(self.get_parameter('far_min_distance').value)
+        self.far_distance_weight = float(self.get_parameter('far_distance_weight').value)
+        self.frontier_size_weight = float(self.get_parameter('frontier_size_weight').value)
+        self.safe_goal_clearance_weight = float(
+            self.get_parameter('safe_goal_clearance_weight').value)
+        self.cleanup_size_weight = float(self.get_parameter('cleanup_size_weight').value)
+        self.cleanup_distance_weight = float(
+            self.get_parameter('cleanup_distance_weight').value)
 
         self.max_velocity = float(self.get_parameter('max_velocity').value)
         self.max_angular_velocity = float(self.get_parameter('max_angular_velocity').value)
@@ -111,6 +138,7 @@ class WavefrontExplorer(Node):
         self.start_time = None
         self.exploration_start_time = None
         self.no_frontier_count = 0
+        self.failure_recovery_used = False
         self.current_goal_start_time = None
         self.current_goal_handle = None
         self.current_goal_frontier = None
@@ -162,6 +190,8 @@ class WavefrontExplorer(Node):
 
         # Action client
         self.nav_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
 
         # Manual/automatic mode control services
         self.set_manual_srv = self.create_service(
@@ -190,6 +220,14 @@ class WavefrontExplorer(Node):
         self.get_logger().info(
             f'      exploration_frequency: {self.exploration_frequency} Hz '
             f'(timer period: {self.timer_period:.2f}s)')
+        self.get_logger().info(f'      max_frontier_candidates: {self.max_frontier_candidates}')
+        self.get_logger().info(f'      no_frontier_finish_count: {self.no_frontier_finish_count}')
+        self.get_logger().info(f'      robot_base_frame: {self.robot_base_frame}')
+        self.get_logger().info(
+            f'      far_goals: {self.far_exploration_goal_count}, '
+            f'far_min_distance: {self.far_min_distance:.2f}m')
+        self.get_logger().info(
+            f'      safe_goal_clearance_weight: {self.safe_goal_clearance_weight:.1f}')
         self.get_logger().info('   🔧 ATTEMPT LIMITS:')
         self.get_logger().info(f'      max_attempts_per_frontier: {self.max_attempts_per_frontier}')
         self.get_logger().info(f'      max_consecutive_timeouts: {self.max_consecutive_timeouts}')
@@ -495,8 +533,8 @@ class WavefrontExplorer(Node):
     # ============================================================
     # WALL OFFSET ALGORITHM
     # ============================================================
-    def _offset_goal_from_walls(self, frontier_x, frontier_y):
-        """Offset goal away from walls."""
+    def _find_safe_goal_from_walls(self, frontier_x, frontier_y, log=True):
+        """Find a nearby free-space goal and its obstacle/unknown clearance."""
         fx, fy = self._world_to_map(frontier_x, frontier_y)
         height, width = self.map_data.shape
         fx = max(0, min(fx, width - 1))
@@ -507,13 +545,13 @@ class WavefrontExplorer(Node):
             offset_cells = 1
 
         best_position = None
-        best_distance_to_wall = 0
+        best_distance_to_wall = 0.0
 
-        for distance in range(offset_cells, offset_cells + 10):
-            for angle_idx in range(8):
-                angle = (angle_idx * 2 * math.pi) / 8
-                offset_x = int(fx + distance * math.cos(angle))
-                offset_y = int(fy + distance * math.sin(angle))
+        for distance in range(offset_cells, offset_cells + 14):
+            for angle_idx in range(16):
+                angle = (angle_idx * 2 * math.pi) / 16
+                offset_x = int(round(fx + distance * math.cos(angle)))
+                offset_y = int(round(fy + distance * math.sin(angle)))
 
                 if not (0 <= offset_x < width and 0 <= offset_y < height):
                     continue
@@ -532,12 +570,21 @@ class WavefrontExplorer(Node):
                     best_position = (world_x, world_y)
 
             if best_position is not None:
-                self.get_logger().info(
-                    f'✓ Offset goal: ({frontier_x:.2f}, {frontier_y:.2f}) → '
-                    f'({best_position[0]:.2f}, {best_position[1]:.2f})')
-                return best_position
+                clearance_m = best_distance_to_wall * self.map_info.resolution
+                if log:
+                    self.get_logger().info(
+                        f'✓ Safe goal: ({frontier_x:.2f}, {frontier_y:.2f}) -> '
+                        f'({best_position[0]:.2f}, {best_position[1]:.2f}) | '
+                        f'clearance={clearance_m:.2f}m')
+                return best_position[0], best_position[1], clearance_m
 
-        return (frontier_x, frontier_y)
+        return frontier_x, frontier_y, 0.0
+
+    def _offset_goal_from_walls(self, frontier_x, frontier_y):
+        """Backward-compatible wrapper for older call sites."""
+        goal_x, goal_y, _clearance_m = self._find_safe_goal_from_walls(
+            frontier_x, frontier_y, log=True)
+        return goal_x, goal_y
 
     def _has_clearance(self, x, y):
         """Check if position has enough clearance."""
@@ -594,35 +641,37 @@ class WavefrontExplorer(Node):
     # FRONTIER DETECTION
     # ============================================================
     def wavefront_frontier_detection(self):
-        """Detect frontiers using wavefront algorithm."""
+        """Detect all frontier cells in linear time across the current map."""
         if self.map_data is None:
             return []
 
         height, width = self.map_data.shape
-        visited = np.zeros((height, width), dtype=bool)
         frontier_cells = []
-        queue = deque()
+        frontier_seen = set()
+        candidate_limit = self.max_frontier_candidates
 
         for y in range(height):
             for x in range(width):
-                if self.map_data[y, x] == 0:
-                    queue.append((x, y))
-                    visited[y, x] = True
+                if self.map_data[y, x] != 0:
+                    continue
 
-        while queue:
-            x, y = queue.popleft()
+                is_frontier = False
+                for dx, dy in [(-1, -1), (-1, 0), (-1, 1), (0, -1),
+                               (0, 1), (1, -1), (1, 0), (1, 1)]:
+                    nx, ny = x + dx, y + dy
+                    if 0 <= nx < width and 0 <= ny < height and self.map_data[ny, nx] == -1:
+                        is_frontier = True
+                        break
 
-            for dx, dy in [(-1,-1), (-1,0), (-1,1), (0,-1), (0,1), (1,-1), (1,0), (1,1)]:
-                nx, ny = x + dx, y + dy
+                if not is_frontier or (x, y) in frontier_seen:
+                    continue
 
-                if 0 <= nx < width and 0 <= ny < height:
-                    cell = self.map_data[ny, nx]
-
-                    if cell == -1:
-                        frontier_cells.append((x, y))
-                    elif cell == 0 and not visited[ny, nx]:
-                        visited[ny, nx] = True
-                        queue.append((nx, ny))
+                frontier_seen.add((x, y))
+                frontier_cells.append((x, y))
+                if candidate_limit > 0 and len(frontier_cells) >= candidate_limit:
+                    break
+            if candidate_limit > 0 and len(frontier_cells) >= candidate_limit:
+                break
 
         frontiers = self._cluster_frontiers(frontier_cells)
         self.get_logger().info(
@@ -632,70 +681,132 @@ class WavefrontExplorer(Node):
         return frontiers
 
     def _cluster_frontiers(self, cells):
-        """Cluster frontier cells."""
+        """Cluster adjacent frontier cells without an O(n^2) all-pairs pass."""
         if not cells:
             return []
 
+        cell_set = set(cells)
+        visited = set()
         clusters = []
-        used = set()
 
-        for i, cell in enumerate(cells):
-            if i in used:
+        for cell in cells:
+            if cell in visited:
                 continue
 
-            cluster = [cell]
-            used.add(i)
+            cluster = []
+            queue = deque([cell])
+            visited.add(cell)
 
-            for j, other in enumerate(cells):
-                if j not in used:
-                    dist = math.sqrt((cell[0] - other[0])**2 + (cell[1] - other[1])**2)
-                    if dist < self.cluster_distance:
-                        cluster.append(other)
-                        used.add(j)
+            while queue:
+                x, y = queue.popleft()
+                cluster.append((x, y))
 
-            if len(cluster) >= self.frontier_min_size:
-                cx = sum(c[0] for c in cluster) / len(cluster)
-                cy = sum(c[1] for c in cluster) / len(cluster)
+                for dx, dy in [(-1, -1), (-1, 0), (-1, 1), (0, -1),
+                               (0, 1), (1, -1), (1, 0), (1, 1)]:
+                    neighbor = (x + dx, y + dy)
+                    if neighbor in cell_set and neighbor not in visited:
+                        visited.add(neighbor)
+                        queue.append(neighbor)
 
-                world_x = self.map_info.origin.position.x + (cx + 0.5) * self.map_info.resolution
-                world_y = self.map_info.origin.position.y + (cy + 0.5) * self.map_info.resolution
+            if len(cluster) < self.frontier_min_size:
+                continue
 
-                # Filter 1: Blocked regions
-                if self._is_region_blocked(world_x, world_y):
-                    continue
+            cx = sum(c[0] for c in cluster) / len(cluster)
+            cy = sum(c[1] for c in cluster) / len(cluster)
+            goal_cell = min(
+                cluster,
+                key=lambda c: (c[0] - cx) * (c[0] - cx) + (c[1] - cy) * (c[1] - cy))
 
-                # Filter 2: Near unreachable areas (WITH CONNECTIVITY CHECK)
-                if self._is_near_unreachable_area(world_x, world_y):
-                    continue
+            frontier_x = self.map_info.origin.position.x + (goal_cell[0] + 0.5) * self.map_info.resolution
+            frontier_y = self.map_info.origin.position.y + (goal_cell[1] + 0.5) * self.map_info.resolution
+            goal_x, goal_y, clearance_m = self._find_safe_goal_from_walls(
+                frontier_x, frontier_y, log=False)
 
-                region_key = self._get_region_key(world_x, world_y)
-                clusters.append((world_x, world_y, len(cluster), region_key))
+            if self._is_region_blocked(goal_x, goal_y):
+                continue
+
+            if self._is_near_unreachable_area(frontier_x, frontier_y):
+                continue
+
+            region_key = self._get_region_key(goal_x, goal_y)
+            clusters.append((frontier_x, frontier_y, len(cluster), region_key,
+                             goal_x, goal_y, clearance_m))
 
         clusters.sort(key=lambda c: c[2], reverse=True)
         return clusters
 
+    def _get_robot_position(self):
+        """Return the robot pose in map frame for frontier scoring."""
+        try:
+            transform = self.tf_buffer.lookup_transform(
+                'map',
+                self.robot_base_frame,
+                Time())
+            return (
+                transform.transform.translation.x,
+                transform.transform.translation.y)
+        except TransformException as exc:
+            self.get_logger().warn(
+                f'Could not get map -> {self.robot_base_frame} TF for frontier scoring: {exc}',
+                throttle_duration_sec=5.0)
+            return None
+
+    def _frontier_fields(self, frontier):
+        """Return frontier and safe-goal fields for old/new tuple formats."""
+        if len(frontier) >= 7:
+            return frontier[:7]
+
+        x, y, size, region_key = frontier
+        goal_x, goal_y, clearance_m = self._find_safe_goal_from_walls(x, y, log=False)
+        return x, y, size, region_key, goal_x, goal_y, clearance_m
+
     def select_best_frontier(self, frontiers):
-        """Select best frontier."""
+        """Select a far frontier first, then refine nearby smaller regions later."""
         if not frontiers:
             return None
 
-        map_center_x = self.map_info.origin.position.x + (self.map_info.width / 2.0) * self.map_info.resolution
-        map_center_y = self.map_info.origin.position.y + (self.map_info.height / 2.0) * self.map_info.resolution
+        robot_position = self._get_robot_position()
+        if robot_position is None:
+            robot_position = (
+                self.map_info.origin.position.x + (self.map_info.width / 2.0) * self.map_info.resolution,
+                self.map_info.origin.position.y + (self.map_info.height / 2.0) * self.map_info.resolution)
 
-        def frontier_score(f):
-            x, y, size, region_key = f
-            distance = math.hypot(x - map_center_x, y - map_center_y)
+        robot_x, robot_y = robot_position
+        far_phase = self.goals_reached < self.far_exploration_goal_count
+
+        def frontier_score(frontier):
+            x, y, size, region_key, goal_x, goal_y, clearance_m = self._frontier_fields(frontier)
+            distance = math.hypot(goal_x - robot_x, goal_y - robot_y)
             attempts = self._get_region_attempts(region_key)
-            attempt_penalty = attempts * 500  # REDUCED penalty - allow more retries
-            score = (size * 10) - distance - attempt_penalty
+            attempt_penalty = attempts * 250.0
+            size_score = min(float(size), 800.0)
+
+            if far_phase:
+                near_penalty = max(0.0, self.far_min_distance - distance) * 300.0
+                score = (
+                    distance * self.far_distance_weight
+                    + size_score * self.frontier_size_weight
+                    + clearance_m * self.safe_goal_clearance_weight
+                    - attempt_penalty
+                    - near_penalty)
+            else:
+                score = (
+                    size_score * self.cleanup_size_weight
+                    + clearance_m * self.safe_goal_clearance_weight
+                    - distance * self.cleanup_distance_weight
+                    - attempt_penalty)
             return -score
 
         best = min(frontiers, key=frontier_score)
-        x, y, size, region_key = best
+        x, y, size, region_key, goal_x, goal_y, clearance_m = self._frontier_fields(best)
         attempts = self._get_region_attempts(region_key)
+        distance = math.hypot(goal_x - robot_x, goal_y - robot_y)
+        phase = 'far' if far_phase else 'cleanup'
 
         self.get_logger().info(
-            f'🎯 Selected: ({x:.2f}, {y:.2f}) | Size: {size} | Attempts: {attempts}/{self.max_attempts_per_frontier}')
+            f'🎯 Selected {phase}: frontier=({x:.2f}, {y:.2f}) goal=({goal_x:.2f}, {goal_y:.2f}) | '
+            f'Size: {size} | Distance: {distance:.2f}m | Clearance: {clearance_m:.2f}m | '
+            f'Attempts: {attempts}/{self.max_attempts_per_frontier}')
         return best
 
     # ============================================================
@@ -746,8 +857,6 @@ class WavefrontExplorer(Node):
                 self.consecutive_timeout_count += 1
                 self.total_timeout_count += 1
 
-                if self.current_goal_region:
-                    self.blocked_regions.add(self.current_goal_region)
                 if self.current_goal_frontier:
                     frontier_x, frontier_y = self.current_goal_frontier
                     self._mark_frontier_failed(
@@ -786,9 +895,19 @@ class WavefrontExplorer(Node):
 
         if not frontiers:
             self.no_frontier_count += 1
-            self.get_logger().info(f'ℹ️  No valid frontiers ({self.no_frontier_count}/3)')
+            self.get_logger().info(
+                f'ℹ️  No valid frontiers ({self.no_frontier_count}/{self.no_frontier_finish_count})')
 
-            if self.no_frontier_count >= 3 and self.exploration_active:
+            if (self.unreachable_areas or self.blocked_regions) and not self.failure_recovery_used:
+                self.get_logger().warn(
+                    'No valid frontiers remain after failure filtering; clearing temporary failed areas once.')
+                self.unreachable_areas.clear()
+                self.blocked_regions.clear()
+                self.failure_recovery_used = True
+                self.no_frontier_count = 0
+                return
+
+            if self.no_frontier_count >= self.no_frontier_finish_count and self.exploration_active:
                 self._finish_exploration()
             return
 
@@ -800,9 +919,14 @@ class WavefrontExplorer(Node):
 
     def _send_nav_goal(self, goal):
         """Send navigation goal to Nav2."""
-        frontier_x, frontier_y, size, region_key = goal
+        frontier_x, frontier_y, size, region_key, goal_x, goal_y, clearance_m = self._frontier_fields(goal)
 
-        goal_x, goal_y = self._offset_goal_from_walls(frontier_x, frontier_y)
+        if clearance_m > 0.0:
+            self.get_logger().info(
+                f'✓ Using safe goal: ({frontier_x:.2f}, {frontier_y:.2f}) -> '
+                f'({goal_x:.2f}, {goal_y:.2f}) | clearance={clearance_m:.2f}m')
+        else:
+            goal_x, goal_y = self._offset_goal_from_walls(frontier_x, frontier_y)
 
         if region_key not in self.region_attempts:
             self.region_attempts[region_key] = 0
@@ -845,9 +969,9 @@ class WavefrontExplorer(Node):
             self.current_goal_handle = goal_handle
 
             if not goal_handle.accepted:
-                self.get_logger().warn(f'❌ Goal rejected')
-                if self.exploration_mode == 'auto':
-                    self._mark_frontier_failed(region_key, frontier_x, frontier_y)
+                self.get_logger().warn(
+                    'Goal rejected; Nav2 may still be activating. Will retry frontier selection.',
+                    throttle_duration_sec=5.0)
                 self.navigating = False
                 self.current_goal_handle = None
                 self.current_goal_frontier = None
@@ -915,14 +1039,18 @@ class WavefrontExplorer(Node):
                 self.current_goal_sequence = None
 
     def _mark_frontier_failed(self, region_key, frontier_x, frontier_y):
-        """Mark frontier as failed."""
+        """Mark a frontier as failed only after repeated unsuccessful attempts."""
         attempts = self._get_region_attempts(region_key)
         successes = self._get_region_successes(region_key)
 
-        # Record unreachable location
-        self._add_unreachable_area(frontier_x, frontier_y)
+        if attempts < self.max_attempts_per_frontier:
+            self.get_logger().warn(
+                f'Frontier attempt failed but will remain available: '
+                f'{attempts}/{self.max_attempts_per_frontier}')
+            return
 
-        if attempts >= self.max_attempts_per_frontier and successes == 0:
+        if successes == 0:
+            self._add_unreachable_area(frontier_x, frontier_y)
             self.get_logger().warn(f'🚫 BLOCKING REGION: {region_key}')
             self.blocked_regions.add(region_key)
 
@@ -1029,7 +1157,7 @@ swepi_metadata:
         """Visualize frontiers (GREEN)."""
         marker_array = MarkerArray()
         for i, frontier in enumerate(frontiers):
-            x, y, size, region_key = frontier
+            x, y, size, region_key, _goal_x, _goal_y, _clearance_m = self._frontier_fields(frontier)
             m = Marker()
             m.header.frame_id = 'map'
             m.header.stamp = self.get_clock().now().to_msg()
