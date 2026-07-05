@@ -40,8 +40,8 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define PI 3.14159265f
-#define WHEEL_RADIUS_M 0.033f // assume 3.3cm radius wheels, adjust as necessary
-#define WHEEL_BASE_M 0.200f // assume 20cm distance between wheels, adjust as necessary
+#define WHEEL_RADIUS_M 0.0615f // assume 6.15cm radius wheels, adjust as necessary
+#define WHEEL_BASE_M 0.29f // assume 29cm distance between wheels, adjust as necessary
 #define MOTOR_TEST_ENABLE 0
 #define MOTOR_TEST_LEFT_RPM 15.0f
 #define MOTOR_TEST_RIGHT_RPM 15.0f
