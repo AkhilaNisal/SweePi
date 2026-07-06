@@ -73,6 +73,20 @@ ros2 launch sweepi_exploration exploration.launch.py \
   start_mode:=auto
 ```
 
+For rooms with many obstacles, automatic exploration now focuses on meaningful
+unknown regions and ignores tiny map-noise pockets around obstacles. The
+explorer treats completion as:
+
+```text
+no large unknown frontier regions remain, or remaining large frontier regions
+failed after the configured retry sweeps/timeouts
+```
+
+That prevents early completion when a real unexplored area remains, while also
+avoiding endless refinement of small SLAM changes. The goal generator searches
+around each frontier for a clear viewpoint that can see unknown cells instead of
+relying on one centroid offset.
+
 The output is saved as:
 
 ```text
@@ -150,29 +164,33 @@ ros2 service call /save_exploration_map nav2_msgs/srv/SaveMap \
 | `use_sim_time` | `true` | Use simulation clock |
 | `start_mode` | `auto` | `auto`, `manual`, or `stopped` |
 | `cmd_vel_topic` | `/cmd_vel` | Teleop/zero-velocity command topic |
-| `frontier_min_size` | `5` | Minimum cells in a frontier cluster |
+| `frontier_min_size` | `3` | Minimum cells in a frontier cluster |
 | `cluster_distance` | `1.2` | Frontier clustering distance |
+| `min_unknown_region_area_m2` | `0.25` | Ignore frontier regions smaller than this unknown area |
 | `exploration_frequency` | `3.0` | Main exploration loop frequency |
 | `nav_timeout` | `15.0` | Time allowed for one Nav2 goal |
 | `max_velocity` | `0.1` | Stored speed limit parameter |
 | `max_angular_velocity` | `0.5` | Stored angular speed limit parameter |
 | `acceleration_limit` | `0.1` | Stored acceleration parameter |
 | `max_attempts_per_frontier` | `2` | Attempts before blocking a frontier region |
-| `max_consecutive_timeouts` | `2` | Stop after repeated navigation timeouts |
+| `max_consecutive_timeouts` | `4` | Consecutive navigation timeouts allowed before resetting the timeout streak |
+| `max_total_timeouts` | `35` | Total navigation timeouts allowed before ending exploration |
 | `max_exploration_time` | `600` | Maximum automatic exploration time in seconds |
 | `goal_offset_distance` | `0.6` | Offset frontier goals away from walls |
 | `robot_radius` | `0.3` | Robot radius used for clearance checks |
 | `safety_margin` | `0.15` | Extra clearance around the robot |
-| `unreachable_region_radius` | `0.3` | Radius for failed-frontier blocking |
+| `unreachable_region_radius` | `0.6` | Radius for failed-frontier blocking |
+| `failed_frontier_retry_sec` | `30.0` | Cooldown before a failed frontier region can be retried |
+| `completion_retry_cycles` | `3` | Final retry sweeps before accepting remaining blocked frontiers |
+| `frontier_goal_search_radius` | `1.4` | Radius used to find obstacle-aware frontier viewpoints |
+| `frontier_goal_unknown_radius` | `0.8` | Nearby unknown-cell radius used to score frontier viewpoints |
 
 Example with custom parameters:
 
 ```bash
 ros2 launch sweepi_exploration exploration.launch.py \
   map_name:=lab_test_01 \
-  frontier_min_size:=5 \
-  max_exploration_time:=900 \
-  unreachable_region_radius:=0.3
+  max_exploration_time:=900
 ```
 
 ## Topics
