@@ -18,8 +18,8 @@
             name="gz::sim::systems::DiffDrive">
       <left_joint>base_left_wheel_joint</left_joint>
       <right_joint>base_right_wheel_joint</right_joint>
-      <wheel_separation>0.300</wheel_separation>
-      <wheel_radius>0.025</wheel_radius>
+      <wheel_separation>0.290</wheel_separation>
+      <wheel_radius>0.0615</wheel_radius>
       <odom_publish_frequency>50</odom_publish_frequency>
       <topic>/model/sweepi/cmd_vel</topic>
       <odom_topic>/odom</odom_topic>

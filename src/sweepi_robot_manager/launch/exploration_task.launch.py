@@ -12,10 +12,16 @@ from launch.substitutions import LaunchConfiguration
 def generate_launch_description():
     nav2_bringup_dir = get_package_share_directory('nav2_bringup')
     exploration_dir = get_package_share_directory('sweepi_exploration')
+    default_nav2_params_file = os.path.join(
+        exploration_dir,
+        'config',
+        'nav2_exploration_rpi_params.yaml',
+    )
 
     map_name = LaunchConfiguration('map_name')
     use_sim_time = LaunchConfiguration('use_sim_time')
     start_mode = LaunchConfiguration('start_mode')
+    nav2_params_file = LaunchConfiguration('nav2_params_file')
 
     return LaunchDescription([
         DeclareLaunchArgument(
@@ -32,12 +38,18 @@ def generate_launch_description():
             default_value='auto',
             description='Initial exploration mode: auto, manual, or stopped',
         ),
+        DeclareLaunchArgument(
+            'nav2_params_file',
+            default_value=default_nav2_params_file,
+            description='Nav2 params file tuned for exploration on the real robot',
+        ),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 os.path.join(nav2_bringup_dir, 'launch', 'navigation_launch.py')
             ),
             launch_arguments={
                 'use_sim_time': use_sim_time,
+                'params_file': nav2_params_file,
             }.items(),
         ),
         IncludeLaunchDescription(

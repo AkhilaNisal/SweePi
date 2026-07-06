@@ -58,13 +58,19 @@ class BaseDriverNode(Node):
         self.serial_timeout = float(self.declare_parameter('serial_timeout', 0.02).value)
         self.reconnect_period = float(self.declare_parameter('reconnect_period', 1.0).value)
 
-        self.wheel_radius = float(self.declare_parameter('wheel_radius', 0.033).value)
-        self.wheel_separation = float(self.declare_parameter('wheel_separation', 0.200).value)
+        self.wheel_radius = float(self.declare_parameter('wheel_radius', 0.0615).value)
+        self.wheel_separation = float(self.declare_parameter('wheel_separation', 0.29).value)
         self.ticks_per_revolution = float(
             self.declare_parameter('ticks_per_revolution', 7392.0).value
         )
-        self.left_encoder_sign = float(self.declare_parameter('left_encoder_sign', -1.0).value)
+        self.left_encoder_sign = float(self.declare_parameter('left_encoder_sign', 1.0).value)
         self.right_encoder_sign = float(self.declare_parameter('right_encoder_sign', 1.0).value)
+        self.left_motor_command_sign = float(
+            self.declare_parameter('left_motor_command_sign', 1.0).value
+        )
+        self.right_motor_command_sign = float(
+            self.declare_parameter('right_motor_command_sign', 1.0).value
+        )
 
         self.command_rate_hz = float(self.declare_parameter('command_rate_hz', 50.0).value)
         self.feedback_poll_rate_hz = float(
@@ -177,6 +183,8 @@ class BaseDriverNode(Node):
             f'ticks_per_revolution={self.ticks_per_revolution}, '
             f'left_encoder_sign={self.left_encoder_sign}, '
             f'right_encoder_sign={self.right_encoder_sign}, '
+            f'left_motor_command_sign={self.left_motor_command_sign}, '
+            f'right_motor_command_sign={self.right_motor_command_sign}, '
             f'command_rate_hz={self.command_rate_hz}, '
             f'feedback_poll_rate_hz={self.feedback_poll_rate_hz}, '
             f'cmd_vel_timeout={self.cmd_vel_timeout}, '
@@ -232,8 +240,12 @@ class BaseDriverNode(Node):
 
         linear_x = self.last_cmd_vel.linear.x if cmd_is_fresh else 0.0
         angular_z = self.last_cmd_vel.angular.z if cmd_is_fresh else 0.0
-        left_velocity = linear_x - angular_z * self.wheel_separation * 0.5
-        right_velocity = linear_x + angular_z * self.wheel_separation * 0.5
+        left_velocity = (
+            linear_x - angular_z * self.wheel_separation * 0.5
+        ) * self.left_motor_command_sign
+        right_velocity = (
+            linear_x + angular_z * self.wheel_separation * 0.5
+        ) * self.right_motor_command_sign
         mode = self.command_mode if cmd_is_fresh else 'STOP'
         motor_enable = self.motor_enable and cmd_is_fresh
 

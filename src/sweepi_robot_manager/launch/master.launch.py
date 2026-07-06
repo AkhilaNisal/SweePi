@@ -58,17 +58,17 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument(
             'use_sim_time',
-            default_value='true',
+            default_value='false',
             description='Use simulation clock',
         ),
         DeclareLaunchArgument(
             'launch_sim',
-            default_value='true',
+            default_value='false',
             description='Launch Gazebo/robot bringup from sweepi_bringup',
         ),
         DeclareLaunchArgument(
             'launch_hardware',
-            default_value='false',
+            default_value='true',
             description='Launch real STM32 base driver, EKF, robot description, and optional lidar',
         ),
         DeclareLaunchArgument(

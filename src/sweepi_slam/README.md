@@ -161,8 +161,8 @@ ros2 service call /slam_toolbox/toggle_interactive_mode slam_toolbox/srv/ToggleI
 | `scan_topic` | `/scan` | - | LiDAR topic name | Must match your laser scanner |
 | `resolution` | 0.05 m | 0.01-0.1 m | Map grid cell size | Lower = more detail (more CPU), Higher = faster |
 | `throttle_scans` | 1 | 1-5 | Process every Nth scan | Increase to reduce CPU load |
-| `transform_publish_period` | 0.02 s | 0.01-0.1 s | TF broadcast frequency | Lower = smoother updates |
-| `map_update_interval` | 2.0 s | 0.5-10.0 s | How often to update map | Lower = real-time, Higher = efficient |
+| `transform_publish_period` | 0.01 s | 0.01-0.1 s | TF broadcast frequency | Lower = smoother updates |
+| `map_update_interval` | 0.5 s | 0.5-10.0 s | How often to update map | Lower = real-time, Higher = efficient |
 
 ### Sensor Parameters
 
@@ -178,16 +178,16 @@ ros2 service call /slam_toolbox/toggle_interactive_mode slam_toolbox/srv/ToggleI
 
 | Parameter | Current | Range | Description | Effect |
 |-----------|---------|-------|-------------|--------|
-| `minimum_travel_distance` | 0.1 m | 0.05-0.5 m | Min linear movement before new scan | Lower = more scans, Higher = sparse |
-| `minimum_travel_heading` | 0.1 rad | 0.05-0.3 rad | Min rotation before new scan | Lower = more scans at turns |
-| `minimum_time_interval` | 0.5 s | 0.1-2.0 s | Min time between scans | Prevents rapid re-scanning |
+| `minimum_travel_distance` | 0.03 m | 0.01-0.5 m | Min linear movement before new scan | Lower = more scans, Higher = sparse |
+| `minimum_travel_heading` | 0.02 rad | 0.01-0.3 rad | Min rotation before new scan | Lower = more scans at turns |
+| `minimum_time_interval` | 0.05 s | 0.02-2.0 s | Min time between scans | Prevents rapid re-scanning |
 
 **Slow, detailed mapping**:
 ```yaml
-minimum_travel_distance: 0.05    # Frequent scans
-minimum_travel_heading: 0.05     # Capture all turns
+minimum_travel_distance: 0.03    # Frequent scans
+minimum_travel_heading: 0.02     # Capture small turns
 throttle_scans: 1                # Process all scans
-map_update_interval: 1.0         # Frequent updates
+map_update_interval: 0.5         # Frequent updates
 ```
 
 ### Loop Closure Parameters
@@ -240,7 +240,7 @@ minimum_travel_distance: 0.2  # Fewer scans
 ```yaml
 loop_match_minimum_response_coarse: 0.25  # More aggressive loop closure
 loop_search_maximum_distance: 5.0         # Search larger area
-minimum_travel_distance: 0.05             # More frequent scans
+minimum_travel_distance: 0.03             # More frequent scans
 ```
 
 ### False Loop Closures

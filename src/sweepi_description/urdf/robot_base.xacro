@@ -5,9 +5,9 @@
   <xacro:property name="body_height"        value="0.100" />
   <xacro:property name="ground_clearance"   value="0.020" />
 
-  <xacro:property name="drive_wheel_radius" value="0.025" />
+  <xacro:property name="drive_wheel_radius" value="0.0615" />
   <xacro:property name="drive_wheel_width"  value="0.020" />
-  <xacro:property name="wheel_span"         value="0.300" />
+  <xacro:property name="wheel_span"         value="0.290" />
 
   <xacro:property name="caster_offset_x"    value="0.160" />
 

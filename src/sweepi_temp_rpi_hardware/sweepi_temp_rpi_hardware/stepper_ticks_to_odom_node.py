@@ -39,8 +39,8 @@ class StepperTicksToOdomNode(Node):
     def __init__(self):
         super().__init__('sweepi_temp_stepper_odom')
 
-        self.declare_parameter('wheel_radius', 0.0325)
-        self.declare_parameter('wheel_separation', 0.20)
+        self.declare_parameter('wheel_radius', 0.0615)
+        self.declare_parameter('wheel_separation', 0.29)
         self.declare_parameter('steps_per_rev', 200)
         self.declare_parameter('microsteps', 16)
         self.declare_parameter('left_step_sign', 1.0)
