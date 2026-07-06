@@ -9,3 +9,6 @@ Release/
 *.o
 *.d
 *.su
+*.cyclo
+*.gcno
+*.gcda

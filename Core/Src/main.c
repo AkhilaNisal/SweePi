@@ -35,36 +35,29 @@
   STM32G474RET6 PCB servo pins:
 
   PC6 = TIM3_CH1 = Left tendon servo
-  PC7 = TIM3_CH2 = Right tendon servo
-  PC8 = TIM3_CH3 = spare
+  PC7 = TIM3_CH2 = spare
+  PC8 = TIM3_CH3 = Right tendon servo
   PC9 = TIM3_CH4 = spare
 */
 
 #define LEFT_SERVO_CHANNEL       TIM_CHANNEL_1
-#define RIGHT_SERVO_CHANNEL      TIM_CHANNEL_2
-#define SERVO_3_CHANNEL          TIM_CHANNEL_3
+#define RIGHT_SERVO_CHANNEL      TIM_CHANNEL_3
+#define SERVO_2_CHANNEL          TIM_CHANNEL_2
 #define SERVO_4_CHANNEL          TIM_CHANNEL_4
 
 /*
-  Safe first-test pulse range.
-  1500 us = center.
-  1400/1600 = small tendon movement.
-
-  Do NOT start with 1000 and 2000 on the real arm.
+  Standard hobby-servo pulses with the TIM3 timer set to 1 us ticks:
+  1000 us = 0 degrees, 1500 us = 90 degrees, 2000 us = 180 degrees.
 */
 
-#define LEFT_CENTER_PULSE        1500U
-#define RIGHT_CENTER_PULSE       1500U
+#define SERVO_0_DEGREE_PULSE     1000U
+#define SERVO_90_DEGREE_PULSE    1500U
+#define SERVO_180_DEGREE_PULSE   2000U
 
-#define ARM_LEFT_LEFT_PULSE      1600U
-#define ARM_LEFT_RIGHT_PULSE     1400U
-
-#define ARM_RIGHT_LEFT_PULSE     1400U
-#define ARM_RIGHT_RIGHT_PULSE    1600U
-
-#define SERVO_STEP_US            2U
-#define SERVO_STEP_DELAY_MS      25U
-#define ARM_HOLD_DELAY_MS        500U
+#define SERVO_STEP_US            20U
+#define SERVO_STEP_DELAY_MS      10U
+#define SERVO_HOLD_DELAY_MS      300U
+#define RUN_CONTINUOUS_TEST      0U
 
 /* USER CODE END PD */
 
@@ -90,8 +83,8 @@ static void MX_TIM3_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-static uint32_t left_servo_pulse = LEFT_CENTER_PULSE;
-static uint32_t right_servo_pulse = RIGHT_CENTER_PULSE;
+static uint32_t left_servo_pulse = SERVO_90_DEGREE_PULSE;
+static uint32_t right_servo_pulse = SERVO_90_DEGREE_PULSE;
 
 static void SetLeftServo(uint32_t pulse)
 {
@@ -150,19 +143,43 @@ static void MoveArmSmooth(uint32_t target_left_pulse, uint32_t target_right_puls
   }
 }
 
-static void ArmCenter(void)
+static uint32_t AngleToPulse(uint32_t angle_degrees)
 {
-  MoveArmSmooth(LEFT_CENTER_PULSE, RIGHT_CENTER_PULSE);
+  if (angle_degrees > 180U)
+  {
+    angle_degrees = 180U;
+  }
+
+  return SERVO_0_DEGREE_PULSE +
+         ((SERVO_180_DEGREE_PULSE - SERVO_0_DEGREE_PULSE) * angle_degrees) / 180U;
 }
 
-static void ArmLeft(void)
+static void MoveServosToAngle(uint32_t angle_degrees)
 {
-  MoveArmSmooth(ARM_LEFT_LEFT_PULSE, ARM_LEFT_RIGHT_PULSE);
+  uint32_t pulse = AngleToPulse(angle_degrees);
+
+  MoveArmSmooth(pulse, pulse);
 }
 
-static void ArmRight(void)
+static void RunServoAngleSequence(void)
 {
-  MoveArmSmooth(ARM_RIGHT_LEFT_PULSE, ARM_RIGHT_RIGHT_PULSE);
+  MoveServosToAngle(0U);
+  HAL_Delay(SERVO_HOLD_DELAY_MS);
+
+  MoveServosToAngle(90U);
+  HAL_Delay(SERVO_HOLD_DELAY_MS);
+
+  MoveServosToAngle(0U);
+  HAL_Delay(SERVO_HOLD_DELAY_MS);
+
+  MoveServosToAngle(90U);
+  HAL_Delay(SERVO_HOLD_DELAY_MS);
+
+  MoveServosToAngle(180U);
+  HAL_Delay(SERVO_HOLD_DELAY_MS);
+
+  MoveServosToAngle(90U);
+  HAL_Delay(SERVO_HOLD_DELAY_MS);
 }
 
 /* USER CODE END 0 */
@@ -199,14 +216,11 @@ int main(void)
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);  // PC6 - left servo
-  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);  // PC7 - right servo
-  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);  // PC8 - spare
-  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);  // PC9 - spare
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);  // PC8 - right servo
 
-  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, LEFT_CENTER_PULSE);
-  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, RIGHT_CENTER_PULSE);
-  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_3, 1500U);
-  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, 1500U);
+  left_servo_pulse = SERVO_90_DEGREE_PULSE;
+  right_servo_pulse = SERVO_90_DEGREE_PULSE;
+  SetArmServos(left_servo_pulse, right_servo_pulse);
 
   HAL_Delay(1000);
 
@@ -219,20 +233,16 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    ArmCenter();
-    HAL_Delay(ARM_HOLD_DELAY_MS);
+#if RUN_CONTINUOUS_TEST
+    RunServoAngleSequence();
+#else
+    RunServoAngleSequence();
 
-    ArmLeft();
-    HAL_Delay(ARM_HOLD_DELAY_MS);
-
-    ArmCenter();
-    HAL_Delay(ARM_HOLD_DELAY_MS);
-
-    ArmRight();
-    HAL_Delay(ARM_HOLD_DELAY_MS);
-
-    ArmCenter();
-    HAL_Delay(ARM_HOLD_DELAY_MS);
+    while (1)
+    {
+      HAL_Delay(1000);
+    }
+#endif
   }
   /* USER CODE END 3 */
 }
