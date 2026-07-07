@@ -62,6 +62,8 @@ class SweePiApiBridge(Node):
         self.validated_coverage_path_signature = None
         self.robot_pose = None
         self.pose_available = False
+        self.amcl_pose = None
+        self.last_amcl_pose_time = 0.0
         self.last_pose_lookup_time = 0.0
         self.validated_for_current_path = False
         self.manual_command_expiry = 0.0
@@ -94,6 +96,8 @@ class SweePiApiBridge(Node):
             '/sweepi_robot_manager/coverage/return_home',
             '/sweepi_robot_manager/coverage/reset',
             '/sweepi_robot_manager/coverage/last_summary',
+            '/validate_coverage_follow_path',
+            '/start_coverage_follow_path',
         ):
             self.trigger_clients[service_name] = self.create_client(
                 Trigger,
@@ -121,6 +125,12 @@ class SweePiApiBridge(Node):
             PoseWithCovarianceStamped,
             '/initialpose',
             self._initial_pose_callback,
+            10,
+        )
+        self.amcl_pose_sub = self.create_subscription(
+            PoseWithCovarianceStamped,
+            '/amcl_pose',
+            self._amcl_pose_callback,
             10,
         )
         self.create_subscription(
@@ -1365,6 +1375,12 @@ class SweePiApiBridge(Node):
             )
 
         self._clear_coverage_cache()
+        with self.data_lock:
+            self.live_map = None
+            self.amcl_pose = None
+            self.last_amcl_pose_time = 0.0
+        self.robot_pose = None
+        self.pose_available = False
         self.validated_for_current_path = False
         self.validated_coverage_path_signature = None
         self.state.update(
@@ -1380,6 +1396,7 @@ class SweePiApiBridge(Node):
             coverage_validated=False,
             coverage_path_available=False,
             coverage_map_available=False,
+            live_map_available=False,
             initial_pose_received=False,
             initial_pose_confirmed=False,
             initial_pose_source=None,
@@ -1442,7 +1459,7 @@ class SweePiApiBridge(Node):
                 command='validate_cleaning',
                 state=ready.get('state', 'validation_blocked'),
             )
-        result = self._call_trigger('/sweepi_robot_manager/coverage/validate')
+        result = self._call_trigger('/validate_coverage_follow_path')
         if result['success']:
             self.validated_for_current_path = True
             self.validated_coverage_path_signature = self.coverage_path_signature
@@ -1506,7 +1523,7 @@ class SweePiApiBridge(Node):
                 map_id=snapshot.get('active_map_id'),
                 coverage_map_id=snapshot.get('active_coverage_map_id'),
             )
-        result = self._call_trigger('/sweepi_robot_manager/coverage/start')
+        result = self._call_trigger('/start_coverage_follow_path')
         if result['success']:
             self.state.update(robot_state='cleaning', cleaning_paused=False, task_phase='cleaning')
             return self._success(
@@ -1762,6 +1779,7 @@ class SweePiApiBridge(Node):
         return None
 
     def _cleaning_preconditions(self, require_path=False):
+        self._reconcile_cleaning_localization()
         snapshot = self.state.snapshot()
         if snapshot['active_task'] != 'cleaning' or not snapshot['cleaning_active']:
             return {
@@ -1784,6 +1802,13 @@ class SweePiApiBridge(Node):
                 'message': 'Robot pose TF map -> base_link is not available yet',
                 'state': 'pose_unavailable',
             }
+        if self.count_publishers('/map') <= 0:
+            return {
+                'ok': True,
+                'accepted': False,
+                'message': 'Live map publisher is not available; restart cleaning so map_server publishes the saved map',
+                'state': 'map_unavailable',
+            }
         if require_path and not snapshot['coverage_path_available']:
             return {
                 'ok': True,
@@ -1792,6 +1817,39 @@ class SweePiApiBridge(Node):
                 'state': 'coverage_path_unavailable',
             }
         return {'ok': True, 'accepted': True}
+
+    def _reconcile_cleaning_localization(self):
+        snapshot = self.state.snapshot()
+        if (
+            snapshot.get('active_task') != 'cleaning'
+            or not snapshot.get('cleaning_active')
+            or snapshot.get('initial_pose_confirmed')
+        ):
+            return
+
+        self._update_robot_pose(force=True)
+        pose = None
+        with self.data_lock:
+            if self.amcl_pose:
+                pose = dict(self.amcl_pose)
+        if pose is None and self.pose_available and self.robot_pose:
+            pose = dict(self.robot_pose)
+        if pose is None:
+            return
+
+        self.state.update(
+            initial_pose_received=True,
+            initial_pose_confirmed=True,
+            initial_pose_source='amcl_tf',
+            initial_pose={
+                'x': float(pose.get('x', 0.0)),
+                'y': float(pose.get('y', 0.0)),
+                'yaw': float(pose.get('yaw', 0.0)),
+                'frame': pose.get('frame', 'map'),
+            },
+            task_phase='initial_pose_confirmed',
+        )
+        self._update_coverage_readiness()
 
     def _wait_for_cleaning_ready(self, timeout_sec):
         deadline = time.monotonic() + timeout_sec
@@ -2088,37 +2146,43 @@ class SweePiApiBridge(Node):
         y,
         yaw,
         timeout_sec=5.0,
-        distance_tolerance=0.75,
-        yaw_tolerance=1.0,
+        distance_tolerance=0.25,
+        yaw_tolerance=0.35,
     ):
+        min_amcl_pose_time = self.last_api_initial_pose_publish_time
         deadline = time.monotonic() + float(timeout_sec)
         last_pose = None
         while time.monotonic() < deadline and rclpy.ok():
-            self._update_robot_pose(force=True)
-            if self.pose_available and self.robot_pose:
-                last_pose = dict(self.robot_pose)
+            with self.data_lock:
+                amcl_pose = dict(self.amcl_pose) if self.amcl_pose else None
+                amcl_pose_time = self.last_amcl_pose_time
+            if amcl_pose and amcl_pose_time >= min_amcl_pose_time:
+                last_pose = amcl_pose
                 distance = math.hypot(
-                    float(self.robot_pose['x']) - float(x),
-                    float(self.robot_pose['y']) - float(y),
+                    float(amcl_pose['x']) - float(x),
+                    float(amcl_pose['y']) - float(y),
                 )
-                yaw_error = abs(self._angle_delta(float(self.robot_pose['yaw']), float(yaw)))
+                yaw_error = abs(self._angle_delta(float(amcl_pose['yaw']), float(yaw)))
                 if distance <= distance_tolerance and yaw_error <= yaw_tolerance:
+                    self.robot_pose = amcl_pose
+                    self.pose_available = True
                     return {
                         'ok': True,
-                        'message': 'Localization confirmed.',
+                        'message': 'AMCL localization confirmed.',
                         'distance': distance,
                         'yaw_error': yaw_error,
                         'pose': last_pose,
                         'distance_tolerance': distance_tolerance,
                         'yaw_tolerance': yaw_tolerance,
                     }
+            self._update_robot_pose(force=True)
             time.sleep(0.1)
         return {
             'ok': False,
             'message': (
-                'map -> base_link TF was not available before timeout'
+                'fresh /amcl_pose was not available before timeout'
                 if last_pose is None
-                else 'Robot pose did not match requested initial pose before timeout'
+                else 'AMCL pose did not match requested initial pose before timeout'
             ),
             'pose': last_pose,
             'distance_tolerance': distance_tolerance,
@@ -2408,6 +2472,14 @@ class SweePiApiBridge(Node):
                 },
                 task_phase='initial_pose_failed',
             )
+
+    def _amcl_pose_callback(self, msg):
+        pose_json = pose_to_json(msg.pose.pose, frame=msg.header.frame_id or 'map')
+        with self.data_lock:
+            self.amcl_pose = pose_json
+            self.last_amcl_pose_time = time.monotonic()
+        self.robot_pose = pose_json
+        self.pose_available = True
 
     def _parse_status_fields(self, status_text):
         fields = {}

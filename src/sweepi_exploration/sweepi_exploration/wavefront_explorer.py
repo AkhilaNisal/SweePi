@@ -1128,7 +1128,7 @@ class WavefrontExplorer(Node):
             f.write(b'P5\n')
             f.write(f'{width} {height}\n'.encode())
             f.write(b'255\n')
-            f.write(image_data.tobytes())
+            f.write(np.flipud(image_data).tobytes())
 
     def _save_yaml_file(self, filename, pgm_file, exploration_time):
         """Save metadata."""

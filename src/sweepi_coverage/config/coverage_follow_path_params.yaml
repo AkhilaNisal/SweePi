@@ -45,7 +45,7 @@ coverage_planner_node:
     max_allowed_nav_cost: 99
     treat_unknown_cost_as_blocked: true
     nav_costmap_timeout_sec: 2.0
-    wait_for_nav_costmap_before_planning: true
+    wait_for_nav_costmap_before_planning: false
     wait_for_robot_pose_before_planning: true
     plan_only_reachable_from_robot: true
     cleanup_after_main_path: true
@@ -77,9 +77,9 @@ coverage_follow_path_executor_node:
     enable_costmap_validation: true
     require_costmap_for_validation: true
     max_allowed_nav_cost: 99
-    max_tolerated_blocked_costmap_samples: 20
-    max_tolerated_blocked_costmap_ratio: 0.01
-    max_tolerated_blocked_cost: 99
+    max_tolerated_blocked_costmap_samples: 40
+    max_tolerated_blocked_costmap_ratio: 0.02
+    max_tolerated_blocked_cost: 100
     treat_unknown_cost_as_blocked: true
     freeze_path_on_start: true
     ignore_path_updates_while_executing: true

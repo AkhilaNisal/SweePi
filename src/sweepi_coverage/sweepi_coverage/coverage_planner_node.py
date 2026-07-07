@@ -1020,6 +1020,7 @@ class CoveragePlannerNode(Node):
             'reachable_cells': 0,
             'unreachable_filtered_cells': 0,
             'robot_reachability_start_available': False,
+            'reachability_fallback_used': False,
         }
         if not self.plan_only_reachable_from_robot:
             return planning_mask, stats
@@ -1069,6 +1070,23 @@ class CoveragePlannerNode(Node):
             else:
                 filtered_mask[index] = False
                 unreachable_filtered += 1
+
+        min_region_cells = max(
+            1,
+            int(math.ceil(self.min_region_area_m2 / (coverage_msg.info.resolution ** 2))),
+        )
+        if unreachable_filtered > 0 and reachable_planning_cells < min_region_cells:
+            stats['robot_reachability_start_available'] = True
+            stats['reachable_cells'] = reachable_planning_cells
+            stats['unreachable_filtered_cells'] = unreachable_filtered
+            stats['reachability_fallback_used'] = True
+            self.get_logger().warn(
+                'Reachability filter left only %d planning cells, below the %d-cell '
+                'minimum region size; keeping all safe planning cells'
+                % (reachable_planning_cells, min_region_cells),
+                throttle_duration_sec=5.0,
+            )
+            return planning_mask, stats
 
         stats['reachability_used'] = True
         stats['robot_reachability_start_available'] = True

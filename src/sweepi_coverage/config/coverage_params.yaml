@@ -46,7 +46,7 @@ coverage_planner_node:
     max_allowed_nav_cost: 99
     treat_unknown_cost_as_blocked: true
     nav_costmap_timeout_sec: 2.0
-    wait_for_nav_costmap_before_planning: true
+    wait_for_nav_costmap_before_planning: false
     wait_for_robot_pose_before_planning: true
 
 coverage_executor_node:

@@ -582,10 +582,10 @@ class SweePiRobotManager(Node):
             response.message = 'Target service unavailable: %s' % target_service
             return response
 
-        future = client.call_async(Trigger.Request())
-        future.add_done_callback(self._exploration_stop_done)
         self.exploration_stop_requested = True
         self.exploration_task_end_requested = False
+        future = client.call_async(Trigger.Request())
+        future.add_done_callback(self._exploration_stop_done)
         response.success = True
         response.message = (
             'Exploration stop requested. Autonomous/manual motion will stop, '

@@ -113,6 +113,7 @@ local_costmap:
       publish_frequency: 4.0
       global_frame: odom
       robot_base_frame: base_link
+      initial_transform_timeout: 300.0
       rolling_window: true
       width: 5 # change from 3
       height: 5 # change from 3
@@ -148,6 +149,7 @@ global_costmap:
       publish_frequency: 4.0
       global_frame: map
       robot_base_frame: base_link
+      initial_transform_timeout: 300.0
       robot_radius: 0.20
       resolution: 0.05
       track_unknown_space: true
