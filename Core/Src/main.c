@@ -47,12 +47,22 @@
 #define MOTOR_TEST_RIGHT_RPM 15.0f
 #define LEFT_ENCODER_SIGN -1
 #define RIGHT_ENCODER_SIGN 1
-#define ENCODER_TICKS_PER_REV 7392.0f
+#define ENCODER_TICKS_PER_REV 7392.0f 
 #define PWM_MAX_COUNT 4799.0f
 #define CONTROL_LOOP_MS 20U
 #define CONTROL_LOOP_SEC ((float)CONTROL_LOOP_MS / 1000.0f)
 #define COMMAND_TIMEOUT_MS 500U
 #define GYRO_DPS_TO_RAD_PER_SEC (PI / 180.0f)
+#define LEFT_SERVO_CHANNEL TIM_CHANNEL_1
+#define RIGHT_SERVO_CHANNEL TIM_CHANNEL_3
+#define SERVO_NEUTRAL_US 1500U
+#define SERVO_LEFT_RELEASE_US 1650U
+#define SERVO_LEFT_TIGHTEN_US 1350U
+#define SERVO_RIGHT_RELEASE_US 1650U
+#define SERVO_RIGHT_TIGHTEN_US 1350U
+#define SERVO_STEP_US 10U     // Step size in microseconds for each control loop iteration
+#define SERVO_HOLD_MS 300U   // Hold time in milliseconds at each extreme position
+#define SERVO_CYCLES 3U      // Number of complete left-right cycles to perform when triggered
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -103,11 +113,30 @@ typedef struct {
     float setpoint; float integral; float prev_error;
 } PID_Controller;
 
+typedef enum {
+    SERVO_IDLE = 0,
+    SERVO_MOVE_LEFT,
+    SERVO_HOLD_LEFT,
+    SERVO_CENTER_AFTER_LEFT,
+    SERVO_HOLD_CENTER_AFTER_LEFT,
+    SERVO_MOVE_RIGHT,
+    SERVO_HOLD_RIGHT,
+    SERVO_CENTER_AFTER_RIGHT,
+    SERVO_HOLD_CENTER_AFTER_RIGHT
+} TubeServoState;
+
 PID_Controller leftPID  = {25.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.0f};
 PID_Controller rightPID = {25.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.0f};
 
 float current_pwm_L = 0.0f;
 float current_pwm_R = 0.0f;
+
+uint32_t left_servo_pulse = SERVO_NEUTRAL_US;
+uint32_t right_servo_pulse = SERVO_NEUTRAL_US;
+TubeServoState tube_servo_state = SERVO_IDLE;
+uint8_t tube_servo_cycle_count = 0;
+uint32_t tube_servo_hold_start_ms = 0;
+uint8_t tube_trigger_latched = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -115,6 +144,12 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 float PID_Compute(PID_Controller *pid, float current_rpm, float dt_sec);
 void UInt64ToDec(uint64_t value, char *buffer, size_t buffer_size);
+void TubeServo_Set(uint32_t left_pulse, uint32_t right_pulse);
+uint32_t TubeServo_StepToward(uint32_t current, uint32_t target);
+uint8_t TubeServo_MoveToward(uint32_t target_left, uint32_t target_right);
+void TubeServo_StartCycle(void);
+void TubeServo_Update(uint32_t now_ms);
+uint8_t ModeEquals(const char *mode, const char *expected);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -160,6 +195,8 @@ int main(void)
   MX_USART2_UART_Init();
   MX_USB_Device_Init();
   MX_ADC2_Init();
+
+  
   /* USER CODE BEGIN 2 */
   // --- Left Motor PWM (Channels 3 & 4) ---
   __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
@@ -172,6 +209,11 @@ int main(void)
   __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+
+  // --- Tube servos on TIM3 (PC6 = left, PC8 = right) ---
+  TubeServo_Set(SERVO_NEUTRAL_US, SERVO_NEUTRAL_US);
+  HAL_TIM_PWM_Start(&htim3, LEFT_SERVO_CHANNEL);
+  HAL_TIM_PWM_Start(&htim3, RIGHT_SERVO_CHANNEL);
 
   // Enable Master Output and the Motor Driver Chip
   __HAL_TIM_MOE_ENABLE(&htim1); 
@@ -308,6 +350,19 @@ int main(void)
             // Pi sends wheel linear velocity in m/s. PID setpoint is wheel RPM.
             leftPID.setpoint = (cmd_left_vel * 60.0f) / (2.0f * PI * WHEEL_RADIUS_M);
             rightPID.setpoint = (cmd_right_vel * 60.0f) / (2.0f * PI * WHEEL_RADIUS_M);
+
+            if (ModeEquals(mode, "HIGH") || ModeEquals(mode, "TUBE"))
+            {
+                if (tube_trigger_latched == 0U)
+                {
+                    TubeServo_StartCycle();
+                    tube_trigger_latched = 1U;
+                }
+            }
+            else
+            {
+                tube_trigger_latched = 0U;
+            }
         }
 
         new_cmd_ready = 0;
@@ -327,6 +382,8 @@ int main(void)
         rightPID.setpoint = 0.0f;
     }
 #endif
+
+    TubeServo_Update(loop_start_ms);
 
     // --- 1. Read All 6 MPU6050 Axes ---
     uint8_t i2c_buf[14]; 
@@ -501,6 +558,169 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void TubeServo_Set(uint32_t left_pulse, uint32_t right_pulse)
+{
+    left_servo_pulse = left_pulse;
+    right_servo_pulse = right_pulse;
+    __HAL_TIM_SET_COMPARE(&htim3, LEFT_SERVO_CHANNEL, left_servo_pulse);
+    __HAL_TIM_SET_COMPARE(&htim3, RIGHT_SERVO_CHANNEL, right_servo_pulse);
+}
+
+uint32_t TubeServo_StepToward(uint32_t current, uint32_t target)
+{
+    if (current < target)
+    {
+        current += SERVO_STEP_US;
+        if (current > target)
+        {
+            current = target;
+        }
+    }
+    else if (current > target)
+    {
+        if ((current - target) < SERVO_STEP_US)
+        {
+            current = target;
+        }
+        else
+        {
+            current -= SERVO_STEP_US;
+        }
+    }
+
+    return current;
+}
+
+uint8_t TubeServo_MoveToward(uint32_t target_left, uint32_t target_right)
+{
+    uint32_t next_left = TubeServo_StepToward(left_servo_pulse, target_left);
+    uint32_t next_right = TubeServo_StepToward(right_servo_pulse, target_right);
+
+    TubeServo_Set(next_left, next_right);
+
+    return ((left_servo_pulse == target_left) && (right_servo_pulse == target_right)) ? 1U : 0U;
+}
+
+void TubeServo_StartCycle(void)
+{
+    if (tube_servo_state == SERVO_IDLE)
+    {
+        tube_servo_cycle_count = 0U;
+        tube_servo_state = SERVO_MOVE_LEFT;
+    }
+}
+
+void TubeServo_Update(uint32_t now_ms)
+{
+    switch (tube_servo_state)
+    {
+        case SERVO_IDLE:
+            break;
+
+        case SERVO_MOVE_LEFT:
+            if (TubeServo_MoveToward(SERVO_LEFT_RELEASE_US, SERVO_RIGHT_TIGHTEN_US) != 0U)
+            {
+                tube_servo_hold_start_ms = now_ms;
+                tube_servo_state = SERVO_HOLD_LEFT;
+            }
+            break;
+
+        case SERVO_HOLD_LEFT:
+            if ((now_ms - tube_servo_hold_start_ms) >= SERVO_HOLD_MS)
+            {
+                tube_servo_state = SERVO_CENTER_AFTER_LEFT;
+            }
+            break;
+
+        case SERVO_CENTER_AFTER_LEFT:
+            if (TubeServo_MoveToward(SERVO_NEUTRAL_US, SERVO_NEUTRAL_US) != 0U)
+            {
+                tube_servo_hold_start_ms = now_ms;
+                tube_servo_state = SERVO_HOLD_CENTER_AFTER_LEFT;
+            }
+            break;
+
+        case SERVO_HOLD_CENTER_AFTER_LEFT:
+            if ((now_ms - tube_servo_hold_start_ms) >= SERVO_HOLD_MS)
+            {
+                tube_servo_state = SERVO_MOVE_RIGHT;
+            }
+            break;
+
+        case SERVO_MOVE_RIGHT:
+            if (TubeServo_MoveToward(SERVO_LEFT_TIGHTEN_US, SERVO_RIGHT_RELEASE_US) != 0U)
+            {
+                tube_servo_hold_start_ms = now_ms;
+                tube_servo_state = SERVO_HOLD_RIGHT;
+            }
+            break;
+
+        case SERVO_HOLD_RIGHT:
+            if ((now_ms - tube_servo_hold_start_ms) >= SERVO_HOLD_MS)
+            {
+                tube_servo_state = SERVO_CENTER_AFTER_RIGHT;
+            }
+            break;
+
+        case SERVO_CENTER_AFTER_RIGHT:
+            if (TubeServo_MoveToward(SERVO_NEUTRAL_US, SERVO_NEUTRAL_US) != 0U)
+            {
+                tube_servo_hold_start_ms = now_ms;
+                tube_servo_state = SERVO_HOLD_CENTER_AFTER_RIGHT;
+            }
+            break;
+
+        case SERVO_HOLD_CENTER_AFTER_RIGHT:
+            if ((now_ms - tube_servo_hold_start_ms) >= SERVO_HOLD_MS)
+            {
+                tube_servo_cycle_count++;
+                if (tube_servo_cycle_count >= SERVO_CYCLES)
+                {
+                    tube_servo_state = SERVO_IDLE;
+                }
+                else
+                {
+                    tube_servo_state = SERVO_MOVE_LEFT;
+                }
+            }
+            break;
+
+        default:
+            tube_servo_state = SERVO_IDLE;
+            TubeServo_Set(SERVO_NEUTRAL_US, SERVO_NEUTRAL_US);
+            break;
+    }
+}
+
+uint8_t ModeEquals(const char *mode, const char *expected)
+{
+    while ((*mode != '\0') && (*expected != '\0'))
+    {
+        char mode_char = *mode;
+        char expected_char = *expected;
+
+        if ((mode_char >= 'a') && (mode_char <= 'z'))
+        {
+            mode_char = (char)(mode_char - ('a' - 'A'));
+        }
+
+        if ((expected_char >= 'a') && (expected_char <= 'z'))
+        {
+            expected_char = (char)(expected_char - ('a' - 'A'));
+        }
+
+        if (mode_char != expected_char)
+        {
+            return 0U;
+        }
+
+        mode++;
+        expected++;
+    }
+
+    return ((*mode == '\0') && (*expected == '\0')) ? 1U : 0U;
+}
+
 void UInt64ToDec(uint64_t value, char *buffer, size_t buffer_size)
 {
     char reversed[20];
