@@ -2,10 +2,10 @@ coverage_tracker_node:
   ros__parameters:
     use_sim_time: true
     global_frame: map
-    robot_base_frame: base_link
+    robot_base_frame: base_footprint
     robot_radius_m: 0.20
     occupied_threshold: 50
-    coverage_update_rate_hz: 2.0
+    coverage_update_rate_hz: 8.0
     coverage_topic: /coverage_map
 
 coverage_planner_node:
@@ -71,7 +71,7 @@ coverage_follow_path_executor_node:
     goal_checker_id: "goal_checker"
     progress_checker_id: "progress_checker"
     global_frame: "map"
-    robot_base_frame: "base_link"
+    robot_base_frame: "base_footprint"
     costmap_topic: "/global_costmap/costmap"
     robot_radius_m: 0.20
     enable_costmap_validation: true
