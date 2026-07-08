@@ -161,7 +161,7 @@ ros2 service call /save_exploration_map nav2_msgs/srv/SaveMap \
 | `max_consecutive_timeouts` | `2` | Stop after repeated navigation timeouts |
 | `max_exploration_time` | `600` | Maximum automatic exploration time in seconds |
 | `goal_offset_distance` | `0.6` | Offset frontier goals away from walls |
-| `robot_radius` | `0.3` | Robot radius used for clearance checks |
+| `robot_radius` | `0.20` | Robot radius used for clearance checks |
 | `safety_margin` | `0.15` | Extra clearance around the robot |
 | `unreachable_region_radius` | `0.3` | Radius for failed-frontier blocking |
 

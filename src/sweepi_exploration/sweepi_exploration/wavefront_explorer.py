@@ -68,7 +68,7 @@ class WavefrontExplorer(Node):
         # WALL OFFSET PARAMETERS
         # ============================================================
         self.declare_parameter('goal_offset_distance', 0.5)
-        self.declare_parameter('robot_radius', 0.25)
+        self.declare_parameter('robot_radius', 0.20)
         self.declare_parameter('safety_margin', 0.15)
 
         # ============================================================

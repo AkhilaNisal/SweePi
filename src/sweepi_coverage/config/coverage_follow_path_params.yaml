@@ -19,10 +19,10 @@ coverage_planner_node:
     coverage_stats_topic: "/coverage_stats"
     coverage_cell_value: 50
     robot_radius_m: 0.20
-    coverage_safety_margin_m: 0.05 # change from 0.10 m
+    coverage_safety_margin_m: 0.03
     coverage_spacing_m: 0.25  # change from 0.25 m
     min_segment_length_m: 0.30
-    inflation_radius_m: 0.28 # change from 0.30 m
+    inflation_radius_m: 0.24
     min_region_area_m2: 0.20
     path_publish_rate_hz: 1.0
     planning_direction: "auto"
@@ -113,10 +113,10 @@ coverage_follow_path_executor_node:
     dynamic_obstacle_cost_threshold: 100
     dynamic_enable_local_only_inscribed_fallback: true
     dynamic_inscribed_cost_threshold: 99
-    dynamic_obstacle_distance_threshold_m: 0.05
-    dynamic_object_clearance_m: 0.05 # change from 0.05 m 
-    dynamic_collision_check_radius_m: 0.25 # change from 0.25 m
-    dynamic_connector_tracking_clearance_m: 0.12 # change from 0.12 m
+    dynamic_obstacle_distance_threshold_m: 0.02
+    dynamic_object_clearance_m: 0.03
+    dynamic_collision_check_radius_m: 0.23
+    dynamic_connector_tracking_clearance_m: 0.04
     dynamic_use_corridor_for_detection: true
     dynamic_monitor_temporary_paths: true
     dynamic_connector_allow_blocked_start: true
@@ -129,23 +129,23 @@ coverage_follow_path_executor_node:
     dynamic_connector_refinement_step_m: 0.04
     dynamic_connector_refinement_influence_m: 0.45
     dynamic_treat_unknown_as_blocked: true
-    dynamic_skip_lookahead_m: 0.60
-    dynamic_skip_padding_m: 0.05
+    dynamic_skip_lookahead_m: 0.30
+    dynamic_skip_padding_m: 0.02
     dynamic_rejoin_max_search_distance_m: 5.00 # change from 3.00 m
-    dynamic_rejoin_min_clearance_m: 0.03 # change from 0.05 m
+    dynamic_rejoin_min_clearance_m: 0.03
     dynamic_max_rejoin_candidates: 60   # change from 20
-    dynamic_required_consecutive_detections: 2
-    dynamic_min_blocked_pose_count: 2
-    dynamic_min_blocked_path_length_m: 0.10
-    dynamic_detection_hysteresis_sec: 0.30
+    dynamic_required_consecutive_detections: 4
+    dynamic_min_blocked_pose_count: 3
+    dynamic_min_blocked_path_length_m: 0.15
+    dynamic_detection_hysteresis_sec: 0.75
     dynamic_use_static_reference_check: true
-    static_reference_padding_m: 0.05
+    static_reference_padding_m: 0.03
     static_map_occupied_threshold: 50
-    dynamic_inscribed_static_reference_padding_m: 0.05
+    dynamic_inscribed_static_reference_padding_m: 0.03
     dynamic_static_encroachment_tolerance_m: 0.05
     dynamic_validate_rejoin_before_cancel: true
     dynamic_cancel_only_if_imminent_blocked: true
-    dynamic_imminent_block_distance_m: 0.35
+    dynamic_imminent_block_distance_m: 0.22
     dynamic_use_nav2_planner_connector: true
     compute_path_to_pose_action_name: "/compute_path_to_pose"
     dynamic_planner_id: "GridBased"

@@ -63,7 +63,7 @@ def generate_launch_description():
         'goal_offset_distance', default_value='0.45',
         description='Offset goal from frontier')
     declare_robot_radius = DeclareLaunchArgument(
-        'robot_radius', default_value='0.3')
+        'robot_radius', default_value='0.20')
     declare_safety_margin = DeclareLaunchArgument(
         'safety_margin', default_value='0.15')
     

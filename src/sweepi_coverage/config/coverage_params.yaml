@@ -20,10 +20,10 @@ coverage_planner_node:
     coverage_stats_topic: "/coverage_stats"
     coverage_cell_value: 50
     robot_radius_m: 0.20
-    coverage_safety_margin_m: 0.10
+    coverage_safety_margin_m: 0.03
     coverage_spacing_m: 0.25
     min_segment_length_m: 0.30
-    inflation_radius_m: 0.30
+    inflation_radius_m: 0.24
     min_region_area_m2: 0.20
     path_publish_rate_hz: 1.0
     planning_direction: "auto"

@@ -91,9 +91,9 @@ Expected values:
 
 ```text
 dynamic_rejoin_max_search_distance_m: 5.0
-dynamic_progress_search_forward_m: 5.0
-dynamic_max_rejoin_candidates: 100
-dynamic_collision_check_radius_m: 0.25
+dynamic_progress_search_forward_m: 1.0
+dynamic_max_rejoin_candidates: 60
+dynamic_collision_check_radius_m: 0.23
 ```
 
 The executor also logs these loaded dynamic obstacle parameters at startup.
@@ -320,8 +320,8 @@ Test cases:
    - The current goal should continue.
    - The robot should not enter `FAILED` because of a bad candidate.
 
-Keep `robot_radius_m: 0.20`, `coverage_safety_margin_m: 0.10`, and
-`inflation_radius_m: 0.30`. The dynamic skip feature is only for unexpected local
+Keep `robot_radius_m: 0.20`, `coverage_safety_margin_m: 0.03`, and
+`inflation_radius_m: 0.24`. The dynamic skip feature is only for unexpected local
 obstacles; it is not a reason to shrink the planner margin or make the robot
 drive closer to known walls. Nav2 local collision detection, obstacle layers, and
 inflation remain enabled.

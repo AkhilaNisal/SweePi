@@ -153,7 +153,7 @@ SENSORS:
 
 | Parameter | Current | Description | Tuning |
 |-----------|---------|-------------|--------|
-| `body_radius` | 0.200 m | Robot body diameter | Adjust for different chassis |
+| `body_radius` | 0.200 m | Robot body radius | Adjust for different chassis |
 | `body_height` | 0.100 m | Robot height | Affects center of mass |
 | `ground_clearance` | 0.020 m | Gap between body and ground | Increase for rough terrain |
 | `drive_wheel_radius` | 0.0615 m | Wheel size | Affects speed and torque |

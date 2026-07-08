@@ -36,7 +36,7 @@ class CoverageTrackerNode(Node):
 
         self.declare_parameter('global_frame', 'map')
         self.declare_parameter('robot_base_frame', 'base_link')
-        self.declare_parameter('robot_radius_m', 0.18)
+        self.declare_parameter('robot_radius_m', 0.20)
         self.declare_parameter('occupied_threshold', 50)
         self.declare_parameter('coverage_update_rate_hz', 2.0)
         self.declare_parameter('coverage_topic', '/coverage_map')

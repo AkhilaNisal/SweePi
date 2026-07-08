@@ -50,7 +50,7 @@ class CoveragePlannerNode(Node):
         self.declare_parameter('coverage_spacing_m', 0.25)
         self.declare_parameter('min_segment_length_m', 0.30)
         self.declare_parameter('path_publish_rate_hz', 1.0)
-        self.declare_parameter('inflation_radius_m', 0.28)
+        self.declare_parameter('inflation_radius_m', 0.24)
         self.declare_parameter('min_region_area_m2', 0.20)
         self.declare_parameter('planning_direction', 'auto')
         self.declare_parameter('publish_debug_mask', True)
@@ -59,7 +59,7 @@ class CoveragePlannerNode(Node):
         self.declare_parameter('republish_last_path', True)
         self.declare_parameter('freeze_path_after_first_valid_plan', False)
         self.declare_parameter('robot_radius_m', 0.20)
-        self.declare_parameter('coverage_safety_margin_m', 0.10)
+        self.declare_parameter('coverage_safety_margin_m', 0.03)
         self.declare_parameter('connect_disjoint_segments', True)
         self.declare_parameter('connector_step_m', 0.10)
         self.declare_parameter('max_consecutive_pose_jump_m', 0.50)
@@ -798,9 +798,9 @@ class CoveragePlannerNode(Node):
 
         if self.coverage_safety_margin_m < 0.0:
             self.get_logger().warn(
-                'coverage_safety_margin_m must not be negative; using 0.10 m'
+                'coverage_safety_margin_m must not be negative; using 0.03 m'
             )
-            self.coverage_safety_margin_m = 0.10
+            self.coverage_safety_margin_m = 0.03
 
         if self.min_region_area_m2 < 0.0:
             self.get_logger().warn(
