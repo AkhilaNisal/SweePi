@@ -421,13 +421,15 @@ class MapStore:
         with open(pgm_path, 'wb') as handle:
             handle.write(('P5\n%d %d\n255\n' % (width, height)).encode('ascii'))
             pixels = bytearray()
-            for cell in occupancy:
-                if cell < 0:
-                    pixels.append(205)
-                elif cell >= 50:
-                    pixels.append(0)
-                else:
-                    pixels.append(254)
+            for row in range(height - 1, -1, -1):
+                start = row * width
+                for cell in occupancy[start:start + width]:
+                    if cell < 0:
+                        pixels.append(205)
+                    elif cell >= 50:
+                        pixels.append(0)
+                    else:
+                        pixels.append(254)
             handle.write(bytes(pixels))
 
         yaw = float(origin.get('yaw', 0.0))

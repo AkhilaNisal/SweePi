@@ -2,10 +2,10 @@ coverage_tracker_node:
   ros__parameters:
     use_sim_time: true
     global_frame: map
-    robot_base_frame: base_link
+    robot_base_frame: base_footprint
     robot_radius_m: 0.20
     occupied_threshold: 50
-    coverage_update_rate_hz: 2.0
+    coverage_update_rate_hz: 8.0
     coverage_topic: /coverage_map
 
 
@@ -46,7 +46,7 @@ coverage_planner_node:
     max_allowed_nav_cost: 99
     treat_unknown_cost_as_blocked: true
     nav_costmap_timeout_sec: 2.0
-    wait_for_nav_costmap_before_planning: true
+    wait_for_nav_costmap_before_planning: false
     wait_for_robot_pose_before_planning: true
 
 coverage_executor_node:
@@ -90,7 +90,7 @@ coverage_executor_node:
     min_batch_poses: 2
     allow_waypoint0_fallback_without_tf: false
     global_frame: "map"
-    robot_base_frame: "base_link"
+    robot_base_frame: "base_footprint"
 
 coverage_manager_node:
   ros__parameters:
