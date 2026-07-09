@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_theme.dart';
+import '../../core/widgets/sweepi_widgets.dart';
 import '../app/app_controller.dart';
 
 const _manualDriveRepeatInterval = Duration(milliseconds: 200);
@@ -36,20 +38,21 @@ class _ExplorationScreenState extends State<ExplorationScreen> {
     final isManual = _mode == 'manual' || status.mode == 'manual';
     final isExploring = controller.isExploring;
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
+    return AppBackground(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 104),
+        children: [
+          SweePiPanel(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Exploration',
-                  style: Theme.of(context).textTheme.titleMedium,
+                const SectionHeader(
+                  title: 'Explore New Map',
+                  subtitle:
+                      'Choose a mode, name the map, then let SweePi scan.',
+                  icon: Icons.explore_rounded,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: SweePiSpacing.md),
                 TextField(
                   controller: _mapNameController,
                   decoration: const InputDecoration(
@@ -57,7 +60,7 @@ class _ExplorationScreenState extends State<ExplorationScreen> {
                     border: OutlineInputBorder(),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: SweePiSpacing.md),
                 SegmentedButton<String>(
                   segments: const [
                     ButtonSegment(
@@ -82,90 +85,149 @@ class _ExplorationScreenState extends State<ExplorationScreen> {
                           }
                         },
                 ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: SizedBox(
+                const SizedBox(height: SweePiSpacing.lg),
+                if (isExploring)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ColorfulActionButton(
+                          label: 'Stop and save map',
+                          icon: Icons.save_rounded,
+                          color: SweePiColors.danger,
+                          onPressed: controller.isBusy
+                              ? null
+                              : controller.stopExploration,
+                        ),
+                      ),
+                      const SizedBox(width: SweePiSpacing.md),
+                      SizedBox(
+                        width: 56,
                         height: 52,
-                        child: FilledButton.icon(
+                        child: IconButton.filledTonal(
+                          tooltip: 'Refresh state',
+                          onPressed: controller.isBusy
+                              ? null
+                              : controller.refreshExplorationStatus,
+                          icon: const Icon(Icons.refresh_rounded),
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ColorfulActionButton(
+                          label: 'Start automatic',
+                          icon: Icons.auto_mode_rounded,
+                          color: SweePiColors.primary,
                           onPressed: controller.isBusy
                               ? null
                               : () {
-                                  if (isExploring) {
-                                    controller.stopExploration();
-                                  } else {
-                                    controller.startExploration(
-                                      _mapNameController.text,
-                                      _mode,
-                                    );
-                                  }
+                                  setState(() => _mode = 'automatic');
+                                  controller.startExploration(
+                                    _mapNameController.text,
+                                    'automatic',
+                                  );
                                 },
-                          icon: Icon(
-                            isExploring
-                                ? Icons.stop_rounded
-                                : Icons.play_arrow_rounded,
-                          ),
-                          label: Text(isExploring ? 'Stop' : 'Start'),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    SizedBox(
-                      width: 56,
-                      height: 52,
-                      child: IconButton.filledTonal(
-                        tooltip: 'Refresh state',
-                        onPressed: controller.isBusy
-                            ? null
-                            : controller.refreshExplorationStatus,
-                        icon: const Icon(Icons.refresh_rounded),
+                      const SizedBox(width: SweePiSpacing.md),
+                      Expanded(
+                        child: ColorfulActionButton(
+                          label: 'Start manual',
+                          icon: Icons.gamepad_rounded,
+                          color: SweePiColors.secondary,
+                          onPressed: controller.isBusy
+                              ? null
+                              : () {
+                                  setState(() => _mode = 'manual');
+                                  controller.startExploration(
+                                    _mapNameController.text,
+                                    'manual',
+                                  );
+                                },
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
               ],
             ),
           ),
-        ),
-        const SizedBox(height: 12),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
+          const SizedBox(height: SweePiSpacing.md),
+          SweePiPanel(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Exploration Status',
-                  style: Theme.of(context).textTheme.titleMedium,
+                SectionHeader(
+                  title: 'Exploration Status',
+                  subtitle: status.message,
+                  icon: Icons.radar_rounded,
                 ),
-                const SizedBox(height: 8),
-                Text('State: ${status.state}'),
-                Text('Mode: ${status.mode}'),
-                Text('Map name: ${status.mapName ?? 'None'}'),
-                Text('Map available: ${status.mapAvailable ? 'Yes' : 'No'}'),
-                Text('Message: ${status.message}'),
-                Text(
-                  'Last saved map ID: ${controller.lastSavedMapId ?? 'None'}',
+                const SizedBox(height: SweePiSpacing.md),
+                Wrap(
+                  spacing: SweePiSpacing.sm,
+                  runSpacing: SweePiSpacing.sm,
+                  children: [
+                    StatusChip(
+                      label: status.state,
+                      icon: Icons.circle_rounded,
+                      color: statusColorForText(status.state),
+                    ),
+                    StatusChip(
+                      label: status.mode,
+                      icon: Icons.tune_rounded,
+                      color: status.mode == 'manual'
+                          ? SweePiColors.secondary
+                          : SweePiColors.primary,
+                    ),
+                    StatusChip(
+                      label: status.mapAvailable
+                          ? 'Map available'
+                          : 'Map pending',
+                      icon: status.mapAvailable
+                          ? Icons.map_rounded
+                          : Icons.hourglass_top_rounded,
+                      color: status.mapAvailable
+                          ? SweePiColors.secondary
+                          : SweePiColors.accent,
+                    ),
+                  ],
                 ),
+                const SizedBox(height: SweePiSpacing.md),
+                _InfoLine(label: 'Map name', value: status.mapName ?? 'None'),
+                _InfoLine(
+                  label: 'Last saved map',
+                  value: controller.lastSavedMapId ?? 'None',
+                ),
+                if (status.progressPercent != null) ...[
+                  const SizedBox(height: SweePiSpacing.sm),
+                  LinearProgressIndicator(
+                    value: (status.progressPercent! / 100).clamp(0.0, 1.0),
+                    minHeight: 10,
+                    borderRadius: BorderRadius.circular(SweePiRadius.xl),
+                  ),
+                ],
               ],
             ),
           ),
-        ),
-        if (isManual) ...[
-          const SizedBox(height: 12),
-          Card(
-            child: Padding(
+          if (isManual) ...[
+            const SizedBox(height: SweePiSpacing.md),
+            SweePiPanel(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Manual Drive',
-                    style: Theme.of(context).textTheme.titleMedium,
+                  const SectionHeader(
+                    title: 'Manual Drive',
+                    subtitle: 'Hold a direction to move, tap stop to brake.',
+                    icon: Icons.gamepad_rounded,
                   ),
-                  const SizedBox(height: 8),
-                  Text('Speed: ${_speed.toStringAsFixed(2)}'),
+                  const SizedBox(height: SweePiSpacing.md),
+                  Text(
+                    'Speed: ${_speed.toStringAsFixed(2)}',
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
                   Slider(
                     value: _speed,
                     min: 0,
@@ -176,16 +238,49 @@ class _ExplorationScreenState extends State<ExplorationScreen> {
                         ? null
                         : (value) => setState(() => _speed = value),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: SweePiSpacing.sm),
                   Center(
                     child: _RcController(controller: controller, speed: _speed),
                   ),
                 ],
               ),
             ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoLine extends StatelessWidget {
+  const _InfoLine({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: SweePiSpacing.xs),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 112,
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
           ),
         ],
-      ],
+      ),
     );
   }
 }

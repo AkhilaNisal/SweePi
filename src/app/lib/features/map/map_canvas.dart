@@ -82,10 +82,10 @@ class _MapCanvasState extends State<MapCanvas> {
         final occupancy = widget.mapData.occupancy[sourceIndex];
 
         final color = switch (occupancy) {
-          < 0 => const Color(0xFFC9D1D0),
-          0 => const Color(0xFFF8FCF6),
-          >= 65 => const Color(0xFF25302B),
-          _ => const Color(0xFFE0E8E3),
+          < 0 => const Color(0xFFD6E7EF),
+          0 => const Color(0xFFFBFEFF),
+          >= 65 => const Color(0xFF263746),
+          _ => const Color(0xFFE7F3F2),
         };
 
         rgba[targetIndex] = (color.r * 255).round().clamp(0, 255);
@@ -389,7 +389,7 @@ class _MapPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     canvas.drawRect(
       Offset.zero & size,
-      Paint()..color = const Color(0xFFE4ECE7),
+      Paint()..color = const Color(0xFFE8F7FB),
     );
 
     if (raster != null) {
@@ -427,13 +427,13 @@ class _MapPainter extends CustomPainter {
         rect.right * size.width,
         rect.bottom * size.height,
       );
-      canvas.drawRect(selectionRect, Paint()..color = const Color(0x55288A63));
+      canvas.drawRect(selectionRect, Paint()..color = const Color(0x5500B8D9));
       canvas.drawRect(
         selectionRect,
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2
-          ..color = const Color(0xFF1E6B52),
+          ..color = const Color(0xFF0487D9),
       );
     }
 
@@ -460,7 +460,14 @@ class _MapPainter extends CustomPainter {
           rect,
           Paint()
             ..style = PaintingStyle.fill
-            ..color = const Color(0x33288A63),
+            ..color = const Color(0x3316A874),
+        );
+      } else {
+        canvas.drawRect(
+          rect,
+          Paint()
+            ..style = PaintingStyle.fill
+            ..color = const Color(0x66F6A21A),
         );
       }
       canvas.drawRect(
@@ -468,7 +475,9 @@ class _MapPainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = selected ? 3 : 1.5
-          ..color = selected ? Colors.black : const Color(0xFF288A63),
+          ..color = selected
+              ? const Color(0xFFE56B2F)
+              : const Color(0xFF16A874),
       );
     }
   }

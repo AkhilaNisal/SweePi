@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../core/models/map_models.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/widgets/sweepi_widgets.dart';
 import '../app/app_controller.dart';
 import '../map/map_canvas.dart';
 
@@ -45,20 +47,22 @@ class _CleaningScreenState extends State<CleaningScreen> {
     final isCleaningActive = controller.isCleaningActive;
     final isPaused = controller.isCleaningPaused;
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
+    return AppBackground(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 104),
+        children: [
+          SweePiPanel(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Cleaning',
-                  style: Theme.of(context).textTheme.titleMedium,
+                SectionHeader(
+                  title: 'Cleaning Plan',
+                  subtitle: metadata == null
+                      ? 'Select a map and set a start pose.'
+                      : 'Map: ${metadata.name}',
+                  icon: Icons.cleaning_services_rounded,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: SweePiSpacing.md),
                 DropdownButtonFormField<String>(
                   initialValue: metadata?.mapId,
                   decoration: const InputDecoration(
@@ -80,7 +84,7 @@ class _CleaningScreenState extends State<CleaningScreen> {
                           }
                         },
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: SweePiSpacing.md),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Clean full map'),
@@ -96,7 +100,7 @@ class _CleaningScreenState extends State<CleaningScreen> {
                   },
                 ),
                 if (!_fullMap) ...[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: SweePiSpacing.sm),
                   _SectionMapPicker(
                     controller: controller,
                     message: _sectionMessage,
@@ -105,7 +109,7 @@ class _CleaningScreenState extends State<CleaningScreen> {
                     },
                   ),
                 ],
-                const SizedBox(height: 8),
+                const SizedBox(height: SweePiSpacing.sm),
                 _InitialPosePicker(
                   controller: controller,
                   mapData: controller.selectedMapData ?? SweePiMapData.empty,
@@ -124,7 +128,7 @@ class _CleaningScreenState extends State<CleaningScreen> {
                         }
                       : null,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: SweePiSpacing.md),
                 _CleaningActions(
                   controller: controller,
                   metadata: metadata,
@@ -143,53 +147,170 @@ class _CleaningScreenState extends State<CleaningScreen> {
               ],
             ),
           ),
-        ),
-        const SizedBox(height: 12),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
+          const SizedBox(height: SweePiSpacing.md),
+          SweePiPanel(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Current Task',
-                  style: Theme.of(context).textTheme.titleMedium,
+                SectionHeader(
+                  title: 'Current Task',
+                  subtitle: taskId == null
+                      ? 'No active cleaning task'
+                      : 'Task $taskId',
+                  icon: Icons.task_alt_rounded,
+                  trailing: StatusChip(
+                    label: cleaning.state,
+                    icon: Icons.circle_rounded,
+                    color: statusColorForText(cleaning.state),
+                  ),
                 ),
-                const SizedBox(height: 8),
-                Text('Robot state: ${controller.robotStatus.state}'),
-                Text('Cleaning state: ${cleaning.state}'),
-                Text('Task ID: ${taskId ?? 'None'}'),
-                Text('Map ID: ${mapId ?? 'None'}'),
-                Text('Coverage map: ${cleaning.coverageMapId ?? 'None'}'),
-                Text('Progress: ${progressPercent.toStringAsFixed(1)}%'),
-                Text('Mode: ${cleaningMode ?? 'None'}'),
-                Text('Navigation: $navStatus'),
-                Text(
-                  'Initial pose: ${cleaning.initialPoseConfirmed
-                      ? 'Confirmed'
-                      : cleaning.initialPoseReceived
-                      ? 'Received'
-                      : 'Not set'}',
+                const SizedBox(height: SweePiSpacing.lg),
+                Row(
+                  children: [
+                    SizedBox(
+                      width: 92,
+                      height: 92,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          CircularProgressIndicator(
+                            value: (progressPercent / 100).clamp(0.0, 1.0),
+                            strokeWidth: 9,
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerHighest,
+                          ),
+                          Center(
+                            child: Text(
+                              '${progressPercent.toStringAsFixed(0)}%',
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.w900),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: SweePiSpacing.lg),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _TaskLine(
+                            label: 'Robot state',
+                            value: controller.robotStatus.state,
+                          ),
+                          _TaskLine(label: 'Map ID', value: mapId ?? 'None'),
+                          _TaskLine(
+                            label: 'Mode',
+                            value: cleaningMode ?? 'None',
+                          ),
+                          _TaskLine(label: 'Navigation', value: navStatus),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  'Validation: ${cleaning.coverageValidated
-                      ? 'Complete'
-                      : cleaning.readyToValidate
-                      ? 'Ready'
-                      : 'Pending'}',
+                const SizedBox(height: SweePiSpacing.lg),
+                Wrap(
+                  spacing: SweePiSpacing.sm,
+                  runSpacing: SweePiSpacing.sm,
+                  children: [
+                    StatusChip(
+                      label: cleaning.initialPoseConfirmed
+                          ? 'Pose confirmed'
+                          : cleaning.initialPoseReceived
+                          ? 'Pose received'
+                          : 'Pose not set',
+                      icon: Icons.my_location_rounded,
+                      color: cleaning.initialPoseConfirmed
+                          ? SweePiColors.secondary
+                          : SweePiColors.accent,
+                    ),
+                    StatusChip(
+                      label: cleaning.coverageValidated
+                          ? 'Validation complete'
+                          : cleaning.readyToValidate
+                          ? 'Ready to validate'
+                          : 'Validation pending',
+                      icon: Icons.fact_check_rounded,
+                      color: cleaning.coverageValidated
+                          ? SweePiColors.secondary
+                          : SweePiColors.primary,
+                    ),
+                    StatusChip(
+                      label: cleaning.readyToStartMotion
+                          ? 'Ready to move'
+                          : 'Motion pending',
+                      icon: Icons.navigation_rounded,
+                      color: cleaning.readyToStartMotion
+                          ? SweePiColors.secondary
+                          : SweePiColors.accent,
+                    ),
+                  ],
                 ),
-                Text(
-                  'Ready to move: ${cleaning.readyToStartMotion ? 'Yes' : 'No'}',
+                const SizedBox(height: SweePiSpacing.md),
+                _TaskLine(
+                  label: 'Coverage map',
+                  value: cleaning.coverageMapId ?? 'None',
                 ),
                 if (cleaning.taskFinished)
-                  Text('Task result: ${cleaning.taskResult ?? 'Finished'}'),
+                  _TaskLine(
+                    label: 'Task result',
+                    value: cleaning.taskResult ?? 'Finished',
+                  ),
                 if (cleaning.lastError != null)
-                  Text('Last error: ${cleaning.lastError}'),
+                  _TaskLine(
+                    label: 'Last error',
+                    value: cleaning.lastError!,
+                    danger: true,
+                  ),
               ],
             ),
           ),
-        ),
-      ],
+        ],
+      ),
+    );
+  }
+}
+
+class _TaskLine extends StatelessWidget {
+  const _TaskLine({
+    required this.label,
+    required this.value,
+    this.danger = false,
+  });
+
+  final String label;
+  final String value;
+  final bool danger;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: SweePiSpacing.xs),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 104,
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                color: danger
+                    ? colorScheme.error
+                    : colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -228,17 +349,19 @@ class _CleaningActions extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: _CleaningStepButton(
+                child: ColorfulActionButton(
                   label: 'Start',
                   icon: Icons.play_arrow_rounded,
+                  color: SweePiColors.secondary,
                   onPressed: controller.isBusy || !_hasMap ? null : onStart,
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: _CleaningStepButton(
+                child: ColorfulActionButton(
                   label: 'Give pos',
                   icon: Icons.my_location_rounded,
+                  color: SweePiColors.primary,
                   onPressed: controller.isBusy || !_hasMap || !canGivePose
                       ? null
                       : onGivePose,
@@ -246,17 +369,19 @@ class _CleaningActions extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: _CleaningStepButton(
+                child: ColorfulActionButton(
                   label: 'Validation',
                   icon: Icons.fact_check_rounded,
+                  color: SweePiColors.accent,
                   onPressed: controller.isBusy || !_hasMap ? null : onValidate,
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: _CleaningStepButton(
+                child: ColorfulActionButton(
                   label: 'Start move',
                   icon: Icons.navigation_rounded,
+                  color: SweePiColors.primaryDeep,
                   onPressed: controller.isBusy || !_hasMap ? null : onStartMove,
                 ),
               ),
@@ -266,44 +391,32 @@ class _CleaningActions extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: SizedBox(
-                  height: 52,
-                  child: FilledButton.tonal(
-                    onPressed: controller.isBusy
-                        ? null
-                        : () {
-                            if (isPaused) {
-                              controller.resumeCleaning();
-                            } else {
-                              controller.pauseCleaning();
-                            }
-                          },
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            isPaused
-                                ? Icons.play_arrow_rounded
-                                : Icons.pause_rounded,
-                            size: 21,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(isPaused ? 'Resume' : 'Pause'),
-                        ],
-                      ),
-                    ),
-                  ),
+                child: ColorfulActionButton(
+                  label: isPaused ? 'Continue' : 'Pause',
+                  icon: isPaused
+                      ? Icons.play_arrow_rounded
+                      : Icons.pause_rounded,
+                  color: isPaused
+                      ? SweePiColors.secondary
+                      : SweePiColors.accent,
+                  onPressed: controller.isBusy
+                      ? null
+                      : () {
+                          if (isPaused) {
+                            controller.resumeCleaning();
+                          } else {
+                            controller.pauseCleaning();
+                          }
+                        },
                 ),
               ),
               const SizedBox(width: 8),
-              SizedBox(
-                height: 52,
-                child: FilledButton.icon(
+              Expanded(
+                child: ColorfulActionButton(
+                  label: 'Stop',
+                  icon: Icons.stop_rounded,
+                  color: SweePiColors.danger,
                   onPressed: controller.isBusy ? null : controller.stopCleaning,
-                  icon: const Icon(Icons.stop_rounded, size: 22),
-                  label: const Text('Stop'),
                 ),
               ),
             ],
@@ -313,22 +426,11 @@ class _CleaningActions extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: SizedBox(
-                height: 52,
-                child: FilledButton.tonal(
-                  onPressed: controller.isBusy ? null : controller.returnHome,
-                  child: const FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.home_rounded, size: 22),
-                        SizedBox(width: 6),
-                        Text('Return home'),
-                      ],
-                    ),
-                  ),
-                ),
+              child: ColorfulActionButton(
+                label: 'Return home',
+                icon: Icons.home_rounded,
+                color: SweePiColors.primary,
+                onPressed: controller.isBusy ? null : controller.returnHome,
               ),
             ),
             const SizedBox(width: 8),
@@ -356,40 +458,6 @@ class _CleaningActions extends StatelessWidget {
           ],
         ),
       ],
-    );
-  }
-}
-
-class _CleaningStepButton extends StatelessWidget {
-  const _CleaningStepButton({
-    required this.label,
-    required this.icon,
-    required this.onPressed,
-  });
-
-  final String label;
-  final IconData icon;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 52,
-      width: double.infinity,
-      child: FilledButton(
-        onPressed: onPressed,
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 20),
-              const SizedBox(width: 5),
-              Text(label),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
