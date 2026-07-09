@@ -197,11 +197,7 @@ class _MapCanvasState extends State<MapCanvas> {
           : details.localPosition;
       _poseDragStart = dragStart;
       widget.onInitialPoseChanged?.call(
-        _poseFromDrag(
-          dragStart,
-          details.localPosition,
-          constraints,
-        ),
+        _poseFromDrag(dragStart, details.localPosition, constraints),
       );
       return;
     }

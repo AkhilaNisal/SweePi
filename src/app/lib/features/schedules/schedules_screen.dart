@@ -12,7 +12,9 @@ class SchedulesScreen extends StatelessWidget {
     return const Center(
       child: Padding(
         padding: EdgeInsets.all(24),
-        child: Text('Schedules are not part of the current mock API integration.'),
+        child: Text(
+          'Schedules are not part of the current mock API integration.',
+        ),
       ),
     );
   }

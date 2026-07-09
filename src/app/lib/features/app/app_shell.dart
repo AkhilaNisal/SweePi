@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../cleaning/cleaning_screen.dart';
 import '../exploration/exploration_screen.dart';
 import '../map/map_screen.dart';
+import '../setup/robot_discovery_screen.dart';
 import '../settings/settings_screen.dart';
 import '../status/status_screen.dart';
 import 'app_controller.dart';
@@ -25,7 +26,9 @@ class _AppShellState extends State<AppShell> {
       animation: widget.controller,
       builder: (context, _) {
         final screens = [
-          StatusScreen(controller: widget.controller),
+          widget.controller.isConnected
+              ? StatusScreen(controller: widget.controller)
+              : RobotDiscoveryScreen(controller: widget.controller),
           ExplorationScreen(controller: widget.controller),
           MapScreen(controller: widget.controller),
           CleaningScreen(controller: widget.controller),
@@ -39,7 +42,9 @@ class _AppShellState extends State<AppShell> {
                 padding: const EdgeInsets.only(right: 16),
                 child: Center(
                   child: Text(
-                    widget.controller.isConnected ? 'Connected' : 'Disconnected',
+                    widget.controller.isConnected
+                        ? 'Connected'
+                        : 'Disconnected',
                   ),
                 ),
               ),

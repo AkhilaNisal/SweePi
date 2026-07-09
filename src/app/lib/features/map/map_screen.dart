@@ -115,7 +115,8 @@ class _MapScreenState extends State<MapScreen> {
                 label: const Text('Clear Selection'),
               ),
               OutlinedButton.icon(
-                onPressed: metadata == null ||
+                onPressed:
+                    metadata == null ||
                         metadata.sections.isEmpty ||
                         controller.isBusy
                     ? null

@@ -57,69 +57,75 @@ void main() {
     expect(_cell(processed, 4, 4), 0);
   });
 
-  test('buildProcessedSectionMap marks multiple rectangular section outlines', () {
-    final mapData = SweePiMapData(
-      mapId: 'room_map',
-      name: 'Room',
-      resolution: 1,
-      originX: 0,
-      originY: 0,
-      width: 10,
-      height: 10,
-      occupancy: List<int>.filled(10 * 10, 0),
-    );
-    const first = MapSection(
-      sectionId: 'sec_1',
-      name: 'First',
-      bounds: SectionBounds(x: 1, y: 1, width: 3, height: 3),
-    );
-    const second = MapSection(
-      sectionId: 'sec_2',
-      name: 'Second',
-      bounds: SectionBounds(x: 6, y: 6, width: 3, height: 3),
-    );
+  test(
+    'buildProcessedSectionMap marks multiple rectangular section outlines',
+    () {
+      final mapData = SweePiMapData(
+        mapId: 'room_map',
+        name: 'Room',
+        resolution: 1,
+        originX: 0,
+        originY: 0,
+        width: 10,
+        height: 10,
+        occupancy: List<int>.filled(10 * 10, 0),
+      );
+      const first = MapSection(
+        sectionId: 'sec_1',
+        name: 'First',
+        bounds: SectionBounds(x: 1, y: 1, width: 3, height: 3),
+      );
+      const second = MapSection(
+        sectionId: 'sec_2',
+        name: 'Second',
+        bounds: SectionBounds(x: 6, y: 6, width: 3, height: 3),
+      );
 
-    final processed = buildProcessedSectionMap(
-      mapData: mapData,
-      sections: [first, second],
-    );
+      final processed = buildProcessedSectionMap(
+        mapData: mapData,
+        sections: [first, second],
+      );
 
-    expect(_cell(processed, 2, 2), 0);
-    expect(_cell(processed, 7, 7), 0);
-    expect(_cell(processed, 1, 2), occupiedCellValue);
-    expect(_cell(processed, 8, 7), occupiedCellValue);
-    expect(_cell(processed, 5, 5), 0);
-    expect(_cell(processed, 0, 0), 0);
-  });
+      expect(_cell(processed, 2, 2), 0);
+      expect(_cell(processed, 7, 7), 0);
+      expect(_cell(processed, 1, 2), occupiedCellValue);
+      expect(_cell(processed, 8, 7), occupiedCellValue);
+      expect(_cell(processed, 5, 5), 0);
+      expect(_cell(processed, 0, 0), 0);
+    },
+  );
 
-  test('buildProcessedSectionMap keeps interior and exterior cells unchanged', () {
-    final mapData = SweePiMapData(
-      mapId: 'room_map',
-      name: 'Room',
-      resolution: 1,
-      originX: 0,
-      originY: 0,
-      width: 8,
-      height: 8,
-      occupancy: List<int>.filled(8 * 8, 0),
-    );
-    const section = MapSection(
-      sectionId: 'sec_1',
-      name: 'Center',
-      bounds: SectionBounds(x: 1, y: 1, width: 5, height: 5),
-    );
+  test(
+    'buildProcessedSectionMap keeps interior and exterior cells unchanged',
+    () {
+      final mapData = SweePiMapData(
+        mapId: 'room_map',
+        name: 'Room',
+        resolution: 1,
+        originX: 0,
+        originY: 0,
+        width: 8,
+        height: 8,
+        occupancy: List<int>.filled(8 * 8, 0),
+      );
+      const section = MapSection(
+        sectionId: 'sec_1',
+        name: 'Center',
+        bounds: SectionBounds(x: 1, y: 1, width: 5, height: 5),
+      );
 
-    final processed = buildProcessedSectionMap(
-      mapData: mapData,
-      sections: [section],
-    );
+      final processed = buildProcessedSectionMap(
+        mapData: mapData,
+        sections: [section],
+      );
 
-    expect(_cell(processed, 2, 3), 0);
-    expect(_cell(processed, 3, 2), 0);
-    expect(_cell(processed, 4, 4), 0);
-    expect(_cell(processed, 1, 4), occupiedCellValue);
-    expect(_cell(processed, 6, 4), occupiedCellValue);
-  });
+      expect(_cell(processed, 2, 3), 0);
+      expect(_cell(processed, 3, 2), 0);
+      expect(_cell(processed, 4, 4), 0);
+      expect(_cell(processed, 1, 4), occupiedCellValue);
+      expect(_cell(processed, 6, 4), occupiedCellValue);
+    },
+  );
 }
 
 int _cell(SweePiMapData map, int x, int y) {

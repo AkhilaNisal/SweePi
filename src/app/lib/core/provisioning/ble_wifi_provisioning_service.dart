@@ -1,0 +1,295 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+
+import '../connection/robot_channel.dart';
+import '../connection/robot_discovered_device.dart';
+import 'ble_uuid_constants.dart';
+import 'provisioning_status_model.dart';
+import 'wifi_network_model.dart';
+
+abstract class BleWifiProvisioningService {
+  Stream<ProvisioningStatus> get statusStream;
+
+  Future<RobotDiscoveredDevice> connect(RobotDiscoveredDevice robot);
+  Future<RobotDiscoveredDevice> readRobotInfo();
+  Future<List<WifiNetwork>> scanWifiNetworks();
+  Future<void> sendWifiCredentials({
+    required String ssid,
+    required String password,
+    String country = 'LK',
+  });
+  Future<ProvisioningStatus> readWifiStatus();
+  Future<void> disconnect();
+}
+
+class FlutterBlueBleWifiProvisioningService
+    implements BleWifiProvisioningService {
+  FlutterBlueBleWifiProvisioningService();
+
+  final _statusController = StreamController<ProvisioningStatus>.broadcast();
+  BluetoothDevice? _device;
+  RobotDiscoveredDevice? _robot;
+  final _characteristics = <String, BluetoothCharacteristic>{};
+
+  @override
+  Stream<ProvisioningStatus> get statusStream => _statusController.stream;
+
+  @override
+  Future<RobotDiscoveredDevice> connect(RobotDiscoveredDevice robot) async {
+    final remoteId = robot.bleDeviceId;
+    if (remoteId == null || remoteId.isEmpty) {
+      throw StateError(
+        'No Bluetooth device ID is available for ${robot.name}.',
+      );
+    }
+
+    final device = BluetoothDevice.fromId(remoteId);
+    await device.connect(
+      license: License.nonprofit,
+      timeout: const Duration(seconds: 20),
+    );
+    _device = device;
+    _robot = robot;
+    await _discoverCharacteristics(device);
+    final info = await readRobotInfo();
+    _statusController.add(
+      const ProvisioningStatus(
+        state: WifiProvisioningState.idle,
+        message: 'Connected over Bluetooth.',
+      ),
+    );
+    return info;
+  }
+
+  @override
+  Future<RobotDiscoveredDevice> readRobotInfo() async {
+    final characteristic = _characteristics[ROBOT_INFO_CHARACTERISTIC_UUID];
+    if (characteristic == null) {
+      final robot = _robot;
+      if (robot == null) {
+        throw StateError('Connect to a SweePi over Bluetooth first.');
+      }
+      return robot;
+    }
+
+    final json = await _readJson(characteristic);
+    final robotId = json['robot_id'] as String? ?? _robot?.robotId ?? 'sweepi';
+    final name = json['name'] as String? ?? _robot?.name ?? robotId;
+    final updated =
+        (_robot ??
+                RobotDiscoveredDevice(
+                  robotId: robotId,
+                  name: name,
+                  channel: RobotChannel.bluetooth,
+                ))
+            .copyWith(
+              robotId: robotId,
+              name: name,
+              status: json['status'] as String?,
+              model: json['model'] as String?,
+            );
+    _robot = updated;
+    return updated;
+  }
+
+  @override
+  Future<List<WifiNetwork>> scanWifiNetworks() async {
+    _statusController.add(
+      const ProvisioningStatus(
+        state: WifiProvisioningState.scanning,
+        message: 'Scanning for Wi-Fi networks...',
+      ),
+    );
+    final command = _characteristics[SETUP_COMMAND_CHARACTERISTIC_UUID];
+    if (command != null) {
+      await _writeJson(command, const {'command': 'scan_wifi'});
+    }
+    final scan = _characteristics[WIFI_SCAN_CHARACTERISTIC_UUID];
+    if (scan == null) {
+      return const [];
+    }
+    final payload = await _readJson(scan);
+    final rawNetworks = payload['networks'] is List
+        ? payload['networks'] as List
+        : payload is List
+        ? payload as List
+        : const [];
+    return rawNetworks
+        .whereType<Map>()
+        .map((item) => WifiNetwork.fromJson(item.cast<String, dynamic>()))
+        .where((network) => network.ssid.isNotEmpty)
+        .toList();
+  }
+
+  @override
+  Future<void> sendWifiCredentials({
+    required String ssid,
+    required String password,
+    String country = 'LK',
+  }) async {
+    final config = _characteristics[WIFI_CONFIG_CHARACTERISTIC_UUID];
+    if (config == null) {
+      throw StateError('Wi-Fi config characteristic was not found.');
+    }
+    _statusController.add(
+      ProvisioningStatus(
+        state: WifiProvisioningState.connecting,
+        ssid: ssid,
+        message: 'Connecting to your Wi-Fi...',
+      ),
+    );
+    await _writeJson(config, {
+      'ssid': ssid,
+      'password': password,
+      'country': country,
+    });
+  }
+
+  @override
+  Future<ProvisioningStatus> readWifiStatus() async {
+    final status = _characteristics[WIFI_STATUS_CHARACTERISTIC_UUID];
+    if (status == null) {
+      return const ProvisioningStatus(
+        state: WifiProvisioningState.failedUnknown,
+        message: 'Wi-Fi status characteristic was not found.',
+      );
+    }
+    final parsed = ProvisioningStatus.fromJson(await _readJson(status));
+    _statusController.add(parsed);
+    return parsed;
+  }
+
+  @override
+  Future<void> disconnect() async {
+    await _device?.disconnect();
+    _device = null;
+    _robot = null;
+    _characteristics.clear();
+  }
+
+  Future<void> _discoverCharacteristics(BluetoothDevice device) async {
+    _characteristics.clear();
+    final services = await device.discoverServices();
+    for (final service in services) {
+      if (service.uuid.str128 != SweePiBleUuids.sweepiProvisioningServiceUuid) {
+        continue;
+      }
+      for (final characteristic in service.characteristics) {
+        _characteristics[characteristic.uuid.str128] = characteristic;
+      }
+    }
+  }
+
+  Future<Map<String, dynamic>> _readJson(
+    BluetoothCharacteristic characteristic,
+  ) async {
+    final raw = await characteristic.read();
+    final decoded = jsonDecode(utf8.decode(raw));
+    if (decoded is Map<String, dynamic>) {
+      return decoded;
+    }
+    if (decoded is List) {
+      return {'networks': decoded};
+    }
+    return const {};
+  }
+
+  Future<void> _writeJson(
+    BluetoothCharacteristic characteristic,
+    Map<String, dynamic> payload,
+  ) async {
+    await characteristic.write(utf8.encode(jsonEncode(payload)));
+  }
+}
+
+class MockBleWifiProvisioningService implements BleWifiProvisioningService {
+  MockBleWifiProvisioningService({this.shouldConnectToWifi = true});
+
+  final bool shouldConnectToWifi;
+  final _statusController = StreamController<ProvisioningStatus>.broadcast();
+  RobotDiscoveredDevice? _robot;
+  ProvisioningStatus _lastStatus = const ProvisioningStatus(
+    state: WifiProvisioningState.idle,
+  );
+
+  @override
+  Stream<ProvisioningStatus> get statusStream => _statusController.stream;
+
+  @override
+  Future<RobotDiscoveredDevice> connect(RobotDiscoveredDevice robot) async {
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    _robot = robot.copyWith(
+      status: 'setup mode',
+      model: robot.model ?? 'sweepi',
+    );
+    _statusController.add(
+      const ProvisioningStatus(
+        state: WifiProvisioningState.idle,
+        message: 'Connected over Bluetooth.',
+      ),
+    );
+    return _robot!;
+  }
+
+  @override
+  Future<RobotDiscoveredDevice> readRobotInfo() async {
+    final robot = _robot;
+    if (robot == null) {
+      throw StateError('Connect to a SweePi over Bluetooth first.');
+    }
+    return robot;
+  }
+
+  @override
+  Future<List<WifiNetwork>> scanWifiNetworks() async {
+    _statusController.add(
+      const ProvisioningStatus(state: WifiProvisioningState.scanning),
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    return const [
+      WifiNetwork(ssid: 'Home WiFi', rssi: -42, security: 'wpa2'),
+      WifiNetwork(ssid: 'SweePi Lab', rssi: -55, security: 'wpa2'),
+      WifiNetwork(ssid: 'Guest Network', rssi: -68, security: 'wpa2'),
+    ];
+  }
+
+  @override
+  Future<void> sendWifiCredentials({
+    required String ssid,
+    required String password,
+    String country = 'LK',
+  }) async {
+    _lastStatus = ProvisioningStatus(
+      state: WifiProvisioningState.connecting,
+      ssid: ssid,
+      message: 'Connecting to your Wi-Fi...',
+    );
+    _statusController.add(_lastStatus);
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    _lastStatus = shouldConnectToWifi
+        ? ProvisioningStatus(
+            state: WifiProvisioningState.connected,
+            ssid: ssid,
+            ip: '192.168.1.45',
+            hostname: 'sweepi-8f23.local',
+            robotId: _robot?.robotId ?? 'sweepi-8f23',
+            message: 'Connected to Wi-Fi.',
+          )
+        : ProvisioningStatus(
+            state: WifiProvisioningState.failedAuth,
+            ssid: ssid,
+            message: 'Wi-Fi password was rejected.',
+          );
+    _statusController.add(_lastStatus);
+  }
+
+  @override
+  Future<ProvisioningStatus> readWifiStatus() async => _lastStatus;
+
+  @override
+  Future<void> disconnect() async {
+    _robot = null;
+  }
+}

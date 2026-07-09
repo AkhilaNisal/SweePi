@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'core/theme/app_theme.dart';
@@ -7,8 +9,9 @@ import 'features/app/app_shell.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final controller = AppController();
-  await controller.loadThemeMode();
+  await controller.initialize();
   runApp(SweePiApp(controller: controller));
+  unawaited(controller.startRobotDiscovery());
 }
 
 class SweePiApp extends StatelessWidget {

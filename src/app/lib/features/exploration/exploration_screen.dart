@@ -5,12 +5,7 @@ import 'package:flutter/material.dart';
 import '../app/app_controller.dart';
 
 const _manualDriveRepeatInterval = Duration(milliseconds: 200);
-const _holdMovementCommands = {
-  'forward',
-  'backward',
-  'left',
-  'right',
-};
+const _holdMovementCommands = {'forward', 'backward', 'left', 'right'};
 
 class ExplorationScreen extends StatefulWidget {
   const ExplorationScreen({super.key, required this.controller});

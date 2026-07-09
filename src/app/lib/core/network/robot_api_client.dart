@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
+import '../connection/robot_discovered_device.dart';
 import '../models/cleaning_models.dart';
 import '../models/exploration_models.dart';
 import '../models/map_models.dart';
@@ -23,12 +24,39 @@ class ApiException implements Exception {
 }
 
 class RobotApiClient {
-  RobotApiClient({required this.host, required this.apiPort})
-    : _httpClient = HttpClient();
+  RobotApiClient({
+    required this.host,
+    required this.apiPort,
+    this.websocketPort = 8765,
+  }) : _httpClient = HttpClient();
+
+  factory RobotApiClient.fromDiscoveredRobot(RobotDiscoveredDevice robot) {
+    final host = robot.bestHost;
+    if (host == null || host.isEmpty) {
+      throw ApiException('No Wi-Fi address was resolved for ${robot.name}.');
+    }
+    return RobotApiClient(
+      host: host,
+      apiPort: robot.apiPort,
+      websocketPort: robot.websocketPort,
+    );
+  }
+
+  factory RobotApiClient.fromBaseUri(Uri baseUri, {int websocketPort = 8765}) {
+    return RobotApiClient(
+      host: baseUri.host,
+      apiPort: baseUri.port == 0 ? robotPort : baseUri.port,
+      websocketPort: websocketPort,
+    );
+  }
 
   final String host;
   final int apiPort;
+  final int websocketPort;
   final HttpClient _httpClient;
+
+  Uri get baseUri => Uri(scheme: 'http', host: host, port: apiPort);
+  Uri get websocketUri => Uri(scheme: 'ws', host: host, port: websocketPort);
 
   Uri _uri(String path) {
     final normalizedPath = path.startsWith('/') ? path : '/$path';

@@ -50,5 +50,15 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>SweePi uses Bluetooth to set up and recover the robot Wi-Fi connection.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>SweePi uses Bluetooth to set up and recover the robot Wi-Fi connection.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>SweePi searches your local network to find your robot automatically.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_sweepi._tcp</string>
+	</array>
 </dict>
 </plist>
