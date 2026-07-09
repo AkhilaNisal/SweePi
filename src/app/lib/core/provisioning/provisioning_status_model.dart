@@ -34,6 +34,7 @@ extension WifiProvisioningStateJson on WifiProvisioningState {
   static WifiProvisioningState fromJsonName(String? value) {
     switch (value) {
       case 'idle':
+      case 'netplan_wifi':
         return WifiProvisioningState.idle;
       case 'scanning':
         return WifiProvisioningState.scanning;

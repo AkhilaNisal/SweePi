@@ -4,17 +4,25 @@ class SweePiBleUuids {
   const SweePiBleUuids._();
 
   static const sweepiProvisioningServiceUuid =
-      '8f230001-4f7d-4a0b-9c52-6f7357656570';
+      '7a0b0001-4f2a-4f7a-9b7d-9c7b6f000001';
   static const robotInfoCharacteristicUuid =
-      '8f230002-4f7d-4a0b-9c52-6f7357656570';
+      '7a0b0002-4f2a-4f7a-9b7d-9c7b6f000001';
   static const wifiScanCharacteristicUuid =
-      '8f230003-4f7d-4a0b-9c52-6f7357656570';
+      '7a0b0003-4f2a-4f7a-9b7d-9c7b6f000001';
   static const wifiConfigCharacteristicUuid =
-      '8f230004-4f7d-4a0b-9c52-6f7357656570';
+      '7a0b0004-4f2a-4f7a-9b7d-9c7b6f000001';
   static const wifiStatusCharacteristicUuid =
-      '8f230005-4f7d-4a0b-9c52-6f7357656570';
+      '7a0b0005-4f2a-4f7a-9b7d-9c7b6f000001';
   static const setupCommandCharacteristicUuid =
-      '8f230006-4f7d-4a0b-9c52-6f7357656570';
+      '7a0b0006-4f2a-4f7a-9b7d-9c7b6f000001';
+
+  static const requiredCharacteristicUuids = [
+    robotInfoCharacteristicUuid,
+    wifiScanCharacteristicUuid,
+    wifiConfigCharacteristicUuid,
+    wifiStatusCharacteristicUuid,
+    setupCommandCharacteristicUuid,
+  ];
 }
 
 const SWEEPI_PROVISIONING_SERVICE_UUID =
@@ -28,3 +36,16 @@ const WIFI_STATUS_CHARACTERISTIC_UUID =
     SweePiBleUuids.wifiStatusCharacteristicUuid;
 const SETUP_COMMAND_CHARACTERISTIC_UUID =
     SweePiBleUuids.setupCommandCharacteristicUuid;
+
+String normalizeUuid(Object? value) {
+  return value
+      .toString()
+      .replaceAll('{', '')
+      .replaceAll('}', '')
+      .replaceAll(RegExp(r'\s+'), '')
+      .toLowerCase();
+}
+
+bool uuidEquals(Object? left, Object? right) {
+  return normalizeUuid(left) == normalizeUuid(right);
+}

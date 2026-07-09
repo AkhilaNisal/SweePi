@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import '../connection/robot_channel.dart';
@@ -11,6 +12,9 @@ import 'wifi_network_model.dart';
 
 abstract class BleWifiProvisioningService {
   Stream<ProvisioningStatus> get statusStream;
+  bool get isConnected;
+  bool get isProvisioningServiceDiscovered;
+  bool get hasWifiConfigCharacteristic;
 
   Future<RobotDiscoveredDevice> connect(RobotDiscoveredDevice robot);
   Future<RobotDiscoveredDevice> readRobotInfo();
@@ -32,9 +36,21 @@ class FlutterBlueBleWifiProvisioningService
   BluetoothDevice? _device;
   RobotDiscoveredDevice? _robot;
   final _characteristics = <String, BluetoothCharacteristic>{};
+  bool _provisioningServiceDiscovered = false;
+  String _lastDiscoveryReport = 'BLE service discovery has not run yet.';
 
   @override
   Stream<ProvisioningStatus> get statusStream => _statusController.stream;
+
+  @override
+  bool get isConnected => _device != null;
+
+  @override
+  bool get isProvisioningServiceDiscovered => _provisioningServiceDiscovered;
+
+  @override
+  bool get hasWifiConfigCharacteristic =>
+      _characteristics.containsKey(WIFI_CONFIG_CHARACTERISTIC_UUID);
 
   @override
   Future<RobotDiscoveredDevice> connect(RobotDiscoveredDevice robot) async {
@@ -45,6 +61,7 @@ class FlutterBlueBleWifiProvisioningService
       );
     }
 
+    await disconnect();
     final device = BluetoothDevice.fromId(remoteId);
     await device.connect(
       license: License.nonprofit,
@@ -113,8 +130,6 @@ class FlutterBlueBleWifiProvisioningService
     final payload = await _readJson(scan);
     final rawNetworks = payload['networks'] is List
         ? payload['networks'] as List
-        : payload is List
-        ? payload as List
         : const [];
     return rawNetworks
         .whereType<Map>()
@@ -131,7 +146,12 @@ class FlutterBlueBleWifiProvisioningService
   }) async {
     final config = _characteristics[WIFI_CONFIG_CHARACTERISTIC_UUID];
     if (config == null) {
-      throw StateError('Wi-Fi config characteristic was not found.');
+      _logDiscoveryFailure(
+        'Wi-Fi config characteristic is not available before credential write.',
+      );
+      throw const ProvisioningException(
+        'Wi-Fi setup is not ready. Reconnect to SweePi and try again.',
+      );
     }
     _statusController.add(
       ProvisioningStatus(
@@ -163,23 +183,79 @@ class FlutterBlueBleWifiProvisioningService
 
   @override
   Future<void> disconnect() async {
-    await _device?.disconnect();
+    final device = _device;
     _device = null;
     _robot = null;
+    _provisioningServiceDiscovered = false;
     _characteristics.clear();
+    if (device != null) {
+      await device.disconnect();
+    }
   }
 
   Future<void> _discoverCharacteristics(BluetoothDevice device) async {
     _characteristics.clear();
+    _provisioningServiceDiscovered = false;
     final services = await device.discoverServices();
+    _provisioningServiceDiscovered = services.any(
+      (service) => uuidEquals(
+        service.uuid.str128,
+        SweePiBleUuids.sweepiProvisioningServiceUuid,
+      ),
+    );
+
+    final discovered = findSweePiProvisioningCharacteristics(
+      services: services,
+      requiredCharacteristicUuids: SweePiBleUuids.requiredCharacteristicUuids,
+      serviceUuidOf: (service) => service.uuid.str128,
+      characteristicsOf: (service) => service.characteristics,
+      characteristicUuidOf: (characteristic) => characteristic.uuid.str128,
+    );
+    _characteristics.addAll(discovered);
+    _lastDiscoveryReport = _formatDiscoveryReport(device, services);
+
+    final missing = SweePiBleUuids.requiredCharacteristicUuids
+        .where((uuid) => !_characteristics.containsKey(uuid))
+        .toList();
+    if (!_provisioningServiceDiscovered || missing.isNotEmpty) {
+      _logDiscoveryFailure(
+        _provisioningServiceDiscovered
+            ? 'Missing required BLE characteristics: ${missing.join(', ')}.'
+            : 'SweePi provisioning service was not discovered.',
+      );
+    }
+  }
+
+  String _formatDiscoveryReport(
+    BluetoothDevice device,
+    List<BluetoothService> services,
+  ) {
+    final buffer = StringBuffer()
+      ..writeln('Device id: ${device.remoteId.str}')
+      ..writeln('Device name: ${_robot?.name ?? 'unknown'}')
+      ..writeln('Platform name: ${device.platformName}')
+      ..writeln(
+        'Expected service UUID: ${SweePiBleUuids.sweepiProvisioningServiceUuid}',
+      )
+      ..writeln('Expected WIFI_CONFIG UUID: $WIFI_CONFIG_CHARACTERISTIC_UUID')
+      ..writeln('Discovered services and characteristics:');
+
     for (final service in services) {
-      if (service.uuid.str128 != SweePiBleUuids.sweepiProvisioningServiceUuid) {
-        continue;
-      }
+      buffer.writeln('- ${normalizeUuid(service.uuid.str128)}');
       for (final characteristic in service.characteristics) {
-        _characteristics[characteristic.uuid.str128] = characteristic;
+        buffer.writeln('  - ${normalizeUuid(characteristic.uuid.str128)}');
       }
     }
+
+    buffer.writeln('Required characteristic discovery:');
+    for (final uuid in SweePiBleUuids.requiredCharacteristicUuids) {
+      buffer.writeln('- $uuid: ${_characteristics.containsKey(uuid)}');
+    }
+    return buffer.toString();
+  }
+
+  void _logDiscoveryFailure(String reason) {
+    debugPrint('[BLE Provisioning] $reason\n$_lastDiscoveryReport');
   }
 
   Future<Map<String, dynamic>> _readJson(
@@ -204,6 +280,46 @@ class FlutterBlueBleWifiProvisioningService
   }
 }
 
+class ProvisioningException implements Exception {
+  const ProvisioningException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
+@visibleForTesting
+Map<String, TCharacteristic>
+findSweePiProvisioningCharacteristics<TService, TCharacteristic>({
+  required Iterable<TService> services,
+  required Iterable<String> requiredCharacteristicUuids,
+  required String Function(TService service) serviceUuidOf,
+  required Iterable<TCharacteristic> Function(TService service)
+  characteristicsOf,
+  required String Function(TCharacteristic characteristic) characteristicUuidOf,
+  String provisioningServiceUuid = SWEEPI_PROVISIONING_SERVICE_UUID,
+}) {
+  final requiredUuids = {
+    for (final uuid in requiredCharacteristicUuids) normalizeUuid(uuid),
+  };
+  final found = <String, TCharacteristic>{};
+
+  for (final service in services) {
+    if (!uuidEquals(serviceUuidOf(service), provisioningServiceUuid)) {
+      continue;
+    }
+    for (final characteristic in characteristicsOf(service)) {
+      final uuid = normalizeUuid(characteristicUuidOf(characteristic));
+      if (requiredUuids.contains(uuid)) {
+        found[uuid] = characteristic;
+      }
+    }
+  }
+
+  return found;
+}
+
 class MockBleWifiProvisioningService implements BleWifiProvisioningService {
   MockBleWifiProvisioningService({this.shouldConnectToWifi = true});
 
@@ -216,6 +332,15 @@ class MockBleWifiProvisioningService implements BleWifiProvisioningService {
 
   @override
   Stream<ProvisioningStatus> get statusStream => _statusController.stream;
+
+  @override
+  bool get isConnected => _robot != null;
+
+  @override
+  bool get isProvisioningServiceDiscovered => _robot != null;
+
+  @override
+  bool get hasWifiConfigCharacteristic => _robot != null;
 
   @override
   Future<RobotDiscoveredDevice> connect(RobotDiscoveredDevice robot) async {
