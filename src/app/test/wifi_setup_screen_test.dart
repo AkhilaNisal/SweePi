@@ -11,11 +11,11 @@ import 'package:sweepi/features/app/app_controller.dart';
 import 'package:sweepi/features/setup/wifi_setup_screen.dart';
 
 void main() {
-  test('Connect button enable logic covers BLE and Wi-Fi form readiness', () {
+  test('connect block reason covers BLE and Wi-Fi form readiness', () {
     const secureNetwork = WifiNetwork(ssid: 'akhila', security: 'WPA/WPA2');
 
     expect(
-      canConnectToWifi(
+      wifiConnectBlockReason(
         bleConnected: false,
         provisioningServiceDiscovered: true,
         wifiConfigDiscovered: true,
@@ -24,10 +24,22 @@ void main() {
         selectedNetwork: secureNetwork,
         isConnecting: false,
       ),
-      isFalse,
+      WifiConnectBlockReason.bleNotConnected,
     );
     expect(
-      canConnectToWifi(
+      wifiConnectBlockReason(
+        bleConnected: true,
+        provisioningServiceDiscovered: false,
+        wifiConfigDiscovered: true,
+        ssid: 'akhila',
+        password: 'password',
+        selectedNetwork: secureNetwork,
+        isConnecting: false,
+      ),
+      WifiConnectBlockReason.provisioningServiceNotFound,
+    );
+    expect(
+      wifiConnectBlockReason(
         bleConnected: true,
         provisioningServiceDiscovered: true,
         wifiConfigDiscovered: false,
@@ -36,10 +48,10 @@ void main() {
         selectedNetwork: secureNetwork,
         isConnecting: false,
       ),
-      isFalse,
+      WifiConnectBlockReason.wifiConfigCharacteristicNotFound,
     );
     expect(
-      canConnectToWifi(
+      wifiConnectBlockReason(
         bleConnected: true,
         provisioningServiceDiscovered: true,
         wifiConfigDiscovered: true,
@@ -48,34 +60,34 @@ void main() {
         selectedNetwork: secureNetwork,
         isConnecting: false,
       ),
-      isFalse,
+      WifiConnectBlockReason.ssidMissing,
     );
     expect(
-      canConnectToWifi(
+      wifiConnectBlockReason(
         bleConnected: true,
         provisioningServiceDiscovered: true,
         wifiConfigDiscovered: true,
         ssid: 'akhila',
         password: '',
-        selectedNetwork: secureNetwork,
+        selectedNetwork: null,
         isConnecting: false,
       ),
-      isFalse,
+      WifiConnectBlockReason.passwordMissing,
     );
     expect(
-      canConnectToWifi(
+      wifiConnectBlockReason(
         bleConnected: true,
         provisioningServiceDiscovered: true,
         wifiConfigDiscovered: true,
         ssid: 'akhila',
         password: 'password',
-        selectedNetwork: secureNetwork,
+        selectedNetwork: null,
         isConnecting: false,
       ),
-      isTrue,
+      WifiConnectBlockReason.none,
     );
     expect(
-      canConnectToWifi(
+      wifiConnectBlockReason(
         bleConnected: true,
         provisioningServiceDiscovered: true,
         wifiConfigDiscovered: true,
@@ -84,66 +96,331 @@ void main() {
         selectedNetwork: const WifiNetwork(ssid: 'guest', security: 'open'),
         isConnecting: false,
       ),
-      isTrue,
+      WifiConnectBlockReason.none,
+    );
+    expect(
+      wifiConnectBlockReason(
+        bleConnected: true,
+        provisioningServiceDiscovered: true,
+        wifiConfigDiscovered: true,
+        ssid: 'akhila',
+        password: 'password',
+        selectedNetwork: secureNetwork,
+        isConnecting: true,
+      ),
+      WifiConnectBlockReason.connecting,
+    );
+    expect(
+      connectBlockReasonMessage(WifiConnectBlockReason.connecting),
+      'Connecting to Wi-Fi...',
     );
   });
 
-  testWidgets('Connect button updates when password text changes', (
+  test('canConnectToWifi is true only when block reason is none', () {
+    expect(
+      canConnectToWifi(
+        bleConnected: true,
+        provisioningServiceDiscovered: true,
+        wifiConfigDiscovered: true,
+        ssid: 'akhila',
+        password: 'password',
+        selectedNetwork: null,
+        isConnecting: false,
+      ),
+      isTrue,
+    );
+    expect(
+      canConnectToWifi(
+        bleConnected: true,
+        provisioningServiceDiscovered: true,
+        wifiConfigDiscovered: false,
+        ssid: 'akhila',
+        password: 'password',
+        selectedNetwork: null,
+        isConnecting: false,
+      ),
+      isFalse,
+    );
+  });
+
+  testWidgets('BLE disconnected reason is visible', (tester) async {
+    final service = _FakeProvisioningService(isConnected: false);
+    addTearDown(service.dispose);
+
+    await _pumpWifiSetup(tester, service: service);
+
+    expect(_connectButton(tester).onPressed, isNull);
+    expect(find.text('Bluetooth device is not connected.'), findsOneWidget);
+  });
+
+  testWidgets('provisioning service missing reason is visible', (tester) async {
+    final service = _FakeProvisioningService(
+      isProvisioningServiceDiscovered: false,
+    );
+    addTearDown(service.dispose);
+
+    await _pumpWifiSetup(tester, service: service);
+
+    expect(_connectButton(tester).onPressed, isNull);
+    expect(
+      find.text('SweePi BLE provisioning service was not discovered.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('WIFI_CONFIG missing reason is visible', (tester) async {
+    final service = _FakeProvisioningService(
+      hasWifiConfigCharacteristic: false,
+    );
+    addTearDown(service.dispose);
+
+    await _pumpWifiSetup(tester, service: service);
+    await tester.enterText(_ssidField(), 'akhila');
+    await tester.enterText(_passwordField(), 'password');
+    await tester.pump();
+
+    expect(_connectButton(tester).onPressed, isNull);
+    expect(
+      find.text('Wi-Fi config characteristic was not found.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('SSID missing reason is visible', (tester) async {
+    final service = _FakeProvisioningService();
+    addTearDown(service.dispose);
+
+    await _pumpWifiSetup(tester, service: service);
+
+    expect(_connectButton(tester).onPressed, isNull);
+    expect(find.text('Enter a Wi-Fi network name.'), findsOneWidget);
+  });
+
+  testWidgets('manual secured network password missing reason is visible', (
     tester,
   ) async {
     final service = _FakeProvisioningService();
-    final controller = AppController();
-    addTearDown(controller.dispose);
     addTearDown(service.dispose);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: WifiSetupScreen(
-          controller: controller,
-          robot: _robot(),
-          networks: const [WifiNetwork(ssid: 'akhila', security: 'WPA/WPA2')],
-          provisioningService: service,
-        ),
-      ),
-    );
+    await _pumpWifiSetup(tester, service: service);
+    await tester.enterText(_ssidField(), 'manual-network');
+    await tester.pump();
 
     expect(_connectButton(tester).onPressed, isNull);
+    expect(find.text('Enter the Wi-Fi password.'), findsOneWidget);
+  });
 
-    await tester.enterText(find.byType(TextField).last, 'password');
+  testWidgets('manual SSID and password enables button and hides reason', (
+    tester,
+  ) async {
+    final service = _FakeProvisioningService();
+    addTearDown(service.dispose);
+
+    await _pumpWifiSetup(tester, service: service);
+    await tester.enterText(_ssidField(), 'manual-network');
+    await tester.enterText(_passwordField(), 'password');
+    await tester.pump();
+
+    expect(_connectButton(tester).onPressed, isNotNull);
+    expect(find.text('Enter the Wi-Fi password.'), findsNothing);
+    expect(find.text('Enter a Wi-Fi network name.'), findsNothing);
+  });
+
+  testWidgets('scanned secured network with password enables button', (
+    tester,
+  ) async {
+    final service = _FakeProvisioningService();
+    addTearDown(service.dispose);
+
+    await _pumpWifiSetup(
+      tester,
+      service: service,
+      networks: const [WifiNetwork(ssid: 'akhila', security: 'WPA/WPA2')],
+    );
+    await tester.enterText(_passwordField(), 'password');
     await tester.pump();
 
     expect(_connectButton(tester).onPressed, isNotNull);
   });
 
-  testWidgets('Connect button updates when selected network changes', (
+  testWidgets('scanned open network without password enables button', (
     tester,
   ) async {
     final service = _FakeProvisioningService();
-    final controller = AppController();
-    addTearDown(controller.dispose);
     addTearDown(service.dispose);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: WifiSetupScreen(
-          controller: controller,
-          robot: _robot(),
-          networks: const [
-            WifiNetwork(ssid: 'akhila', security: 'WPA/WPA2'),
-            WifiNetwork(ssid: 'guest', security: 'open'),
-          ],
-          provisioningService: service,
-        ),
-      ),
+    await _pumpWifiSetup(
+      tester,
+      service: service,
+      networks: const [
+        WifiNetwork(ssid: 'akhila', security: 'WPA/WPA2'),
+        WifiNetwork(ssid: 'guest', security: 'open'),
+      ],
     );
-
-    expect(_connectButton(tester).onPressed, isNull);
-
     await tester.tap(find.text('guest'));
     await tester.pump();
 
     expect(_connectButton(tester).onPressed, isNotNull);
   });
+
+  testWidgets('SSID text change updates reason immediately', (tester) async {
+    final service = _FakeProvisioningService();
+    addTearDown(service.dispose);
+
+    await _pumpWifiSetup(tester, service: service);
+    await tester.enterText(_passwordField(), 'password');
+    await tester.pump();
+    expect(find.text('Enter a Wi-Fi network name.'), findsOneWidget);
+
+    await tester.enterText(_ssidField(), 'manual-network');
+    await tester.pump();
+    expect(_connectButton(tester).onPressed, isNotNull);
+
+    await tester.enterText(_ssidField(), '');
+    await tester.pump();
+    expect(find.text('Enter a Wi-Fi network name.'), findsOneWidget);
+  });
+
+  testWidgets('password text change updates reason immediately', (
+    tester,
+  ) async {
+    final service = _FakeProvisioningService();
+    addTearDown(service.dispose);
+
+    await _pumpWifiSetup(tester, service: service);
+    await tester.enterText(_ssidField(), 'manual-network');
+    await tester.pump();
+    expect(find.text('Enter the Wi-Fi password.'), findsOneWidget);
+
+    await tester.enterText(_passwordField(), 'password');
+    await tester.pump();
+    expect(_connectButton(tester).onPressed, isNotNull);
+
+    await tester.enterText(_passwordField(), '');
+    await tester.pump();
+    expect(find.text('Enter the Wi-Fi password.'), findsOneWidget);
+  });
+
+  testWidgets(
+    'manual SSID edit clears scanned selection and treats it as secured',
+    (tester) async {
+      final service = _FakeProvisioningService();
+      addTearDown(service.dispose);
+
+      await _pumpWifiSetup(
+        tester,
+        service: service,
+        networks: const [WifiNetwork(ssid: 'guest', security: 'open')],
+      );
+      expect(_connectButton(tester).onPressed, isNotNull);
+
+      await tester.enterText(_ssidField(), 'custom-secured-network');
+      await tester.pump();
+      expect(find.text('Enter the Wi-Fi password.'), findsOneWidget);
+
+      await tester.enterText(_passwordField(), 'password');
+      await tester.pump();
+      expect(_connectButton(tester).onPressed, isNotNull);
+    },
+  );
+
+  testWidgets('BLE readiness change updates reason immediately', (
+    tester,
+  ) async {
+    final service = _FakeProvisioningService(
+      isConnected: false,
+      isProvisioningServiceDiscovered: false,
+      hasWifiConfigCharacteristic: false,
+    );
+    addTearDown(service.dispose);
+
+    await _pumpWifiSetup(tester, service: service);
+    await tester.enterText(_ssidField(), 'manual-network');
+    await tester.enterText(_passwordField(), 'password');
+    await tester.pump();
+    expect(find.text('Bluetooth device is not connected.'), findsOneWidget);
+
+    service.updateReadiness(
+      isConnected: true,
+      isProvisioningServiceDiscovered: true,
+      hasWifiConfigCharacteristic: true,
+    );
+    await tester.pump();
+
+    expect(_connectButton(tester).onPressed, isNotNull);
+  });
+
+  testWidgets('debug details show state without revealing password', (
+    tester,
+  ) async {
+    final service = _FakeProvisioningService();
+    addTearDown(service.dispose);
+
+    await _pumpWifiSetup(
+      tester,
+      service: service,
+      networks: const [WifiNetwork(ssid: 'akhila', security: 'WPA/WPA2')],
+    );
+    await tester.enterText(_passwordField(), 'secret-password');
+    await tester.tap(find.text('Debug details'));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView), const Offset(0, -300));
+    await tester.pump();
+
+    expect(
+      find.text('BLE connected: true', skipOffstage: false),
+      findsOneWidget,
+    );
+    expect(
+      find.text('WIFI_CONFIG discovered: true', skipOffstage: false),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Selected network: akhila', skipOffstage: false),
+      findsOneWidget,
+    );
+    expect(find.text('SSID text: akhila', skipOffstage: false), findsOneWidget);
+    expect(
+      find.text('Password length: 15', skipOffstage: false),
+      findsOneWidget,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Text &&
+            (widget.data?.contains('secret-password') ?? false),
+      ),
+      findsNothing,
+    );
+  });
+}
+
+Future<void> _pumpWifiSetup(
+  WidgetTester tester, {
+  required _FakeProvisioningService service,
+  List<WifiNetwork> networks = const [],
+}) async {
+  final controller = AppController();
+  addTearDown(controller.dispose);
+
+  await tester.pumpWidget(
+    MaterialApp(
+      home: WifiSetupScreen(
+        controller: controller,
+        robot: _robot(),
+        networks: networks,
+        provisioningService: service,
+      ),
+    ),
+  );
+}
+
+Finder _ssidField() {
+  return find.byType(TextField).first;
+}
+
+Finder _passwordField() {
+  return find.byType(TextField).last;
 }
 
 FilledButton _connectButton(WidgetTester tester) {
@@ -164,19 +441,38 @@ RobotDiscoveredDevice _robot() {
 }
 
 class _FakeProvisioningService implements BleWifiProvisioningService {
+  _FakeProvisioningService({
+    this.isConnected = true,
+    this.isProvisioningServiceDiscovered = true,
+    this.hasWifiConfigCharacteristic = true,
+  });
+
   final _statusController = StreamController<ProvisioningStatus>.broadcast();
 
   @override
   Stream<ProvisioningStatus> get statusStream => _statusController.stream;
 
   @override
-  bool isConnected = true;
+  bool isConnected;
 
   @override
-  bool isProvisioningServiceDiscovered = true;
+  bool isProvisioningServiceDiscovered;
 
   @override
-  bool hasWifiConfigCharacteristic = true;
+  bool hasWifiConfigCharacteristic;
+
+  void updateReadiness({
+    required bool isConnected,
+    required bool isProvisioningServiceDiscovered,
+    required bool hasWifiConfigCharacteristic,
+  }) {
+    this.isConnected = isConnected;
+    this.isProvisioningServiceDiscovered = isProvisioningServiceDiscovered;
+    this.hasWifiConfigCharacteristic = hasWifiConfigCharacteristic;
+    _statusController.add(
+      const ProvisioningStatus(state: WifiProvisioningState.idle),
+    );
+  }
 
   @override
   Future<RobotDiscoveredDevice> connect(RobotDiscoveredDevice robot) async {

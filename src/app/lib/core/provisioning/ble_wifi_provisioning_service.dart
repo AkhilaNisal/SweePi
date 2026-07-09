@@ -144,7 +144,14 @@ class FlutterBlueBleWifiProvisioningService
     required String password,
     String country = 'LK',
   }) async {
-    final config = _characteristics[WIFI_CONFIG_CHARACTERISTIC_UUID];
+    var config = _characteristics[WIFI_CONFIG_CHARACTERISTIC_UUID];
+    if (config == null) {
+      final device = _device;
+      if (device != null) {
+        await _discoverCharacteristics(device);
+        config = _characteristics[WIFI_CONFIG_CHARACTERISTIC_UUID];
+      }
+    }
     if (config == null) {
       _logDiscoveryFailure(
         'Wi-Fi config characteristic is not available before credential write.',
