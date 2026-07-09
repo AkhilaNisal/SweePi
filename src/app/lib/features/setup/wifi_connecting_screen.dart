@@ -38,7 +38,8 @@ class _WifiConnectingScreenState extends State<WifiConnectingScreen> {
   }
 
   Future<ProvisioningStatus> _waitForFinalWifiStatus() async {
-    ProvisioningStatus lastStatus = await widget.provisioningService.readWifiStatus();
+    ProvisioningStatus lastStatus = await widget.provisioningService
+        .readWifiStatus();
 
     for (var attempt = 0; attempt < 45; attempt++) {
       if (!mounted) {
@@ -113,6 +114,14 @@ class _WifiConnectingScreenState extends State<WifiConnectingScreen> {
         setState(() {
           _error =
               'Robot connected to Wi-Fi, but automatic discovery failed. Make sure your phone is on the same Wi-Fi network.';
+        });
+        return;
+      }
+      if (!widget.controller.isConnected) {
+        setState(() {
+          _error =
+              widget.controller.errorMessage ??
+              'Could not reach SweePi over Wi-Fi.';
         });
         return;
       }

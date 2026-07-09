@@ -143,6 +143,21 @@ void main() {
     );
   });
 
+  test('wifiSsidMismatch ignores unknown or matching robot SSID', () {
+    expect(
+      wifiSsidMismatch(currentSsid: null, targetSsid: 'Home WiFi'),
+      isFalse,
+    );
+    expect(
+      wifiSsidMismatch(currentSsid: 'Home WiFi', targetSsid: 'Home WiFi'),
+      isFalse,
+    );
+    expect(
+      wifiSsidMismatch(currentSsid: 'Home WiFi', targetSsid: 'Guest WiFi'),
+      isTrue,
+    );
+  });
+
   testWidgets('BLE disconnected reason is visible', (tester) async {
     final service = _FakeProvisioningService(isConnected: false);
     addTearDown(service.dispose);
@@ -217,6 +232,8 @@ void main() {
     addTearDown(service.dispose);
 
     await _pumpWifiSetup(tester, service: service);
+    await tester.pump();
+    await tester.pump();
     await tester.enterText(_ssidField(), 'manual-network');
     await tester.enterText(_passwordField(), 'password');
     await tester.pump();
@@ -224,6 +241,95 @@ void main() {
     expect(_connectButton(tester).onPressed, isNotNull);
     expect(find.text('Enter the Wi-Fi password.'), findsNothing);
     expect(find.text('Enter a Wi-Fi network name.'), findsNothing);
+  });
+
+  testWidgets('no Wi-Fi mismatch warning when current robot SSID is unknown', (
+    tester,
+  ) async {
+    final service = _FakeProvisioningService();
+    addTearDown(service.dispose);
+
+    await _pumpWifiSetup(tester, service: service);
+    await tester.enterText(_ssidField(), 'manual-network');
+    await tester.enterText(_passwordField(), 'password');
+    await tester.pump();
+
+    expect(find.byIcon(Icons.warning_amber), findsNothing);
+    expect(
+      find.textContaining('SweePi is currently connected to'),
+      findsNothing,
+    );
+  });
+
+  testWidgets(
+    'no Wi-Fi mismatch warning when current robot SSID matches target',
+    (tester) async {
+      final service = _FakeProvisioningService(currentWifiSsid: 'Home WiFi');
+      addTearDown(service.dispose);
+
+      await _pumpWifiSetup(tester, service: service);
+      await tester.pump();
+      await tester.pump();
+      await tester.enterText(_ssidField(), 'Home WiFi');
+      await tester.enterText(_passwordField(), 'password');
+      await tester.pump();
+
+      expect(find.byIcon(Icons.warning_amber), findsNothing);
+      expect(
+        find.textContaining('SweePi is currently connected to'),
+        findsNothing,
+      );
+    },
+  );
+
+  testWidgets('Wi-Fi mismatch warning appears when robot SSID differs', (
+    tester,
+  ) async {
+    final service = _FakeProvisioningService(currentWifiSsid: 'Home WiFi');
+    addTearDown(service.dispose);
+
+    await _pumpWifiSetup(tester, service: service);
+    await tester.pump();
+    await tester.pump();
+    await tester.enterText(_ssidField(), 'Guest WiFi');
+    await tester.enterText(_passwordField(), 'password');
+    await tester.pump();
+
+    expect(find.byIcon(Icons.warning_amber), findsOneWidget);
+    expect(
+      find.text(
+        "SweePi is currently connected to 'Home WiFi'. You selected "
+        "'Guest WiFi'. After setup, your phone must also be connected to "
+        "'Guest WiFi', otherwise the app may not find SweePi over Wi-Fi.",
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Connect asks for confirmation when robot SSID differs', (
+    tester,
+  ) async {
+    final service = _FakeProvisioningService(currentWifiSsid: 'Home WiFi');
+    addTearDown(service.dispose);
+
+    await _pumpWifiSetup(tester, service: service);
+    await tester.pump();
+    await tester.pump();
+    await tester.enterText(_ssidField(), 'Guest WiFi');
+    await tester.enterText(_passwordField(), 'password');
+    await tester.pump();
+
+    await tester.tap(find.text('Connect SweePi'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Different Wi-Fi selected'), findsOneWidget);
+    expect(find.text('Cancel'), findsOneWidget);
+    expect(find.text('Continue anyway'), findsOneWidget);
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Robot Wi-Fi'), findsOneWidget);
   });
 
   testWidgets('scanned secured network with password enables button', (
@@ -445,9 +551,11 @@ class _FakeProvisioningService implements BleWifiProvisioningService {
     this.isConnected = true,
     this.isProvisioningServiceDiscovered = true,
     this.hasWifiConfigCharacteristic = true,
+    this.currentWifiSsid,
   });
 
   final _statusController = StreamController<ProvisioningStatus>.broadcast();
+  final String? currentWifiSsid;
 
   @override
   Stream<ProvisioningStatus> get statusStream => _statusController.stream;
@@ -476,6 +584,11 @@ class _FakeProvisioningService implements BleWifiProvisioningService {
 
   @override
   Future<RobotDiscoveredDevice> connect(RobotDiscoveredDevice robot) async {
+    if (!isConnected ||
+        !isProvisioningServiceDiscovered ||
+        !hasWifiConfigCharacteristic) {
+      throw StateError('BLE setup is not ready.');
+    }
     return robot;
   }
 
@@ -487,7 +600,11 @@ class _FakeProvisioningService implements BleWifiProvisioningService {
 
   @override
   Future<ProvisioningStatus> readWifiStatus() async {
-    return const ProvisioningStatus(state: WifiProvisioningState.idle);
+    return ProvisioningStatus(
+      state: WifiProvisioningState.idle,
+      ssid: currentWifiSsid,
+      message: 'Idle.',
+    );
   }
 
   @override

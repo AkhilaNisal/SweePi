@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -13,6 +14,7 @@ import '../models/robot_models.dart';
 // opens in the phone browser. Do not use localhost, 127.0.0.1, or 0.0.0.0.
 const robotIp = '192.168.8.101';
 const robotPort = 8080;
+const robotApiRequestTimeout = Duration(seconds: 8);
 
 class ApiException implements Exception {
   const ApiException(this.message);
@@ -28,7 +30,9 @@ class RobotApiClient {
     required this.host,
     required this.apiPort,
     this.websocketPort = 8765,
-  }) : _httpClient = HttpClient();
+  }) : _httpClient = HttpClient() {
+    _httpClient.connectionTimeout = robotApiRequestTimeout;
+  }
 
   factory RobotApiClient.fromDiscoveredRobot(RobotDiscoveredDevice robot) {
     final host = robot.bestHost;
@@ -67,11 +71,20 @@ class RobotApiClient {
     final uri = _uri(path);
     _logRequest('GET', uri);
     try {
-      final request = await _httpClient.getUrl(uri);
-      return _readJsonObject('GET', uri, await request.close());
+      final request = await _httpClient
+          .getUrl(uri)
+          .timeout(robotApiRequestTimeout);
+      return _readJsonObject(
+        'GET',
+        uri,
+        await request.close().timeout(robotApiRequestTimeout),
+      );
     } catch (error) {
       if (error is! ApiException) {
         _logError('GET', uri, error);
+      }
+      if (isApiConnectivityFailure(error)) {
+        throw ApiException(apiConnectivityTroubleshootingMessage(uri));
       }
       rethrow;
     }
@@ -84,11 +97,16 @@ class RobotApiClient {
     final uri = _uri(path);
     _logRequest('POST', uri, body: body);
     try {
-      final request = await _httpClient.postUrl(uri);
+      final request = await _httpClient
+          .postUrl(uri)
+          .timeout(robotApiRequestTimeout);
       return _sendJson('POST', uri, request, body);
     } catch (error) {
       if (error is! ApiException) {
         _logError('POST', uri, error);
+      }
+      if (isApiConnectivityFailure(error)) {
+        throw ApiException(apiConnectivityTroubleshootingMessage(uri));
       }
       rethrow;
     }
@@ -101,11 +119,16 @@ class RobotApiClient {
     final uri = _uri(path);
     _logRequest('PUT', uri, body: body);
     try {
-      final request = await _httpClient.putUrl(uri);
+      final request = await _httpClient
+          .putUrl(uri)
+          .timeout(robotApiRequestTimeout);
       return _sendJson('PUT', uri, request, body);
     } catch (error) {
       if (error is! ApiException) {
         _logError('PUT', uri, error);
+      }
+      if (isApiConnectivityFailure(error)) {
+        throw ApiException(apiConnectivityTroubleshootingMessage(uri));
       }
       rethrow;
     }
@@ -292,7 +315,11 @@ class RobotApiClient {
 
     request.add(bodyBytes);
 
-    return _readJsonObject(method, uri, await request.close());
+    return _readJsonObject(
+      method,
+      uri,
+      await request.close().timeout(robotApiRequestTimeout),
+    );
   }
 
   Future<Map<String, dynamic>> _readJsonObject(
@@ -359,6 +386,33 @@ class RobotApiClient {
     }
     debugPrint('[RobotApiClient] !! $method $uri $error');
   }
+}
+
+@visibleForTesting
+bool isApiConnectivityFailure(Object error) {
+  if (error is SocketException || error is TimeoutException) {
+    return true;
+  }
+  final message = error.toString().toLowerCase();
+  return message.contains('connection refused') ||
+      message.contains('connection timed out') ||
+      message.contains('timed out');
+}
+
+@visibleForTesting
+String apiConnectivityTroubleshootingMessage(Uri attemptedUri) {
+  final healthUri = Uri(
+    scheme: attemptedUri.scheme,
+    host: attemptedUri.host,
+    port: attemptedUri.port,
+    path: '/api/system/health',
+  );
+  return 'Could not reach SweePi over Wi-Fi. Make sure your phone is '
+      'connected to the same Wi-Fi/hotspot as SweePi, and make sure the '
+      'Raspberry Pi API bridge is running:\n\n'
+      'ros2 launch sweepi_api_bridge api_bridge.launch.py\n\n'
+      'You can test it from your phone browser:\n'
+      '$healthUri';
 }
 
 Map<String, dynamic> buildCleaningStartRequestBody({

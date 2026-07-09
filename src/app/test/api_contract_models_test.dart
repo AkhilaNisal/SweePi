@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
@@ -154,6 +156,23 @@ void main() {
       fields.error?.details['use_endpoint'],
       '/api/localization/initial-pose',
     );
+  });
+
+  test('API connectivity failures produce friendly troubleshooting text', () {
+    final uri = Uri.parse('http://192.168.8.101:8080/api/system/health');
+    final message = apiConnectivityTroubleshootingMessage(uri);
+
+    expect(
+      isApiConnectivityFailure(const SocketException('Connection refused')),
+      isTrue,
+    );
+    expect(isApiConnectivityFailure(TimeoutException('Timed out')), isTrue);
+    expect(message, contains('Could not reach SweePi over Wi-Fi.'));
+    expect(
+      message,
+      contains('ros2 launch sweepi_api_bridge api_bridge.launch.py'),
+    );
+    expect(message, contains('http://192.168.8.101:8080/api/system/health'));
   });
 
   test('cleaning start response parses lifecycle fields', () {

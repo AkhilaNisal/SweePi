@@ -49,7 +49,7 @@ class _WifiSetupScreenState extends State<WifiSetupScreen> {
     _passwordController.addListener(_refreshFormState);
     widget.controller.connectionManager.addListener(_refreshFormState);
     _statusSubscription = widget.provisioningService.statusStream.listen(
-          (status) {
+      (status) {
         _lastProvisioningStatus = status;
         _refreshFormState();
       },
@@ -91,10 +91,11 @@ class _WifiSetupScreenState extends State<WifiSetupScreen> {
 
     final alreadyReady =
         widget.provisioningService.isConnected &&
-            widget.provisioningService.isProvisioningServiceDiscovered &&
-            widget.provisioningService.hasWifiConfigCharacteristic;
+        widget.provisioningService.isProvisioningServiceDiscovered &&
+        widget.provisioningService.hasWifiConfigCharacteristic;
 
     if (alreadyReady) {
+      await _readCurrentWifiStatus();
       _refreshFormState();
       return;
     }
@@ -107,6 +108,7 @@ class _WifiSetupScreenState extends State<WifiSetupScreen> {
     try {
       final robotInfo = await widget.provisioningService.connect(widget.robot);
       await widget.controller.connectionManager.markBleConnected(robotInfo);
+      await _readCurrentWifiStatus();
     } catch (error) {
       _lastBleError = error;
     } finally {
@@ -116,6 +118,25 @@ class _WifiSetupScreenState extends State<WifiSetupScreen> {
           _selectedNetwork = _networkForSsid(_ssidController.text);
         });
       }
+    }
+  }
+
+  Future<void> _readCurrentWifiStatus() async {
+    try {
+      final status = await widget.provisioningService.readWifiStatus();
+      if (!mounted || _isLeavingScreen) {
+        return;
+      }
+      setState(() {
+        _lastProvisioningStatus = status;
+      });
+    } catch (error) {
+      if (!mounted || _isLeavingScreen) {
+        return;
+      }
+      setState(() {
+        _lastBleError = error;
+      });
     }
   }
 
@@ -133,9 +154,9 @@ class _WifiSetupScreenState extends State<WifiSetupScreen> {
     return wifiConnectBlockReason(
       bleConnected: widget.provisioningService.isConnected,
       provisioningServiceDiscovered:
-      widget.provisioningService.isProvisioningServiceDiscovered,
+          widget.provisioningService.isProvisioningServiceDiscovered,
       wifiConfigDiscovered:
-      widget.provisioningService.hasWifiConfigCharacteristic,
+          widget.provisioningService.hasWifiConfigCharacteristic,
       ssid: _ssidController.text,
       password: _passwordController.text,
       selectedNetwork: _selectedNetwork,
@@ -148,11 +169,55 @@ class _WifiSetupScreenState extends State<WifiSetupScreen> {
     return _connectBlockReason == WifiConnectBlockReason.none;
   }
 
+  String? get _currentRobotWifiSsid => _lastProvisioningStatus?.ssid;
+
+  String get _targetSsid => _ssidController.text.trim();
+
+  bool get _hasWifiSsidMismatch {
+    return wifiSsidMismatch(
+      currentSsid: _currentRobotWifiSsid,
+      targetSsid: _targetSsid,
+    );
+  }
+
   bool _shouldShowBleRecoveryAction(WifiConnectBlockReason reason) {
     return reason == WifiConnectBlockReason.bleNotConnected ||
         reason == WifiConnectBlockReason.provisioningServiceNotFound ||
         reason == WifiConnectBlockReason.wifiConfigCharacteristicNotFound ||
         reason == WifiConnectBlockReason.waitingForProvisioning;
+  }
+
+  Future<void> _handleConnectPressed() async {
+    if (_hasWifiSsidMismatch) {
+      final shouldContinue = await showDialog<bool>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('Different Wi-Fi selected'),
+            content: Text(
+              wifiSsidMismatchWarningMessage(
+                currentSsid: _currentRobotWifiSsid!,
+                targetSsid: _targetSsid,
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Continue anyway'),
+              ),
+            ],
+          );
+        },
+      );
+      if (shouldContinue != true || !mounted) {
+        return;
+      }
+    }
+    _connectSweePi();
   }
 
   void _connectSweePi() {
@@ -178,6 +243,8 @@ class _WifiSetupScreenState extends State<WifiSetupScreen> {
     final selectedNetwork = _selectedNetwork;
     final blockReason = _connectBlockReason;
     final canConnectSweePi = _canConnectSweePi;
+    final currentRobotWifiSsid = _currentRobotWifiSsid;
+    final hasWifiSsidMismatch = _hasWifiSsidMismatch;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Robot Wi-Fi')),
@@ -231,9 +298,16 @@ class _WifiSetupScreenState extends State<WifiSetupScreen> {
               border: OutlineInputBorder(),
             ),
           ),
+          if (hasWifiSsidMismatch) ...[
+            const SizedBox(height: 12),
+            _WifiSsidMismatchWarning(
+              currentSsid: currentRobotWifiSsid!,
+              targetSsid: _targetSsid,
+            ),
+          ],
           const SizedBox(height: 16),
           FilledButton.icon(
-            onPressed: canConnectSweePi ? _connectSweePi : null,
+            onPressed: canConnectSweePi ? _handleConnectPressed : null,
             icon: const Icon(Icons.wifi),
             label: const Text('Connect SweePi'),
           ),
@@ -252,26 +326,29 @@ class _WifiSetupScreenState extends State<WifiSetupScreen> {
               onPressed: _isPreparingBle ? null : _ensureBleReady,
               icon: _isPreparingBle
                   ? const SizedBox.square(
-                dimension: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
+                      dimension: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : const Icon(Icons.bluetooth_connected),
-              label: Text(_isPreparingBle ? 'Connecting...' : 'Reconnect to SweePi'),
+              label: Text(
+                _isPreparingBle ? 'Connecting...' : 'Reconnect to SweePi',
+              ),
             ),
           ],
           const SizedBox(height: 12),
           _WifiConnectDebugDetails(
             bleConnected: widget.provisioningService.isConnected,
             provisioningServiceDiscovered:
-            widget.provisioningService.isProvisioningServiceDiscovered,
+                widget.provisioningService.isProvisioningServiceDiscovered,
             wifiConfigDiscovered:
-            widget.provisioningService.hasWifiConfigCharacteristic,
+                widget.provisioningService.hasWifiConfigCharacteristic,
             selectedNetwork: selectedNetwork,
             ssid: _ssidController.text,
             passwordLength: _passwordController.text.length,
             isConnecting: _isConnecting,
             isPreparingBle: _isPreparingBle,
             blockReason: blockReason,
+            currentRobotWifiSsid: currentRobotWifiSsid,
             lastProvisioningStatus: _lastProvisioningStatus,
             lastBleError: _lastBleError,
           ),
@@ -347,16 +424,40 @@ bool canConnectToWifi({
   bool isWaitingForProvisioning = false,
 }) {
   return wifiConnectBlockReason(
-    bleConnected: bleConnected,
-    provisioningServiceDiscovered: provisioningServiceDiscovered,
-    wifiConfigDiscovered: wifiConfigDiscovered,
-    ssid: ssid,
-    password: password,
-    selectedNetwork: selectedNetwork,
-    isConnecting: isConnecting,
-    isWaitingForProvisioning: isWaitingForProvisioning,
-  ) ==
+        bleConnected: bleConnected,
+        provisioningServiceDiscovered: provisioningServiceDiscovered,
+        wifiConfigDiscovered: wifiConfigDiscovered,
+        ssid: ssid,
+        password: password,
+        selectedNetwork: selectedNetwork,
+        isConnecting: isConnecting,
+        isWaitingForProvisioning: isWaitingForProvisioning,
+      ) ==
       WifiConnectBlockReason.none;
+}
+
+@visibleForTesting
+bool wifiSsidMismatch({
+  required String? currentSsid,
+  required String targetSsid,
+}) {
+  final current = currentSsid?.trim();
+  final target = targetSsid.trim();
+  if (current == null || current.isEmpty || target.isEmpty) {
+    return false;
+  }
+  return current != target;
+}
+
+@visibleForTesting
+String wifiSsidMismatchWarningMessage({
+  required String currentSsid,
+  required String targetSsid,
+}) {
+  return 'SweePi is currently connected to \'$currentSsid\'. '
+      'You selected \'$targetSsid\'. After setup, your phone must also be '
+      'connected to \'$targetSsid\', otherwise the app may not find SweePi '
+      'over Wi-Fi.';
 }
 
 @visibleForTesting
@@ -381,6 +482,43 @@ String connectBlockReasonMessage(WifiConnectBlockReason reason) {
   }
 }
 
+class _WifiSsidMismatchWarning extends StatelessWidget {
+  const _WifiSsidMismatchWarning({
+    required this.currentSsid,
+    required this.targetSsid,
+  });
+
+  final String currentSsid;
+  final String targetSsid;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Card(
+      color: colors.errorContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.warning_amber, color: colors.onErrorContainer),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                wifiSsidMismatchWarningMessage(
+                  currentSsid: currentSsid,
+                  targetSsid: targetSsid,
+                ),
+                style: TextStyle(color: colors.onErrorContainer),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _WifiConnectDebugDetails extends StatelessWidget {
   const _WifiConnectDebugDetails({
     required this.bleConnected,
@@ -392,6 +530,7 @@ class _WifiConnectDebugDetails extends StatelessWidget {
     required this.isConnecting,
     required this.isPreparingBle,
     required this.blockReason,
+    required this.currentRobotWifiSsid,
     required this.lastProvisioningStatus,
     required this.lastBleError,
   });
@@ -405,6 +544,7 @@ class _WifiConnectDebugDetails extends StatelessWidget {
   final bool isConnecting;
   final bool isPreparingBle;
   final WifiConnectBlockReason blockReason;
+  final String? currentRobotWifiSsid;
   final ProvisioningStatus? lastProvisioningStatus;
   final Object? lastBleError;
 
@@ -441,8 +581,16 @@ class _WifiConnectDebugDetails extends StatelessWidget {
         _DebugLine(label: 'Is preparing BLE', value: '$isPreparingBle'),
         _DebugLine(label: 'Current block reason', value: blockReason.name),
         _DebugLine(
+          label: 'Current robot Wi-Fi SSID',
+          value: currentRobotWifiSsid,
+        ),
+        _DebugLine(
           label: 'Last provisioning status',
           value: lastProvisioningStatus?.state.jsonName,
+        ),
+        _DebugLine(
+          label: 'Last provisioning message',
+          value: lastProvisioningStatus?.message,
         ),
         _DebugLine(label: 'Last BLE error', value: lastBleError?.toString()),
       ],

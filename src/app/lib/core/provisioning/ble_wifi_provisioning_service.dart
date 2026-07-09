@@ -297,27 +297,24 @@ class FlutterBlueBleWifiProvisioningService
   }
 
   Future<void> _writeJson(
-      BluetoothCharacteristic characteristic,
-      Map<String, dynamic> payload,
-      ) async {
+    BluetoothCharacteristic characteristic,
+    Map<String, dynamic> payload,
+  ) async {
     final encoded = utf8.encode(jsonEncode(payload));
 
     debugPrint(
       '[BLE Provisioning] Writing ${encoded.length} bytes to '
-          '${characteristic.uuid.str128}',
+      '${characteristic.uuid.str128}',
     );
 
     try {
-      await characteristic.write(
-        encoded,
-        withoutResponse: false,
-      );
+      await characteristic.write(encoded, withoutResponse: false);
     } on FlutterBluePlusException catch (error) {
       debugPrint(
         '[BLE Provisioning] BLE write failed. '
-            'bytes=${encoded.length}, '
-            'characteristic=${characteristic.uuid.str128}, '
-            'error=$error',
+        'bytes=${encoded.length}, '
+        'characteristic=${characteristic.uuid.str128}, '
+        'error=$error',
       );
       rethrow;
     }
