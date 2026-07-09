@@ -189,7 +189,7 @@ class RobotApiClient {
   }) async {
     final json = await postJson(
       '/api/localization/initial-pose',
-      body: {'map_id': mapId, ...initialPose.toJson()},
+      body: buildInitialPoseRequestBody(mapId: mapId, initialPose: initialPose),
     );
     return SimpleCommandResponse.fromJson(json);
   }
@@ -243,11 +243,11 @@ class RobotApiClient {
   }
 
   Future<Map<String, dynamic>> _sendJson(
-      String method,
-      Uri uri,
-      HttpClientRequest request,
-      Map<String, dynamic>? body,
-      ) async {
+    String method,
+    Uri uri,
+    HttpClientRequest request,
+    Map<String, dynamic>? body,
+  ) async {
     final bodyText = jsonEncode(body ?? const <String, dynamic>{});
     final bodyBytes = utf8.encode(bodyText);
 
@@ -348,4 +348,17 @@ Map<String, dynamic> buildCleaningStartRequestBody({
     body['processed_map'] = processedMap.toProcessedMapJson();
   }
   return body;
+}
+
+Map<String, dynamic> buildInitialPoseRequestBody({
+  required String mapId,
+  required RobotPose initialPose,
+}) {
+  return {
+    'map_id': mapId,
+    'x': initialPose.x,
+    'y': initialPose.y,
+    'yaw': initialPose.yaw,
+    'frame': initialPose.frame,
+  };
 }

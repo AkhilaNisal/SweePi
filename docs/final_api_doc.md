@@ -56,12 +56,15 @@ Example successful response:
 ```json
 {
   "success": true,
-  "message": "Cleaning started.",
+  "message": "Coverage validation completed successfully.",
   "error": null,
   "timestamp": "2026-06-24T12:00:00Z",
+  "command": "validate_cleaning",
   "accepted": true,
+  "completed": true,
+  "task_finished": false,
   "task_id": "cleaning_20260624_001",
-  "state": "cleaning",
+  "state": "coverage_validated",
   "map_id": "my_room"
 }
 ```
@@ -81,6 +84,54 @@ Example error response:
   "timestamp": "2026-06-24T12:00:00Z"
 }
 ```
+
+---
+
+### 2.2 Command Lifecycle Fields
+
+Robot command endpoints must include top-level command lifecycle fields:
+
+| Field | Meaning |
+| --- | --- |
+| `accepted` | The API bridge accepted the command and attempted the ROS/mock action. |
+| `completed` | This endpoint's immediate command step reached its confirmation condition. |
+| `task_finished` | The whole long-running task is finished. Start commands normally return `false`. |
+| `task_result` | Final task result such as `completed`, `stopped`, `reset`, `failed`, or `map_saved`. |
+| `state` | Current robot/task state or next state. |
+| `command` | Stable command name for app logic. |
+| `next_steps` | Optional ordered hints for the next API calls. |
+| `error` | Structured error object when `success=false`. |
+
+`accepted=true` does not mean the robot task succeeded. It means the bridge
+accepted the request and tried to send or publish it. `completed=true` means the
+specific command step completed, for example initial pose was confirmed by
+localization instead of only published to `/initialpose`.
+
+Long-running tasks such as cleaning, exploration, and return-home require
+status polling for the final result. The mobile app must not proceed to the next
+cleaning step unless the previous command response has both `success=true` and
+`completed=true`.
+
+Cleaning command sequence:
+
+```text
+POST /api/cleaning/start
+  -> waiting_for_initial_pose
+
+POST /api/localization/initial-pose
+  -> initial_pose_confirmed or initial_pose_failed
+
+POST /api/cleaning/validate
+  -> coverage_validated or coverage_validation_failed
+
+POST /api/cleaning/start-motion
+  -> cleaning or cleaning_start_failed
+
+GET /api/cleaning/status
+  -> running/completed/failed/progress
+```
+
+See also [`docs/command_lifecycle.md`](command_lifecycle.md).
 
 ---
 
@@ -687,12 +738,16 @@ Fields:
 {
   "success": true,
   "accepted": true,
-  "message": "Manual drive command accepted.",
+  "completed": true,
+  "task_finished": false,
+  "message": "Manual drive command published.",
   "error": null,
   "timestamp": "2026-06-24T12:00:00Z",
-  "command": "forward",
+  "command": "manual_drive",
+  "direction": "forward",
   "speed": 0.2,
-  "state": "exploring"
+  "state": "exploring",
+  "verified_motion": false
 }
 ```
 
@@ -839,6 +894,9 @@ Rules:
 {
   "success": true,
   "accepted": true,
+  "completed": true,
+  "task_finished": false,
+  "command": "prepare_cleaning",
   "message": "Coverage prepared. Waiting for initial pose from mobile app or RViz.",
   "error": null,
   "timestamp": "2026-06-24T12:00:00Z",
@@ -870,7 +928,12 @@ Rules:
   ],
   "initial_pose": null,
   "initial_pose_required": true,
-  "progress_percent": 0.0
+  "progress_percent": 0.0,
+  "next_steps": [
+    "Set initial pose from RViz or POST /api/localization/initial-pose.",
+    "Call POST /api/cleaning/validate.",
+    "Call POST /api/cleaning/start-motion."
+  ]
 }
 ```
 
@@ -882,6 +945,9 @@ Rules:
 {
   "success": false,
   "accepted": false,
+  "completed": false,
+  "task_finished": false,
+  "command": "prepare_cleaning",
   "message": "initial_pose must be sent separately after cleaning/start.",
   "error": {
     "code": "VALIDATION_ERROR",
@@ -890,7 +956,8 @@ Rules:
       "use_endpoint": "/api/localization/initial-pose"
     }
   },
-  "timestamp": "2026-06-24T12:00:00Z"
+  "timestamp": "2026-06-24T12:00:00Z",
+  "state": "invalid_request"
 }
 ```
 
@@ -902,6 +969,9 @@ Rules:
 {
   "success": false,
   "accepted": false,
+  "completed": false,
+  "task_finished": false,
+  "command": "prepare_cleaning",
   "message": "sections must contain at least one section when cleaning_mode is sections.",
   "error": {
     "code": "VALIDATION_ERROR",
@@ -910,7 +980,8 @@ Rules:
       "cleaning_mode": "sections"
     }
   },
-  "timestamp": "2026-06-24T12:00:00Z"
+  "timestamp": "2026-06-24T12:00:00Z",
+  "state": "invalid_request"
 }
 ```
 
@@ -922,6 +993,9 @@ Rules:
 {
   "success": false,
   "accepted": false,
+  "completed": false,
+  "task_finished": false,
+  "command": "prepare_cleaning",
   "message": "Invalid cleaning_mode. Allowed values are full-map and sections.",
   "error": {
     "code": "VALIDATION_ERROR",
@@ -930,7 +1004,8 @@ Rules:
       "allowed_values": ["full-map", "sections"]
     }
   },
-  "timestamp": "2026-06-24T12:00:00Z"
+  "timestamp": "2026-06-24T12:00:00Z",
+  "state": "invalid_request"
 }
 ```
 
@@ -942,7 +1017,9 @@ Rules:
 POST /api/localization/initial-pose
 ```
 
-Sets the initial pose after `POST /api/cleaning/start`. The pose may also be
+Sets the initial pose after `POST /api/cleaning/start`. The bridge validates
+the pose against the active coverage map when possible, publishes
+`/initialpose`, then waits for localization confirmation. The pose may also be
 set from RViz with `2D Pose Estimate`.
 
 #### Request Body
@@ -963,17 +1040,50 @@ set from RViz with `2D Pose Estimate`.
 {
   "success": true,
   "accepted": true,
-  "message": "Initial pose published.",
+  "completed": true,
+  "task_finished": false,
+  "command": "set_initial_pose",
+  "message": "Initial pose confirmed.",
   "error": null,
   "timestamp": "2026-06-24T12:00:00Z",
+  "state": "initial_pose_confirmed",
   "initial_pose_received": true,
+  "initial_pose_confirmed": true,
   "initial_pose_source": "api",
   "initial_pose": {
     "x": 0.0,
     "y": 0.0,
     "yaw": 0.0,
     "frame": "map"
-  }
+  },
+  "next_steps": [
+    "Call POST /api/cleaning/validate.",
+    "Call POST /api/cleaning/start-motion after validation completes."
+  ]
+}
+```
+
+If `/initialpose` was published but localization/TF was not confirmed, the
+response is a failed command step:
+
+```json
+{
+  "success": false,
+  "accepted": true,
+  "completed": false,
+  "task_finished": false,
+  "command": "set_initial_pose",
+  "message": "Initial pose was published, but localization was not confirmed.",
+  "error": {
+    "code": "INITIAL_POSE_NOT_CONFIRMED",
+    "details": {
+      "reason": "map -> base_link TF was not available before timeout"
+    }
+  },
+  "timestamp": "2026-06-24T12:00:00Z",
+  "state": "initial_pose_failed",
+  "initial_pose_received": true,
+  "initial_pose_confirmed": false
 }
 ```
 
@@ -985,7 +1095,27 @@ set from RViz with `2D Pose Estimate`.
 POST /api/cleaning/validate
 ```
 
-Requests validation after the initial pose is set and coverage path is available.
+Requests validation after the initial pose is confirmed and robot pose/TF is
+available.
+
+#### Response
+
+```json
+{
+  "success": true,
+  "message": "Coverage validation completed successfully.",
+  "error": null,
+  "timestamp": "2026-06-24T12:00:00Z",
+  "command": "validate_cleaning",
+  "accepted": true,
+  "completed": true,
+  "task_finished": false,
+  "state": "coverage_validated",
+  "task_id": "cleaning_20260624_001",
+  "map_id": "my_room",
+  "coverage_map_id": "my_room"
+}
+```
 
 ---
 
@@ -995,7 +1125,46 @@ Requests validation after the initial pose is set and coverage path is available
 POST /api/cleaning/start-motion
 ```
 
-Starts robot motion after `cleaning/start`, initial pose, and validation.
+Starts robot motion after `cleaning/start`, confirmed initial pose, and
+successful validation. This endpoint does not auto-validate.
+
+#### Response
+
+```json
+{
+  "success": true,
+  "message": "Cleaning motion started.",
+  "error": null,
+  "timestamp": "2026-06-24T12:00:00Z",
+  "command": "start_cleaning_motion",
+  "accepted": true,
+  "completed": true,
+  "task_finished": false,
+  "state": "cleaning",
+  "task_id": "cleaning_20260624_001",
+  "map_id": "my_room",
+  "coverage_map_id": "my_room"
+}
+```
+
+If validation has not completed for the current coverage path:
+
+```json
+{
+  "success": false,
+  "message": "Coverage validation is required before starting motion.",
+  "error": {
+    "code": "VALIDATION_REQUIRED",
+    "details": {}
+  },
+  "timestamp": "2026-06-24T12:00:00Z",
+  "command": "start_cleaning_motion",
+  "accepted": false,
+  "completed": false,
+  "task_finished": false,
+  "state": "validation_required"
+}
+```
 
 ---
 
@@ -1019,6 +1188,7 @@ Returns current cleaning progress.
   "state": "cleaning",
   "task_id": "cleaning_20260624_001",
   "map_id": "my_room",
+  "coverage_map_id": "my_room",
   "cleaning_mode": "sections",
   "sections": [
     {
@@ -1037,6 +1207,23 @@ Returns current cleaning progress.
     "yaw": 1.57,
     "frame": "map"
   },
+  "paused": false,
+  "initial_pose_received": true,
+  "initial_pose_confirmed": true,
+  "initial_pose_source": "api",
+  "pose_available": true,
+  "coverage_path_available": true,
+  "path_available": true,
+  "coverage_map_available": true,
+  "coverage_validated": true,
+  "ready_to_validate": true,
+  "ready_to_start_motion": false,
+  "task_finished": false,
+  "task_result": null,
+  "last_error": null,
+  "next_steps": [
+    "Poll GET /api/cleaning/status until task_finished is true."
+  ],
   "nav": {
     "execution_status": "RUNNING"
   },

@@ -17,11 +17,31 @@ class _CleaningScreenState extends State<CleaningScreen> {
   bool _fullMap = true;
   String? _sectionMessage;
 
+  bool _validateSectionSelection() {
+    if (!_fullMap && widget.controller.selectedSections.isEmpty) {
+      setState(() {
+        _sectionMessage = 'Select at least one section before starting.';
+      });
+      return false;
+    }
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = widget.controller;
     final metadata = controller.selectedMapMetadata;
-    final cleaning = controller.robotStatus.cleaning;
+    final cleaning = controller.cleaningStatus;
+    final robotCleaning = controller.robotStatus.cleaning;
+    final taskId = cleaning.taskId ?? robotCleaning.taskId;
+    final mapId = cleaning.mapId ?? robotCleaning.mapId;
+    final progressPercent = taskId == null
+        ? robotCleaning.progressPercent
+        : cleaning.progressPercent;
+    final cleaningMode = cleaning.cleaningMode ?? robotCleaning.cleaningMode;
+    final navStatus = cleaning.navExecutionStatus == 'IDLE'
+        ? controller.robotStatus.nav.executionStatus
+        : cleaning.navExecutionStatus;
     final isCleaningActive = controller.isCleaningActive;
     final isPaused = controller.isCleaningPaused;
 
@@ -110,17 +130,15 @@ class _CleaningScreenState extends State<CleaningScreen> {
                   metadata: metadata,
                   isCleaningActive: isCleaningActive,
                   isPaused: isPaused,
-                  canStart: controller.plannedInitialPose != null,
+                  canGivePose: controller.plannedInitialPose != null,
                   onStart: () {
-                    if (!_fullMap && controller.selectedSections.isEmpty) {
-                      setState(() {
-                        _sectionMessage =
-                            'Select at least one section before starting.';
-                      });
-                      return;
+                    if (_validateSectionSelection()) {
+                      controller.cleaning1(fullMap: _fullMap);
                     }
-                    controller.startCleaning(fullMap: _fullMap);
                   },
+                  onGivePose: controller.cleaning2,
+                  onValidate: controller.cleaning3,
+                  onStartMove: controller.cleaning4,
                 ),
               ],
             ),
@@ -139,15 +157,34 @@ class _CleaningScreenState extends State<CleaningScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text('Robot state: ${controller.robotStatus.state}'),
-                Text('Task ID: ${cleaning.taskId ?? 'None'}'),
-                Text('Map ID: ${cleaning.mapId ?? 'None'}'),
+                Text('Cleaning state: ${cleaning.state}'),
+                Text('Task ID: ${taskId ?? 'None'}'),
+                Text('Map ID: ${mapId ?? 'None'}'),
+                Text('Coverage map: ${cleaning.coverageMapId ?? 'None'}'),
+                Text('Progress: ${progressPercent.toStringAsFixed(1)}%'),
+                Text('Mode: ${cleaningMode ?? 'None'}'),
+                Text('Navigation: $navStatus'),
                 Text(
-                  'Progress: ${cleaning.progressPercent.toStringAsFixed(1)}%',
+                  'Initial pose: ${cleaning.initialPoseConfirmed
+                      ? 'Confirmed'
+                      : cleaning.initialPoseReceived
+                      ? 'Received'
+                      : 'Not set'}',
                 ),
-                Text('Mode: ${cleaning.cleaningMode ?? 'None'}'),
                 Text(
-                  'Navigation: ${controller.robotStatus.nav.executionStatus}',
+                  'Validation: ${cleaning.coverageValidated
+                      ? 'Complete'
+                      : cleaning.readyToValidate
+                      ? 'Ready'
+                      : 'Pending'}',
                 ),
+                Text(
+                  'Ready to move: ${cleaning.readyToStartMotion ? 'Yes' : 'No'}',
+                ),
+                if (cleaning.taskFinished)
+                  Text('Task result: ${cleaning.taskResult ?? 'Finished'}'),
+                if (cleaning.lastError != null)
+                  Text('Last error: ${cleaning.lastError}'),
               ],
             ),
           ),
@@ -163,38 +200,71 @@ class _CleaningActions extends StatelessWidget {
     required this.metadata,
     required this.isCleaningActive,
     required this.isPaused,
-    required this.canStart,
+    required this.canGivePose,
     required this.onStart,
+    required this.onGivePose,
+    required this.onValidate,
+    required this.onStartMove,
   });
 
   final AppController controller;
   final SweePiMapMetadata? metadata;
   final bool isCleaningActive;
   final bool isPaused;
-  final bool canStart;
+  final bool canGivePose;
   final VoidCallback onStart;
+  final VoidCallback onGivePose;
+  final VoidCallback onValidate;
+  final VoidCallback onStartMove;
+
+  bool get _hasMap => metadata != null;
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            if (!isCleaningActive)
+        if (!isCleaningActive) ...[
+          Row(
+            children: [
               Expanded(
-                child: SizedBox(
-                  height: 52,
-                  child: FilledButton.icon(
-                    onPressed: controller.isBusy || metadata == null || !canStart
-                        ? null
-                        : onStart,
-                    icon: const Icon(Icons.play_arrow_rounded, size: 22),
-                    label: const Text('Start'),
-                  ),
+                child: _CleaningStepButton(
+                  label: 'Start',
+                  icon: Icons.play_arrow_rounded,
+                  onPressed: controller.isBusy || !_hasMap ? null : onStart,
                 ),
-              )
-            else ...[
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _CleaningStepButton(
+                  label: 'Give pos',
+                  icon: Icons.my_location_rounded,
+                  onPressed: controller.isBusy || !_hasMap || !canGivePose
+                      ? null
+                      : onGivePose,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _CleaningStepButton(
+                  label: 'Validation',
+                  icon: Icons.fact_check_rounded,
+                  onPressed: controller.isBusy || !_hasMap ? null : onValidate,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _CleaningStepButton(
+                  label: 'Start move',
+                  icon: Icons.navigation_rounded,
+                  onPressed: controller.isBusy || !_hasMap ? null : onStartMove,
+                ),
+              ),
+            ],
+          ),
+        ] else ...[
+          Row(
+            children: [
               Expanded(
                 child: SizedBox(
                   height: 52,
@@ -237,6 +307,30 @@ class _CleaningActions extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ],
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 52,
+                child: FilledButton.tonal(
+                  onPressed: controller.isBusy ? null : controller.returnHome,
+                  child: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.home_rounded, size: 22),
+                        SizedBox(width: 6),
+                        Text('Return home'),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
             const SizedBox(width: 8),
             SizedBox(
               width: 52,
@@ -247,22 +341,7 @@ class _CleaningActions extends StatelessWidget {
                 icon: const Icon(Icons.restart_alt_rounded),
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            SizedBox(
-              width: 52,
-              height: 52,
-              child: IconButton.filledTonal(
-                tooltip: 'Return home',
-                onPressed: controller.isBusy ? null : controller.returnHome,
-                icon: const Icon(Icons.home_rounded),
-              ),
-            ),
+            const SizedBox(width: 8),
             SizedBox(
               width: 52,
               height: 52,
@@ -277,6 +356,40 @@ class _CleaningActions extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+class _CleaningStepButton extends StatelessWidget {
+  const _CleaningStepButton({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 52,
+      width: double.infinity,
+      child: FilledButton(
+        onPressed: onPressed,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 20),
+              const SizedBox(width: 5),
+              Text(label),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

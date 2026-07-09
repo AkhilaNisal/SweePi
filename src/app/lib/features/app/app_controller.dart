@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/models/cleaning_models.dart';
 import '../../core/models/exploration_models.dart';
 import '../../core/map/processed_section_map.dart';
 import '../../core/models/map_models.dart';
@@ -22,6 +23,7 @@ class AppController extends ChangeNotifier {
   String? lastMessage;
 
   RobotStatus robotStatus = RobotStatus.offline;
+  CleaningStatus cleaningStatus = CleaningStatus.empty;
   ExplorationStatus explorationStatus = ExplorationStatus.empty;
   List<SweePiMapMetadata> savedMaps = const [];
   SweePiMapMetadata? selectedMapMetadata;
@@ -71,15 +73,24 @@ class AppController extends ChangeNotifier {
   }
 
   bool get isCleaningRunning {
+    final cleaningState = cleaningStatus.state.toLowerCase();
     final robotState = robotStatus.state.toLowerCase();
     final navState = robotStatus.nav.executionStatus.toUpperCase();
-    return robotState == 'cleaning' || navState == 'CLEANING';
+    final cleaningNavState = cleaningStatus.navExecutionStatus.toUpperCase();
+    return cleaningState == 'cleaning' ||
+        robotState == 'cleaning' ||
+        navState == 'CLEANING' ||
+        cleaningNavState == 'RUNNING';
   }
 
   bool get isCleaningPaused {
+    final cleaningState = cleaningStatus.state.toLowerCase();
     final robotState = robotStatus.state.toLowerCase();
     final navState = robotStatus.nav.executionStatus.toUpperCase();
-    return robotState == 'paused' || navState == 'PAUSED';
+    return cleaningStatus.paused ||
+        cleaningState == 'paused' ||
+        robotState == 'paused' ||
+        navState == 'PAUSED';
   }
 
   bool get isCleaningActive => isCleaningRunning || isCleaningPaused;
@@ -106,6 +117,7 @@ class AppController extends ChangeNotifier {
       errorMessage = '$error';
       isConnected = false;
       robotStatus = RobotStatus.offline;
+      cleaningStatus = CleaningStatus.empty;
     } finally {
       isBusy = false;
       notifyListeners();
@@ -321,60 +333,132 @@ class AppController extends ChangeNotifier {
   }
 
   Future<bool> startCleaning({required bool fullMap}) async {
+    if (plannedInitialPose == null) {
+      errorMessage = 'Set a start pose before starting cleaning.';
+      notifyListeners();
+      return false;
+    }
+
+    final cleaningStarted = await cleaning1(fullMap: fullMap);
+    if (!cleaningStarted) {
+      return false;
+    }
+
+    final initialPoseSet = await cleaning2();
+    if (!initialPoseSet) {
+      return false;
+    }
+
+    final cleaningValidated = await cleaning3();
+    if (!cleaningValidated) {
+      return false;
+    }
+
+    return cleaning4();
+  }
+
+  Future<bool> cleaning1({required bool fullMap}) async {
     var accepted = false;
     await _runBusy(() async {
       final metadata = selectedMapMetadata;
       if (metadata == null) {
         throw const ApiException('Select a map before starting cleaning.');
       }
+
       if (!fullMap && selectedSections.isEmpty) {
         errorMessage = 'Select a section before starting section cleaning.';
         return;
       }
-      if (plannedInitialPose == null) {
-        errorMessage = 'Set a start pose before starting cleaning.';
-        return;
-      }
+
       final sectionsToClean = fullMap ? const <MapSection>[] : selectedSections;
       if (!fullMap && processedSectionMapPreview == null) {
         _rebuildProcessedSectionPreview();
       }
-      final client = _requireClient();
-      final response = await client.startCleaning(
+
+      final response = await _requireClient().startCleaning(
         mapId: metadata.mapId,
         cleaningMode: fullMap ? 'full-map' : 'sections',
         sections: sectionsToClean,
         processedMap: fullMap ? null : processedSectionMapPreview,
       );
-      accepted = response.accepted;
+
+      accepted = response.commandSucceeded;
       lastMessage = response.message;
-      if (!response.accepted) {
+      if (!response.commandSucceeded) {
         errorMessage = response.message;
         return;
       }
-      final poseResponse = await client.setCleaningInitialPose(
+
+      await _refreshCleaningStatusOnly();
+      await _refreshRobotStatusOnly();
+    });
+    return accepted;
+  }
+
+  Future<bool> cleaning2() async {
+    var accepted = false;
+    await _runBusy(() async {
+      final metadata = selectedMapMetadata;
+      final initialPose = plannedInitialPose;
+
+      if (metadata == null) {
+        throw const ApiException('Select a map before setting initial pose.');
+      }
+
+      if (initialPose == null) {
+        errorMessage = 'Set a start pose before starting cleaning.';
+        return;
+      }
+
+      final response = await _requireClient().setCleaningInitialPose(
         mapId: metadata.mapId,
-        initialPose: plannedInitialPose!,
+        initialPose: initialPose,
       );
-      lastMessage = poseResponse.message;
-      if (!poseResponse.accepted) {
-        errorMessage = poseResponse.message;
+
+      accepted = response.commandSucceeded;
+      lastMessage = response.message;
+      if (!response.commandSucceeded) {
+        errorMessage = response.message;
         return;
       }
-      await Future.delayed(const Duration(seconds: 5));
-      final validationResponse = await client.validateCleaning();
-      lastMessage = validationResponse.message;
-      if (!validationResponse.accepted) {
-        errorMessage = validationResponse.message;
+
+      await _refreshCleaningStatusOnly();
+      await _refreshRobotStatusOnly();
+    });
+    return accepted;
+  }
+
+  Future<bool> cleaning3() async {
+    var accepted = false;
+    await _runBusy(() async {
+      final response = await _requireClient().validateCleaning();
+
+      accepted = response.commandSucceeded;
+      lastMessage = response.message;
+      if (!response.commandSucceeded) {
+        errorMessage = response.message;
         return;
       }
-      final motionResponse = await client.startCleaningMotion();
-      accepted = motionResponse.accepted;
-      lastMessage = motionResponse.message;
-      if (!motionResponse.accepted) {
-        errorMessage = motionResponse.message;
+
+      await _refreshCleaningStatusOnly();
+      await _refreshRobotStatusOnly();
+    });
+    return accepted;
+  }
+
+  Future<bool> cleaning4() async {
+    var accepted = false;
+    await _runBusy(() async {
+      final response = await _requireClient().startCleaningMotion();
+
+      accepted = response.commandSucceeded;
+      lastMessage = response.message;
+      if (!response.commandSucceeded) {
+        errorMessage = response.message;
         return;
       }
+
+      await _refreshCleaningStatusOnly();
       await _refreshRobotStatusOnly();
     });
     return accepted;
@@ -392,6 +476,7 @@ class AppController extends ChangeNotifier {
         errorMessage = response.message;
         return;
       }
+      await _refreshCleaningStatusOnly();
       await _refreshRobotStatusOnly();
     });
     return accepted;
@@ -409,6 +494,7 @@ class AppController extends ChangeNotifier {
         errorMessage = response.message;
         return;
       }
+      await _refreshCleaningStatusOnly();
       await _refreshRobotStatusOnly();
     });
     return accepted;
@@ -426,6 +512,7 @@ class AppController extends ChangeNotifier {
         errorMessage = response.message;
         return;
       }
+      await _refreshCleaningStatusOnly();
       await _refreshRobotStatusOnly();
     });
     return accepted;
@@ -433,8 +520,8 @@ class AppController extends ChangeNotifier {
 
   Future<void> refreshCleaningStatus() async {
     await _runBusy(() async {
-      final status = await _requireClient().fetchCleaningStatus();
-      lastMessage = status.message;
+      await _refreshCleaningStatusOnly();
+      lastMessage = cleaningStatus.message;
       await _refreshRobotStatusOnly();
     });
   }
@@ -451,6 +538,7 @@ class AppController extends ChangeNotifier {
         errorMessage = response.message;
         return;
       }
+      await _refreshCleaningStatusOnly();
       await _refreshRobotStatusOnly();
     });
     return accepted;
@@ -468,6 +556,7 @@ class AppController extends ChangeNotifier {
         errorMessage = response.message;
         return;
       }
+      await _refreshCleaningStatusOnly();
       await _refreshRobotStatusOnly();
     });
     return accepted;
@@ -526,6 +615,10 @@ class AppController extends ChangeNotifier {
 
   Future<void> _refreshRobotStatusOnly() async {
     robotStatus = await _requireClient().fetchRobotStatus();
+  }
+
+  Future<void> _refreshCleaningStatusOnly() async {
+    cleaningStatus = await _requireClient().fetchCleaningStatus();
   }
 
   Future<void> _refreshMapsOnly() async {

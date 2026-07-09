@@ -64,9 +64,24 @@ class RobotCleaningState {
     required this.active,
     required this.taskId,
     required this.mapId,
+    required this.coverageMapId,
     required this.cleaningMode,
     required this.sections,
     required this.progressPercent,
+    required this.paused,
+    required this.initialPoseReceived,
+    required this.initialPoseConfirmed,
+    required this.initialPoseSource,
+    required this.poseAvailable,
+    required this.coveragePathAvailable,
+    required this.pathAvailable,
+    required this.coverageMapAvailable,
+    required this.coverageValidated,
+    required this.readyToValidate,
+    required this.readyToStartMotion,
+    required this.taskFinished,
+    required this.taskResult,
+    required this.lastError,
   });
 
   factory RobotCleaningState.fromJson(Map<String, dynamic> json) {
@@ -74,12 +89,27 @@ class RobotCleaningState {
       active: json['active'] as bool? ?? false,
       taskId: json['task_id'] as String?,
       mapId: json['map_id'] as String?,
+      coverageMapId: json['coverage_map_id'] as String?,
       cleaningMode: json['cleaning_mode'] as String?,
       sections: ((json['sections'] as List?) ?? const [])
           .whereType<Map>()
           .map((item) => MapSection.fromJson(item.cast<String, dynamic>()))
           .toList(),
       progressPercent: (json['progress_percent'] as num?)?.toDouble() ?? 0.0,
+      paused: json['paused'] as bool? ?? false,
+      initialPoseReceived: json['initial_pose_received'] as bool? ?? false,
+      initialPoseConfirmed: json['initial_pose_confirmed'] as bool? ?? false,
+      initialPoseSource: json['initial_pose_source'] as String?,
+      poseAvailable: json['pose_available'] as bool? ?? false,
+      coveragePathAvailable: json['coverage_path_available'] as bool? ?? false,
+      pathAvailable: json['path_available'] as bool? ?? false,
+      coverageMapAvailable: json['coverage_map_available'] as bool? ?? false,
+      coverageValidated: json['coverage_validated'] as bool? ?? false,
+      readyToValidate: json['ready_to_validate'] as bool? ?? false,
+      readyToStartMotion: json['ready_to_start_motion'] as bool? ?? false,
+      taskFinished: json['task_finished'] as bool? ?? false,
+      taskResult: json['task_result'] as String?,
+      lastError: _stringFromOptional(json['last_error']),
     );
   }
 
@@ -87,17 +117,47 @@ class RobotCleaningState {
     active: false,
     taskId: null,
     mapId: null,
+    coverageMapId: null,
     cleaningMode: null,
     sections: [],
     progressPercent: 0,
+    paused: false,
+    initialPoseReceived: false,
+    initialPoseConfirmed: false,
+    initialPoseSource: null,
+    poseAvailable: false,
+    coveragePathAvailable: false,
+    pathAvailable: false,
+    coverageMapAvailable: false,
+    coverageValidated: false,
+    readyToValidate: false,
+    readyToStartMotion: false,
+    taskFinished: false,
+    taskResult: null,
+    lastError: null,
   );
 
   final bool active;
   final String? taskId;
   final String? mapId;
+  final String? coverageMapId;
   final String? cleaningMode;
   final List<MapSection> sections;
   final double progressPercent;
+  final bool paused;
+  final bool initialPoseReceived;
+  final bool initialPoseConfirmed;
+  final String? initialPoseSource;
+  final bool poseAvailable;
+  final bool coveragePathAvailable;
+  final bool pathAvailable;
+  final bool coverageMapAvailable;
+  final bool coverageValidated;
+  final bool readyToValidate;
+  final bool readyToStartMotion;
+  final bool taskFinished;
+  final String? taskResult;
+  final String? lastError;
 }
 
 class RobotExplorationState {
@@ -214,4 +274,18 @@ class RobotStatus {
   final RobotNavState nav;
   final List<String> errors;
   final List<String> warnings;
+}
+
+String? _stringFromOptional(Object? value) {
+  if (value == null) {
+    return null;
+  }
+  if (value is String) {
+    return value;
+  }
+  if (value is Map) {
+    final message = value['message'] ?? value['code'];
+    return message?.toString();
+  }
+  return value.toString();
 }
