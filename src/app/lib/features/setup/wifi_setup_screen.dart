@@ -35,6 +35,7 @@ class _WifiSetupScreenState extends State<WifiSetupScreen> {
   ProvisioningStatus? _lastProvisioningStatus;
   Object? _lastBleError;
   bool _isConnecting = false;
+  bool _isPreparingBle = false;
   bool _isLeavingScreen = false;
 
   @override
@@ -48,7 +49,7 @@ class _WifiSetupScreenState extends State<WifiSetupScreen> {
     _passwordController.addListener(_refreshFormState);
     widget.controller.connectionManager.addListener(_refreshFormState);
     _statusSubscription = widget.provisioningService.statusStream.listen(
-      (status) {
+          (status) {
         _lastProvisioningStatus = status;
         _refreshFormState();
       },
@@ -57,6 +58,10 @@ class _WifiSetupScreenState extends State<WifiSetupScreen> {
         _refreshFormState();
       },
     );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _ensureBleReady();
+    });
   }
 
   @override
@@ -79,6 +84,41 @@ class _WifiSetupScreenState extends State<WifiSetupScreen> {
     });
   }
 
+  Future<void> _ensureBleReady() async {
+    if (!mounted || _isLeavingScreen || _isPreparingBle) {
+      return;
+    }
+
+    final alreadyReady =
+        widget.provisioningService.isConnected &&
+            widget.provisioningService.isProvisioningServiceDiscovered &&
+            widget.provisioningService.hasWifiConfigCharacteristic;
+
+    if (alreadyReady) {
+      _refreshFormState();
+      return;
+    }
+
+    setState(() {
+      _isPreparingBle = true;
+      _lastBleError = null;
+    });
+
+    try {
+      final robotInfo = await widget.provisioningService.connect(widget.robot);
+      await widget.controller.connectionManager.markBleConnected(robotInfo);
+    } catch (error) {
+      _lastBleError = error;
+    } finally {
+      if (mounted && !_isLeavingScreen) {
+        setState(() {
+          _isPreparingBle = false;
+          _selectedNetwork = _networkForSsid(_ssidController.text);
+        });
+      }
+    }
+  }
+
   WifiNetwork? _networkForSsid(String ssid) {
     final normalizedSsid = ssid.trim();
     for (final network in widget.networks) {
@@ -93,18 +133,26 @@ class _WifiSetupScreenState extends State<WifiSetupScreen> {
     return wifiConnectBlockReason(
       bleConnected: widget.provisioningService.isConnected,
       provisioningServiceDiscovered:
-          widget.provisioningService.isProvisioningServiceDiscovered,
+      widget.provisioningService.isProvisioningServiceDiscovered,
       wifiConfigDiscovered:
-          widget.provisioningService.hasWifiConfigCharacteristic,
+      widget.provisioningService.hasWifiConfigCharacteristic,
       ssid: _ssidController.text,
       password: _passwordController.text,
       selectedNetwork: _selectedNetwork,
       isConnecting: _isConnecting,
+      isWaitingForProvisioning: _isPreparingBle,
     );
   }
 
   bool get _canConnectSweePi {
     return _connectBlockReason == WifiConnectBlockReason.none;
+  }
+
+  bool _shouldShowBleRecoveryAction(WifiConnectBlockReason reason) {
+    return reason == WifiConnectBlockReason.bleNotConnected ||
+        reason == WifiConnectBlockReason.provisioningServiceNotFound ||
+        reason == WifiConnectBlockReason.wifiConfigCharacteristicNotFound ||
+        reason == WifiConnectBlockReason.waitingForProvisioning;
   }
 
   void _connectSweePi() {
@@ -141,6 +189,15 @@ class _WifiSetupScreenState extends State<WifiSetupScreen> {
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 12),
+          if (_isPreparingBle) ...[
+            const LinearProgressIndicator(),
+            const SizedBox(height: 8),
+            Text(
+              'Connecting to SweePi Bluetooth setup service...',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+          ],
           if (widget.networks.isNotEmpty)
             for (final network in widget.networks)
               ListTile(
@@ -189,17 +246,31 @@ class _WifiSetupScreenState extends State<WifiSetupScreen> {
               ),
             ),
           ],
+          if (_shouldShowBleRecoveryAction(blockReason)) ...[
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: _isPreparingBle ? null : _ensureBleReady,
+              icon: _isPreparingBle
+                  ? const SizedBox.square(
+                dimension: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+                  : const Icon(Icons.bluetooth_connected),
+              label: Text(_isPreparingBle ? 'Connecting...' : 'Reconnect to SweePi'),
+            ),
+          ],
           const SizedBox(height: 12),
           _WifiConnectDebugDetails(
             bleConnected: widget.provisioningService.isConnected,
             provisioningServiceDiscovered:
-                widget.provisioningService.isProvisioningServiceDiscovered,
+            widget.provisioningService.isProvisioningServiceDiscovered,
             wifiConfigDiscovered:
-                widget.provisioningService.hasWifiConfigCharacteristic,
+            widget.provisioningService.hasWifiConfigCharacteristic,
             selectedNetwork: selectedNetwork,
             ssid: _ssidController.text,
             passwordLength: _passwordController.text.length,
             isConnecting: _isConnecting,
+            isPreparingBle: _isPreparingBle,
             blockReason: blockReason,
             lastProvisioningStatus: _lastProvisioningStatus,
             lastBleError: _lastBleError,
@@ -231,6 +302,7 @@ WifiConnectBlockReason wifiConnectBlockReason({
   required String password,
   required WifiNetwork? selectedNetwork,
   required bool isConnecting,
+  bool isWaitingForProvisioning = false,
 }) {
   final hasSsid = ssid.trim().isNotEmpty;
   final normalizedSsid = ssid.trim();
@@ -241,6 +313,9 @@ WifiConnectBlockReason wifiConnectBlockReason({
 
   if (isConnecting) {
     return WifiConnectBlockReason.connecting;
+  }
+  if (isWaitingForProvisioning) {
+    return WifiConnectBlockReason.waitingForProvisioning;
   }
   if (!bleConnected) {
     return WifiConnectBlockReason.bleNotConnected;
@@ -269,16 +344,18 @@ bool canConnectToWifi({
   required String password,
   required WifiNetwork? selectedNetwork,
   required bool isConnecting,
+  bool isWaitingForProvisioning = false,
 }) {
   return wifiConnectBlockReason(
-        bleConnected: bleConnected,
-        provisioningServiceDiscovered: provisioningServiceDiscovered,
-        wifiConfigDiscovered: wifiConfigDiscovered,
-        ssid: ssid,
-        password: password,
-        selectedNetwork: selectedNetwork,
-        isConnecting: isConnecting,
-      ) ==
+    bleConnected: bleConnected,
+    provisioningServiceDiscovered: provisioningServiceDiscovered,
+    wifiConfigDiscovered: wifiConfigDiscovered,
+    ssid: ssid,
+    password: password,
+    selectedNetwork: selectedNetwork,
+    isConnecting: isConnecting,
+    isWaitingForProvisioning: isWaitingForProvisioning,
+  ) ==
       WifiConnectBlockReason.none;
 }
 
@@ -313,6 +390,7 @@ class _WifiConnectDebugDetails extends StatelessWidget {
     required this.ssid,
     required this.passwordLength,
     required this.isConnecting,
+    required this.isPreparingBle,
     required this.blockReason,
     required this.lastProvisioningStatus,
     required this.lastBleError,
@@ -325,6 +403,7 @@ class _WifiConnectDebugDetails extends StatelessWidget {
   final String ssid;
   final int passwordLength;
   final bool isConnecting;
+  final bool isPreparingBle;
   final WifiConnectBlockReason blockReason;
   final ProvisioningStatus? lastProvisioningStatus;
   final Object? lastBleError;
@@ -359,6 +438,7 @@ class _WifiConnectDebugDetails extends StatelessWidget {
         _DebugLine(label: 'Is open network', value: '$isOpenNetwork'),
         _DebugLine(label: 'Is manual network', value: '$isManualNetwork'),
         _DebugLine(label: 'Is connecting', value: '$isConnecting'),
+        _DebugLine(label: 'Is preparing BLE', value: '$isPreparingBle'),
         _DebugLine(label: 'Current block reason', value: blockReason.name),
         _DebugLine(
           label: 'Last provisioning status',

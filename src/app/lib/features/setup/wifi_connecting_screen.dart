@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/connection/robot_channel.dart';
 import '../../core/connection/robot_discovered_device.dart';
 import '../../core/provisioning/ble_wifi_provisioning_service.dart';
+import '../../core/provisioning/provisioning_status_model.dart';
 import '../app/app_controller.dart';
 import 'setup_success_screen.dart';
 
@@ -36,6 +37,33 @@ class _WifiConnectingScreenState extends State<WifiConnectingScreen> {
     _connect();
   }
 
+  Future<ProvisioningStatus> _waitForFinalWifiStatus() async {
+    ProvisioningStatus lastStatus = await widget.provisioningService.readWifiStatus();
+
+    for (var attempt = 0; attempt < 45; attempt++) {
+      if (!mounted) {
+        return lastStatus;
+      }
+
+      if (lastStatus.isConnected || lastStatus.isFailure) {
+        return lastStatus;
+      }
+
+      setState(() {
+        _message = lastStatus.message ?? 'Connecting to your Wi-Fi...';
+      });
+
+      await Future<void>.delayed(const Duration(seconds: 1));
+      lastStatus = await widget.provisioningService.readWifiStatus();
+    }
+
+    return ProvisioningStatus(
+      state: WifiProvisioningState.failedTimeout,
+      ssid: widget.ssid,
+      message: 'Timed out while waiting for SweePi to connect to Wi-Fi.',
+    );
+  }
+
   Future<void> _connect() async {
     widget.controller.connectionManager.markProvisioning();
     try {
@@ -43,7 +71,7 @@ class _WifiConnectingScreenState extends State<WifiConnectingScreen> {
         ssid: widget.ssid,
         password: widget.password,
       );
-      final status = await widget.provisioningService.readWifiStatus();
+      final status = await _waitForFinalWifiStatus();
       if (!mounted) {
         return;
       }

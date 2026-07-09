@@ -52,6 +52,20 @@ class FlutterBlueBleWifiProvisioningService
   bool get hasWifiConfigCharacteristic =>
       _characteristics.containsKey(WIFI_CONFIG_CHARACTERISTIC_UUID);
 
+  Future<void> _requestLargerMtu(BluetoothDevice device) async {
+    if (defaultTargetPlatform != TargetPlatform.android) {
+      return;
+    }
+
+    try {
+      await device.requestMtu(256);
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      debugPrint('[BLE Provisioning] Requested BLE MTU 256.');
+    } catch (error) {
+      debugPrint('[BLE Provisioning] MTU request failed: $error');
+    }
+  }
+
   @override
   Future<RobotDiscoveredDevice> connect(RobotDiscoveredDevice robot) async {
     final remoteId = robot.bleDeviceId;
@@ -67,8 +81,11 @@ class FlutterBlueBleWifiProvisioningService
       license: License.nonprofit,
       timeout: const Duration(seconds: 20),
     );
+
     _device = device;
     _robot = robot;
+
+    await _requestLargerMtu(device);
     await _discoverCharacteristics(device);
     final info = await readRobotInfo();
     _statusController.add(
@@ -280,10 +297,30 @@ class FlutterBlueBleWifiProvisioningService
   }
 
   Future<void> _writeJson(
-    BluetoothCharacteristic characteristic,
-    Map<String, dynamic> payload,
-  ) async {
-    await characteristic.write(utf8.encode(jsonEncode(payload)));
+      BluetoothCharacteristic characteristic,
+      Map<String, dynamic> payload,
+      ) async {
+    final encoded = utf8.encode(jsonEncode(payload));
+
+    debugPrint(
+      '[BLE Provisioning] Writing ${encoded.length} bytes to '
+          '${characteristic.uuid.str128}',
+    );
+
+    try {
+      await characteristic.write(
+        encoded,
+        withoutResponse: false,
+      );
+    } on FlutterBluePlusException catch (error) {
+      debugPrint(
+        '[BLE Provisioning] BLE write failed. '
+            'bytes=${encoded.length}, '
+            'characteristic=${characteristic.uuid.str128}, '
+            'error=$error',
+      );
+      rethrow;
+    }
   }
 }
 
