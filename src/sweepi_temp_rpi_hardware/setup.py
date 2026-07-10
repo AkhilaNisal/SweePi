@@ -18,7 +18,7 @@ setup(
     zip_safe=True,
     maintainer='akhila-wedamestrige',
     maintainer_email='wedamestrigean@gmail.com',
-    description='Temporary Raspberry Pi GPIO stepper and MPU6050 hardware layer for SweePi testing.',
+    description='Raspberry Pi GPIO hardware layer for SweePi test drive and cleaning motors.',
     license='Apache-2.0',
     tests_require=['pytest'],
     entry_points={
@@ -26,6 +26,7 @@ setup(
             'stepper_driver_node = sweepi_temp_rpi_hardware.stepper_driver_node:main',
             'stepper_ticks_to_odom_node = sweepi_temp_rpi_hardware.stepper_ticks_to_odom_node:main',
             'mpu6050_imu_node = sweepi_temp_rpi_hardware.mpu6050_imu_node:main',
+            'cleaning_motor_controller_node = sweepi_temp_rpi_hardware.cleaning_motor_controller_node:main',
         ],
     },
 )
