@@ -26,6 +26,10 @@ class SweePiRobotManager(Node):
 
         self.declare_parameter('map_topic', '/map')
         self.map_topic = str(self.get_parameter('map_topic').value).strip() or '/map'
+        self.declare_parameter('use_arm_assist', False)
+        self.use_arm_assist = bool(
+            self.get_parameter('use_arm_assist').value
+        )
 
         self.active_task = 'idle'
         self.active_map_name = ''
@@ -257,6 +261,7 @@ class SweePiRobotManager(Node):
                 'map_name:=%s' % map_name,
                 'auto_start:=false',
                 'use_sim_time:=%s' % self._use_sim_time_value(),
+                'use_robot_arm:=%s' % self._bool_arg(self.use_arm_assist),
             ],
             transition_from_task='exploration',
             start_coverage_when_ready=bool(request.auto_start),
@@ -1133,11 +1138,12 @@ class SweePiRobotManager(Node):
 
         msg = String()
         msg.data = (
-            'task=%s map_name=%s latest_coverage_status=%s '
+            'task=%s map_name=%s arm_assist=%s latest_coverage_status=%s '
             'latest_exploration_mode=%s'
         ) % (
             self.active_task,
             self.active_map_name or '(unset)',
+            self._bool_arg(self.use_arm_assist),
             self.latest_coverage_status or '(none)',
             self.latest_exploration_mode or '(none)',
         )

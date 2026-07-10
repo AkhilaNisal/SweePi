@@ -50,10 +50,6 @@
       <render_engine>ogre2</render_engine>
     </plugin>
 
-    <!-- CAMERA SYSTEM PLUGIN (REQUIRED FOR CAMERA TO WORK!) -->
-    <plugin filename="gz-sim-camera-system" name="gz::sim::systems::Camera">
-    </plugin>
-    
     <!-- IMU System (for inertial measurement unit simulation) -->
     <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu"/>
 

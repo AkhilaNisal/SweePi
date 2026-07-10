@@ -54,6 +54,39 @@ coverage_planner_node:
 
 coverage_follow_path_executor_node:
   ros__parameters:
+    use_robot_arm: false
+    front_tof_topic: "/tof/front/range"
+    tof_free_space_threshold_m: 0.50
+    tof_message_timeout_sec: 0.5
+    tof_required_free_readings: 5
+    front_lidar_topic: "/scan"
+    front_lidar_object_threshold_m: 0.50
+    front_lidar_sector_half_angle_rad: 0.35
+    front_lidar_object_max_angle_rad: 0.25
+    front_lidar_message_timeout_sec: 0.5
+    front_lidar_required_object_readings: 5
+    arm_command_topic: "/sweepi_arm/command"
+    arm_status_topic: "/sweepi_arm/status"
+    coverage_arm_status_topic: "/coverage_arm_status"
+    arm_spin_action_name: "/spin"
+    arm_turn_angle_rad: 3.141592653589793
+    arm_spin_timeout_sec: 15.0
+    arm_start_ack_timeout_sec: 3.0
+    arm_completion_timeout_sec: 60.0
+    arm_handled_object_radius_m: 0.50
+    arm_resume_handled_costmap_radius_m: 0.75
+    arm_handled_path_index_margin: 10
+    arm_static_obstacle_reject_radius_m: 0.45
+    arm_mark_failed_object_handled: true
+    arm_resume_on_failure: true
+    arm_replan_after_completion: true
+    arm_replan_on_resume_failure: true
+    arm_replan_max_tolerated_blocked_costmap_samples: 75
+    arm_replan_max_tolerated_blocked_costmap_ratio: 0.05
+    arm_replan_max_tolerated_blocked_cost: 99
+    arm_replan_planner_service: "/replan_coverage_planner"
+    arm_fallback_to_dynamic_bypass: false
+    arm_resume_suppress_detection_sec: 3.0
     use_sim_time: true
     coverage_path_topic: "/coverage_path"
     raw_path_topic: "/coverage_path_raw"
@@ -80,7 +113,7 @@ coverage_follow_path_executor_node:
     max_allowed_nav_cost: 50
     max_tolerated_blocked_costmap_samples: 25
     max_tolerated_blocked_costmap_ratio: 0.01
-    max_tolerated_blocked_cost: 90
+    max_tolerated_blocked_cost: 99
     treat_unknown_cost_as_blocked: true
     freeze_path_on_start: true
     ignore_path_updates_while_executing: true

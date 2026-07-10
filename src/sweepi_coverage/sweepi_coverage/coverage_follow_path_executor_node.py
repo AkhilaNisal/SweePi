@@ -2818,6 +2818,7 @@ class CoverageFollowPathExecutorNode(Node):
             'costmap_valid': True,
             'costmap_reason': 'ok',
             'blocked_pose_count': 0,
+            'ignored_blocked_pose_count': 0,
             'unknown_pose_count': 0,
             'max_observed_cost': 0,
             'tolerated_blocked_pose_count': 0,
@@ -2840,6 +2841,7 @@ class CoverageFollowPathExecutorNode(Node):
         sample_step = max(0.01, self.nav_costmap.info.resolution * 0.5)
         sample_count = 0
         blocked_count = 0
+        ignored_blocked_count = 0
         unknown_count = 0
         max_cost = 0
         max_blocked_cost = 0
@@ -2852,9 +2854,19 @@ class CoverageFollowPathExecutorNode(Node):
                 unknown_count += 1
             max_cost = max(max_cost, cost_info['cost'])
             if cost_info['blocked']:
-                blocked_count += 1
-                max_blocked_cost = max(max_blocked_cost, cost_info['cost'])
-                self._append_blocked_debug_point(pose.position)
+                if self._ignore_costmap_validation_blocked_sample(
+                    pose.position.x,
+                    pose.position.y,
+                    cost_info['cost'],
+                    cost_info['unknown'],
+                    index,
+                    path,
+                ):
+                    ignored_blocked_count += 1
+                else:
+                    blocked_count += 1
+                    max_blocked_cost = max(max_blocked_cost, cost_info['cost'])
+                    self._append_blocked_debug_point(pose.position)
 
             if index == 0:
                 continue
@@ -2873,17 +2885,40 @@ class CoverageFollowPathExecutorNode(Node):
                     unknown_count += 1
                 max_cost = max(max_cost, cost_info['cost'])
                 if cost_info['blocked']:
-                    blocked_count += 1
-                    max_blocked_cost = max(max_blocked_cost, cost_info['cost'])
-                    point = Point()
-                    point.x = x
-                    point.y = y
-                    point.z = 0.0
-                    self._append_blocked_debug_point(point)
+                    if self._ignore_costmap_validation_blocked_sample(
+                        x,
+                        y,
+                        cost_info['cost'],
+                        cost_info['unknown'],
+                        index,
+                        path,
+                    ):
+                        ignored_blocked_count += 1
+                    else:
+                        blocked_count += 1
+                        max_blocked_cost = max(max_blocked_cost, cost_info['cost'])
+                        point = Point()
+                        point.x = x
+                        point.y = y
+                        point.z = 0.0
+                        self._append_blocked_debug_point(point)
 
         report['blocked_pose_count'] = blocked_count
+        report['ignored_blocked_pose_count'] = ignored_blocked_count
         report['unknown_pose_count'] = unknown_count
         report['max_observed_cost'] = max_cost
+        if ignored_blocked_count > 0 and blocked_count == 0:
+            report['costmap_reason'] = (
+                'ignored %d handled obstacle inflated costmap samples'
+                % ignored_blocked_count
+            )
+            self.get_logger().warn(
+                'Coverage path has %d inflated costmap samples near a handled '
+                'obstacle; allowing this validation pass.'
+                % ignored_blocked_count,
+                throttle_duration_sec=5.0,
+            )
+            return report
         if blocked_count > 0:
             blocked_ratio = (
                 float(blocked_count) / float(sample_count)
@@ -2926,6 +2961,12 @@ class CoverageFollowPathExecutorNode(Node):
                 )
             )
         return report
+
+    def _ignore_costmap_validation_blocked_sample(
+        self, x, y, cost, unknown, pose_index, path
+    ):
+        del x, y, cost, unknown, pose_index, path
+        return False
 
     def _costmap_value_at(self, x, y):
         try:

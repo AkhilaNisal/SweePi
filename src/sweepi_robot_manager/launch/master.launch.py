@@ -80,6 +80,7 @@ def generate_launch_description():
     headless = LaunchConfiguration('headless')
     launch_rviz = LaunchConfiguration('launch_rviz')
     launch_api_bridge = LaunchConfiguration('launch_api_bridge')
+    use_arm_assist = LaunchConfiguration('use_arm_assist')
     api_host = LaunchConfiguration('api_host')
     api_port = LaunchConfiguration('api_port')
     base_serial_port = LaunchConfiguration('base_serial_port')
@@ -199,7 +200,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'use_arm_assist',
             default_value='false',
-            description='Deprecated compatibility argument; coverage arm assist is disabled',
+            description='Enable arm assistance when the manager launches coverage',
         ),
         OpaqueFunction(
             function=include_sim_launch,
@@ -238,6 +239,7 @@ def generate_launch_description():
             parameters=[
                 {
                     'use_sim_time': as_bool(use_sim_time),
+                    'use_arm_assist': as_bool(use_arm_assist),
                 }
             ],
         ),
@@ -249,6 +251,7 @@ def generate_launch_description():
             parameters=[
                 {
                     'use_sim_time': as_bool(use_sim_time),
+                    'use_arm_assist': as_bool(use_arm_assist),
                 }
             ],
         ),

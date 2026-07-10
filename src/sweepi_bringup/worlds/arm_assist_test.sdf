@@ -17,7 +17,6 @@
     <plugin name='gz::sim::systems::Sensors' filename='gz-sim-sensors-system'>
       <render_engine>ogre2</render_engine>
     </plugin>
-    <plugin name='gz::sim::systems::Camera' filename='gz-sim-camera-system'/>
     <plugin name='gz::sim::systems::Imu' filename='gz-sim-imu-system'/>
 
     <model name='ground_plane'>
