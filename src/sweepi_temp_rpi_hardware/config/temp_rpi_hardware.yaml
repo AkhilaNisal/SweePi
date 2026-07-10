@@ -9,7 +9,6 @@ sweepi_temp_stepper_driver:
     decel_steps_per_sec2: 15000.0
     cmd_vel_timeout: 0.5
     steps_publish_rate_hz: 50.0
-
     chip_name: gpiochip4
     left_en_pin: 12
     left_dir_pin: 5
@@ -17,15 +16,12 @@ sweepi_temp_stepper_driver:
     right_en_pin: 22
     right_dir_pin: 23
     right_step_pin: 24
-
     enable_active_low: true
     left_dir_inverted: false
     right_dir_inverted: true
-
     cmd_vel_topic: /cmd_vel
     left_steps_topic: /stepper/left_steps_total
     right_steps_topic: /stepper/right_steps_total
-
     dry_run_gpio: false
     fail_if_gpio_unavailable: true
 
@@ -38,14 +34,11 @@ sweepi_temp_stepper_odom:
     left_step_sign: 1.0
     right_step_sign: 1.0
     publish_rate_hz: 50.0
-
     left_steps_topic: /stepper/left_steps_total
     right_steps_topic: /stepper/right_steps_total
     wheel_odom_topic: /wheel/odom
-
     odom_frame_id: odom
     base_frame_id: base_footprint
-
     wheel_odom_pose_covariance_diagonal: [0.05, 0.05, 99999.0, 99999.0, 99999.0, 0.10]
     wheel_odom_twist_covariance_diagonal: [0.05, 99999.0, 99999.0, 99999.0, 99999.0, 0.10]
 
@@ -56,31 +49,61 @@ sweepi_temp_mpu6050:
     frame_id: imu_link
     imu_topic: /imu/data
     publish_rate_hz: 50.0
-
     calibrate_on_startup: true
     gyro_calibration_samples: 1000
     gyro_calibration_delay_sec: 0.002
     calibration_file: ~/.ros/sweepi_mpu6050_calibration.yaml
     save_calibration: true
     load_calibration_if_available: true
-
     publish_orientation: false
-
     enable_light_low_pass_filter: true
     low_pass_alpha: 0.7
-
     gyro_units_output: rad_s
     accel_units_output: m_s2
-
     angular_velocity_signs: [1.0, 1.0, 1.0]
     linear_acceleration_signs: [1.0, 1.0, 1.0]
-
     enable_stationary_bias_adaptation: true
     stationary_gyro_threshold_dps: 0.8
     stationary_accel_threshold_g: 0.08
     yaw_bias_adapt_alpha: 0.001
     zero_gyro_when_stationary: true
-
     angular_velocity_covariance_diagonal: [0.05, 0.05, 0.02]
     linear_acceleration_covariance_diagonal: [0.30, 0.30, 0.30]
     orientation_covariance_diagonal: [99999.0, 99999.0, 99999.0]
+
+cleaning_motor_controller:
+  ros__parameters:
+    enabled: true
+    gpio_chip_index: 0
+    dry_run_gpio: false
+    fail_if_gpio_unavailable: true
+    vacuum_pwm_gpio: 18
+    vacuum_enable_gpio: 17
+    brush_pwm_gpio: 19
+    brush_1_in1_gpio: 16
+    brush_1_in2_gpio: 20
+    brush_2_in1_gpio: 21
+    brush_2_in2_gpio: 26
+    brush_1_reversed: false
+    brush_2_reversed: true
+    pwm_frequency_hz: 1000.0
+    control_rate_hz: 50.0
+    status_publish_rate_hz: 2.0
+    vacuum_max_pwm_percent: 10.0
+    brush_max_pwm_percent: 10.0
+    vacuum_ramp_up_sec: 10.0
+    brush_ramp_up_sec: 5.0
+    vacuum_ramp_down_sec: 2.0
+    brush_ramp_down_sec: 1.0
+    coverage_status_topic: /coverage_execution_status
+    arm_status_topic: /coverage_arm_status
+    cmd_vel_topic: /cmd_vel
+    hardware_status_topic: /hardware/cleaning_motors/status
+    motion_linear_threshold: 0.005
+    motion_angular_threshold: 0.01
+    motion_timeout_sec: 0.5
+    keep_vacuum_on_during_arm: true
+    keep_brushes_on_during_arm: false
+    allow_manual_test: false
+    vacuum_test_pwm_percent: 10.0
+    brush_test_pwm_percent: 10.0
