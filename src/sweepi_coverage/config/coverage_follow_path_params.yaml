@@ -19,7 +19,7 @@ coverage_planner_node:
     coverage_stats_topic: "/coverage_stats"
     coverage_cell_value: 50
     robot_radius_m: 0.20
-    coverage_safety_margin_m: 0.03
+    coverage_safety_margin_m: 0.10
     coverage_spacing_m: 0.25  # change from 0.25 m
     min_segment_length_m: 0.30
     inflation_radius_m: 0.24
@@ -42,18 +42,51 @@ coverage_planner_node:
     debug_path_continuity: true
     use_nav_costmap_for_planning: true
     use_global_costmap_for_planning: true
-    max_allowed_nav_cost: 99
+    max_allowed_nav_cost: 50
     treat_unknown_cost_as_blocked: true
     nav_costmap_timeout_sec: 2.0
-    wait_for_nav_costmap_before_planning: false
+    wait_for_nav_costmap_before_planning: true
     wait_for_robot_pose_before_planning: true
     plan_only_reachable_from_robot: true
-    cleanup_after_main_path: true
-    cleanup_max_passes: 1
+    cleanup_after_main_path: false
+    cleanup_max_passes: 0
     coverage_execution_status_topic: "/coverage_execution_status"
 
 coverage_follow_path_executor_node:
   ros__parameters:
+    use_robot_arm: false
+    front_tof_topic: "/tof/front/range"
+    tof_free_space_threshold_m: 0.50
+    tof_message_timeout_sec: 0.5
+    tof_required_free_readings: 5
+    front_lidar_topic: "/scan"
+    front_lidar_object_threshold_m: 0.50
+    front_lidar_sector_half_angle_rad: 0.35
+    front_lidar_object_max_angle_rad: 0.25
+    front_lidar_message_timeout_sec: 0.5
+    front_lidar_required_object_readings: 5
+    arm_command_topic: "/sweepi_arm/command"
+    arm_status_topic: "/sweepi_arm/status"
+    coverage_arm_status_topic: "/coverage_arm_status"
+    arm_spin_action_name: "/spin"
+    arm_turn_angle_rad: 3.141592653589793
+    arm_spin_timeout_sec: 15.0
+    arm_start_ack_timeout_sec: 3.0
+    arm_completion_timeout_sec: 60.0
+    arm_handled_object_radius_m: 0.50
+    arm_resume_handled_costmap_radius_m: 0.75
+    arm_handled_path_index_margin: 10
+    arm_static_obstacle_reject_radius_m: 0.45
+    arm_mark_failed_object_handled: true
+    arm_resume_on_failure: true
+    arm_replan_after_completion: true
+    arm_replan_on_resume_failure: true
+    arm_replan_max_tolerated_blocked_costmap_samples: 75
+    arm_replan_max_tolerated_blocked_costmap_ratio: 0.05
+    arm_replan_max_tolerated_blocked_cost: 99
+    arm_replan_planner_service: "/replan_coverage_planner"
+    arm_fallback_to_dynamic_bypass: false
+    arm_resume_suppress_detection_sec: 3.0
     use_sim_time: true
     coverage_path_topic: "/coverage_path"
     raw_path_topic: "/coverage_path_raw"
@@ -66,6 +99,7 @@ coverage_follow_path_executor_node:
     path_markers_topic: "/coverage_path_markers"
     skipped_segments_topic: "/coverage_skipped_segments"
     dynamic_skip_status_topic: "/coverage_dynamic_skip_status"
+    scan_topic: "/scan"
     follow_path_action_name: "/follow_path"
     controller_id: "FollowPath"
     goal_checker_id: "goal_checker"
@@ -76,10 +110,10 @@ coverage_follow_path_executor_node:
     robot_radius_m: 0.20
     enable_costmap_validation: true
     require_costmap_for_validation: true
-    max_allowed_nav_cost: 99
-    max_tolerated_blocked_costmap_samples: 40
-    max_tolerated_blocked_costmap_ratio: 0.02
-    max_tolerated_blocked_cost: 100
+    max_allowed_nav_cost: 50
+    max_tolerated_blocked_costmap_samples: 25
+    max_tolerated_blocked_costmap_ratio: 0.01
+    max_tolerated_blocked_cost: 99
     treat_unknown_cost_as_blocked: true
     freeze_path_on_start: true
     ignore_path_updates_while_executing: true
@@ -119,8 +153,8 @@ coverage_follow_path_executor_node:
     dynamic_connector_tracking_clearance_m: 0.04
     dynamic_use_corridor_for_detection: true
     dynamic_monitor_temporary_paths: true
-    dynamic_connector_allow_blocked_start: true
-    dynamic_connector_start_grace_m: 0.20
+    dynamic_connector_allow_blocked_start: false
+    dynamic_connector_start_grace_m: 0.0
     dynamic_refresh_temporary_rejoin: true
     dynamic_temporary_rejoin_check_distance_m: 0.80
     dynamic_temporary_rejoin_refresh_cooldown_sec: 0.75
@@ -132,7 +166,11 @@ coverage_follow_path_executor_node:
     dynamic_skip_lookahead_m: 0.30
     dynamic_skip_padding_m: 0.02
     dynamic_rejoin_max_search_distance_m: 5.00 # change from 3.00 m
+<<<<<<< HEAD
     dynamic_rejoin_min_clearance_m: 0.03
+=======
+    dynamic_rejoin_min_clearance_m: 0.08
+>>>>>>> 8c21eaa61e02e15d2598765feef4a82c3d5d665a
     dynamic_max_rejoin_candidates: 60   # change from 20
     dynamic_required_consecutive_detections: 4
     dynamic_min_blocked_pose_count: 3
@@ -164,13 +202,13 @@ coverage_follow_path_executor_node:
     stuck_start_grace_sec: 4.0
     stuck_min_movement_m: 0.03
     stuck_skip_distance_m: 0.60
-    enable_cleanup_after_main_path: true
-    cleanup_max_passes: 1
+    enable_cleanup_after_main_path: false
+    cleanup_max_passes: 0
     cleanup_wait_for_path_timeout_sec: 6.0
     retry_skipped_segments_at_end: false
     mark_skipped_segments_uncovered: true
     publish_skipped_segments: true
-    dynamic_require_safe_connector: false # change from true
+    dynamic_require_safe_connector: true
     dynamic_enable_local_astar_detour: true
     dynamic_enable_local_detour: true
     dynamic_detour_min_lateral_offset_m: 0.10

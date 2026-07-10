@@ -14,6 +14,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(nav2_msgs REQUIRED)
 find_package(rclpy REQUIRED)
+find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(tf2_ros REQUIRED)
@@ -41,8 +42,18 @@ install(
     sweepi_coverage/coverage_planner_node.py
     sweepi_coverage/coverage_executor_node.py
     sweepi_coverage/coverage_follow_path_executor_node.py
+    sweepi_coverage/coverage_arm_follow_path_executor_node.py
     sweepi_coverage/coverage_manager_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
+
+if(BUILD_TESTING)
+  find_package(ament_cmake_pytest REQUIRED)
+  ament_add_pytest_test(
+    coverage_arm_follow_path_executor_test
+    test/test_coverage_arm_follow_path_executor.py
+    TIMEOUT 60
+  )
+endif()
 
 ament_package()

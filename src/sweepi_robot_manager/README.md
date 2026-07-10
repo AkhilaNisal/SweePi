@@ -10,6 +10,13 @@ Robot bringup plus manager:
 ros2 launch sweepi_robot_manager master.launch.py
 ```
 
+Enable arm assistance for coverage tasks subsequently started through the
+manager:
+
+```bash
+ros2 launch sweepi_robot_manager master.launch.py use_arm_assist:=true
+```
+
 For a real robot, skip Gazebo:
 
 ```bash

@@ -73,14 +73,14 @@ class CoveragePlannerNode(Node):
         self.declare_parameter('tf_lookup_timeout_sec', 0.2)
         self.declare_parameter('use_nav_costmap_for_planning', True)
         self.declare_parameter('use_global_costmap_for_planning', True)
-        self.declare_parameter('max_allowed_nav_cost', 99)
+        self.declare_parameter('max_allowed_nav_cost', 50)
         self.declare_parameter('treat_unknown_cost_as_blocked', True)
         self.declare_parameter('nav_costmap_timeout_sec', 2.0)
         self.declare_parameter('wait_for_nav_costmap_before_planning', False)
         self.declare_parameter('wait_for_robot_pose_before_planning', False)
         self.declare_parameter('plan_only_reachable_from_robot', True)
-        self.declare_parameter('cleanup_after_main_path', True)
-        self.declare_parameter('cleanup_max_passes', 1)
+        self.declare_parameter('cleanup_after_main_path', False)
+        self.declare_parameter('cleanup_max_passes', 0)
         self.declare_parameter('coverage_execution_status_topic', '/coverage_execution_status')
 
         self.coverage_map_topic = (
@@ -338,6 +338,11 @@ class CoveragePlannerNode(Node):
             '/reset_coverage_planner',
             self.reset_service_callback,
         )
+        self.replan_service = self.create_service(
+            Trigger,
+            '/replan_coverage_planner',
+            self.replan_service_callback,
+        )
 
         publish_period = 1.0 / self.path_publish_rate_hz
         self.timer = self.create_timer(publish_period, self.publish_outputs)
@@ -400,6 +405,38 @@ class CoveragePlannerNode(Node):
 
         response.success = True
         response.message = 'Coverage planner reset; /coverage_path cleared'
+        self.get_logger().info(response.message)
+        return response
+
+    def replan_service_callback(self, request, response):
+        del request
+        if self.coverage_map is None:
+            response.success = False
+            response.message = 'Coverage planner has no /coverage_map to replan from'
+            self.get_logger().warn(response.message)
+            return response
+
+        self.path_frozen = False
+        self.plan_dirty = True
+        self.latest_path = self._make_empty_path()
+        self.latest_debug_mask = None
+        self.latest_markers = self._make_delete_markers()
+        self.connector_count = 0
+        self.connector_pose_count = 0
+        self.connector_failure_count = 0
+
+        stamp = self.get_clock().now().to_msg()
+        self.latest_path.header.stamp = stamp
+        self.coverage_path_pub.publish(self.latest_path)
+
+        for marker in self.latest_markers.markers:
+            marker.header.stamp = stamp
+        self.marker_pub.publish(self.latest_markers)
+
+        response.success = True
+        response.message = (
+            'Coverage planner unfrozen; replanning from current /coverage_map'
+        )
         self.get_logger().info(response.message)
         return response
 

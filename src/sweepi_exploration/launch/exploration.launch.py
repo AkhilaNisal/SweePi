@@ -18,9 +18,12 @@ def generate_launch_description():
     declare_use_sim_time = DeclareLaunchArgument(
         'use_sim_time', default_value='true')
     declare_frontier_min_size = DeclareLaunchArgument(
-        'frontier_min_size', default_value='8')
+        'frontier_min_size', default_value='3')
     declare_cluster_distance = DeclareLaunchArgument(
         'cluster_distance', default_value='1.2') # 1.2
+    declare_min_unknown_region_area_m2 = DeclareLaunchArgument(
+        'min_unknown_region_area_m2', default_value='0.05',
+        description='Ignore frontier regions exposing less unknown area than this')
     declare_exploration_frequency = DeclareLaunchArgument(
         'exploration_frequency', default_value='1.0')
     declare_nav_timeout = DeclareLaunchArgument(
@@ -54,9 +57,9 @@ def generate_launch_description():
     declare_max_attempts_per_frontier = DeclareLaunchArgument(
         'max_attempts_per_frontier', default_value='3')
     declare_max_consecutive_timeouts = DeclareLaunchArgument(
-        'max_consecutive_timeouts', default_value='2')
+        'max_consecutive_timeouts', default_value='4')
     declare_max_total_timeouts = DeclareLaunchArgument(
-        'max_total_timeouts', default_value='10')
+        'max_total_timeouts', default_value='35')
     declare_max_exploration_time = DeclareLaunchArgument(
         'max_exploration_time', default_value='600')
     declare_goal_offset_distance = DeclareLaunchArgument(
@@ -71,12 +74,42 @@ def generate_launch_description():
     declare_unreachable_region_radius = DeclareLaunchArgument(
         'unreachable_region_radius', default_value='0.4',
         description='Block all frontiers within this distance of failed frontier')
+    declare_failed_frontier_retry_sec = DeclareLaunchArgument(
+        'failed_frontier_retry_sec', default_value='30.0',
+        description='Retry failed frontier regions after this cooldown')
+    declare_completion_retry_cycles = DeclareLaunchArgument(
+        'completion_retry_cycles', default_value='3',
+        description='Final retry sweeps before accepting remaining blocked frontiers')
+    declare_frontier_goal_search_radius = DeclareLaunchArgument(
+        'frontier_goal_search_radius', default_value='1.4',
+        description='Search radius for obstacle-aware frontier viewpoints')
+    declare_frontier_goal_unknown_radius = DeclareLaunchArgument(
+        'frontier_goal_unknown_radius', default_value='0.8',
+        description='Unknown-cell radius used to score frontier viewpoints')
+    declare_save_map_padding_m = DeclareLaunchArgument(
+        'save_map_padding_m', default_value='0.50',
+        description='Unknown border padding added around saved exploration maps')
+    declare_close_saved_map_boundary = DeclareLaunchArgument(
+        'close_saved_map_boundary', default_value='true',
+        description='Stamp the explored map outer contour as occupied on save')
+    declare_saved_map_boundary_thickness_m = DeclareLaunchArgument(
+        'saved_map_boundary_thickness_m', default_value='0.10',
+        description='Thickness of repaired saved-map boundary wall')
     declare_start_mode = DeclareLaunchArgument(
         'start_mode', default_value='auto',
         description='Initial exploration mode: auto, manual, or stopped')
     declare_cmd_vel_topic = DeclareLaunchArgument(
         'cmd_vel_topic', default_value='/cmd_vel',
         description='Velocity topic used by manual teleop and stop commands')
+    declare_source_map_topic = DeclareLaunchArgument(
+        'source_map_topic', default_value='/slam_map',
+        description='Raw SLAM map consumed by the frontier explorer')
+    declare_repaired_map_topic = DeclareLaunchArgument(
+        'repaired_map_topic', default_value='/map',
+        description='Live repaired map published for RViz/Nav2/API')
+    declare_publish_live_repaired_map = DeclareLaunchArgument(
+        'publish_live_repaired_map', default_value='true',
+        description='Publish boundary-repaired live map while exploring')
 
     slam_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -85,6 +118,7 @@ def generate_launch_description():
         launch_arguments={
             'use_sim_time': LaunchConfiguration('use_sim_time'),
             'autostart': 'true',
+            'map_topic': LaunchConfiguration('source_map_topic'),
         }.items(),
     )
 
@@ -99,6 +133,7 @@ def generate_launch_description():
                 'map_name': LaunchConfiguration('map_name'),
                 'frontier_min_size': LaunchConfiguration('frontier_min_size'),
                 'cluster_distance': LaunchConfiguration('cluster_distance'),
+                'min_unknown_region_area_m2': LaunchConfiguration('min_unknown_region_area_m2'),
                 'exploration_frequency': LaunchConfiguration('exploration_frequency'),
                 'nav_timeout': LaunchConfiguration('nav_timeout'),
                 'max_frontier_candidates': LaunchConfiguration('max_frontier_candidates'),
@@ -122,8 +157,18 @@ def generate_launch_description():
                 'robot_radius': LaunchConfiguration('robot_radius'),
                 'safety_margin': LaunchConfiguration('safety_margin'),
                 'unreachable_region_radius': LaunchConfiguration('unreachable_region_radius'),
+                'failed_frontier_retry_sec': LaunchConfiguration('failed_frontier_retry_sec'),
+                'completion_retry_cycles': LaunchConfiguration('completion_retry_cycles'),
+                'frontier_goal_search_radius': LaunchConfiguration('frontier_goal_search_radius'),
+                'frontier_goal_unknown_radius': LaunchConfiguration('frontier_goal_unknown_radius'),
+                'save_map_padding_m': LaunchConfiguration('save_map_padding_m'),
+                'close_saved_map_boundary': LaunchConfiguration('close_saved_map_boundary'),
+                'saved_map_boundary_thickness_m': LaunchConfiguration('saved_map_boundary_thickness_m'),
                 'start_mode': LaunchConfiguration('start_mode'),
                 'cmd_vel_topic': LaunchConfiguration('cmd_vel_topic'),
+                'source_map_topic': LaunchConfiguration('source_map_topic'),
+                'repaired_map_topic': LaunchConfiguration('repaired_map_topic'),
+                'publish_live_repaired_map': LaunchConfiguration('publish_live_repaired_map'),
             }
         ],
     )
@@ -133,6 +178,7 @@ def generate_launch_description():
         declare_use_sim_time,
         declare_frontier_min_size,
         declare_cluster_distance,
+        declare_min_unknown_region_area_m2,
         declare_exploration_frequency,
         declare_nav_timeout,
         declare_max_frontier_candidates,
@@ -156,12 +202,23 @@ def generate_launch_description():
         declare_robot_radius,
         declare_safety_margin,
         declare_unreachable_region_radius,
+        declare_failed_frontier_retry_sec,
+        declare_completion_retry_cycles,
+        declare_frontier_goal_search_radius,
+        declare_frontier_goal_unknown_radius,
+        declare_save_map_padding_m,
+        declare_close_saved_map_boundary,
+        declare_saved_map_boundary_thickness_m,
         declare_start_mode,
         declare_cmd_vel_topic,
+        declare_source_map_topic,
+        declare_repaired_map_topic,
+        declare_publish_live_repaired_map,
         
         LogInfo(msg='🚀 STARTING SWEEPI AUTONOMOUS EXPLORATION'),
         LogInfo(msg='💾 Map name: ${map_name}'),
         LogInfo(msg='📏 Proximity-based blocking: ${unreachable_region_radius}m'),
+        LogInfo(msg='🔁 Completion retry sweeps: ${completion_retry_cycles}'),
         LogInfo(msg='🎮 Exploration mode: ${start_mode}'),
         
         slam_launch,

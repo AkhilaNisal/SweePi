@@ -20,6 +20,7 @@ def generate_launch_description():
     use_lifecycle_manager = LaunchConfiguration("use_lifecycle_manager")
     use_sim_time = LaunchConfiguration('use_sim_time')
     slam_params_file = LaunchConfiguration('slam_params_file')
+    map_topic = LaunchConfiguration('map_topic')
 
     # 🔥 SweePi-specific default config path
     sweepi_slam_dir = get_package_share_directory('sweepi_slam')
@@ -47,6 +48,10 @@ def generate_launch_description():
         'slam_params_file',
         default_value=default_slam_params,  # 🔥 Uses SweePi config
         description='Full path to the ROS2 parameters file to use for the slam_toolbox node')
+    declare_map_topic_cmd = DeclareLaunchArgument(
+        'map_topic',
+        default_value='/map',
+        description='OccupancyGrid topic published by slam_toolbox')
 
     # Perform substitution
     slam_params_file_w_subst = ParameterFile(
@@ -66,7 +71,10 @@ def generate_launch_description():
         executable='async_slam_toolbox_node',
         name='slam_toolbox',
         output='screen',
-        namespace=''
+        namespace='',
+        remappings=[
+            ('/map', map_topic),
+        ],
     )
 
     configure_event = EmitEvent(
@@ -99,6 +107,7 @@ def generate_launch_description():
     ld.add_action(declare_use_lifecycle_manager)
     ld.add_action(declare_use_sim_time_argument)
     ld.add_action(declare_slam_params_file_cmd)
+    ld.add_action(declare_map_topic_cmd)
     ld.add_action(start_async_slam_toolbox_node)
     ld.add_action(configure_event)
     ld.add_action(activate_event)

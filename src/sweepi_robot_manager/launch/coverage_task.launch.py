@@ -6,7 +6,7 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PythonExpression
 
 
 def generate_launch_description():
@@ -21,8 +21,27 @@ def generate_launch_description():
     use_sim_time = LaunchConfiguration('use_sim_time')
     auto_start = LaunchConfiguration('auto_start')
     coverage_params_file = LaunchConfiguration('coverage_params_file')
+    use_robot_arm = LaunchConfiguration('use_robot_arm')
+    use_arm_assist = LaunchConfiguration('use_arm_assist')
+    arm_enabled = PythonExpression([
+        "'true' if ('",
+        use_robot_arm,
+        "' == 'true' or '",
+        use_arm_assist,
+        "' == 'true') else 'false'",
+    ])
 
     return LaunchDescription([
+        DeclareLaunchArgument(
+            'use_robot_arm',
+            default_value='false',
+            description='Enable rear robot-arm obstacle handling',
+        ),
+        DeclareLaunchArgument(
+            'use_arm_assist',
+            default_value='false',
+            description='Alias for use_robot_arm',
+        ),
         DeclareLaunchArgument(
             'map_name',
             description='Required map name to load from ~/SweePi/maps/<map_name>.yaml',
@@ -58,6 +77,7 @@ def generate_launch_description():
             launch_arguments={
                 'use_sim_time': use_sim_time,
                 'auto_start': auto_start,
+                'use_robot_arm': arm_enabled,
                 'params_file': coverage_params_file,
             }.items(),
         ),

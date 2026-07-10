@@ -4,6 +4,7 @@ Wavefront-Based Frontier Explorer for SweePi
 CRITICAL FIX: Smarter proximity blocking + connectivity check
 """
 
+import copy
 import math
 import os
 from collections import deque
@@ -18,6 +19,7 @@ from nav2_msgs.srv import SaveMap
 from nav_msgs.msg import OccupancyGrid
 from rclpy.action import ActionClient
 from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from rclpy.time import Time
 from std_msgs.msg import String
 from std_srvs.srv import SetBool, Trigger
@@ -34,8 +36,9 @@ class WavefrontExplorer(Node):
         # ============================================================
         # FRONTIER DETECTION PARAMETERS
         # ============================================================
-        self.declare_parameter('frontier_min_size', 8)
+        self.declare_parameter('frontier_min_size', 3)
         self.declare_parameter('cluster_distance', 1.5)
+        self.declare_parameter('min_unknown_region_area_m2', 0.25)
         self.declare_parameter('exploration_frequency', 5.0)
         self.declare_parameter('nav_timeout', 25.0)
         self.declare_parameter('max_frontier_candidates', 0)
@@ -60,8 +63,8 @@ class WavefrontExplorer(Node):
         # ATTEMPT LIMITING
         # ============================================================
         self.declare_parameter('max_attempts_per_frontier', 3)
-        self.declare_parameter('max_consecutive_timeouts', 3)
-        self.declare_parameter('max_total_timeouts', 10)
+        self.declare_parameter('max_consecutive_timeouts', 4)
+        self.declare_parameter('max_total_timeouts', 35)
         self.declare_parameter('max_exploration_time', 600)
 
         # ============================================================
@@ -76,6 +79,13 @@ class WavefrontExplorer(Node):
         # ============================================================
         self.declare_parameter('unreachable_region_radius', 0.6)
         self.declare_parameter('smart_blocking_enabled', True)    # NEW: Check connectivity
+        self.declare_parameter('failed_frontier_retry_sec', 30.0)
+        self.declare_parameter('completion_retry_cycles', 3)
+        self.declare_parameter('frontier_goal_search_radius', 1.4)
+        self.declare_parameter('frontier_goal_unknown_radius', 0.8)
+        self.declare_parameter('save_map_padding_m', 0.50)
+        self.declare_parameter('close_saved_map_boundary', True)
+        self.declare_parameter('saved_map_boundary_thickness_m', 0.10)
 
         # ============================================================
         # MANUAL / AUTO CONTROL PARAMETERS
@@ -83,10 +93,15 @@ class WavefrontExplorer(Node):
         self.declare_parameter('map_name', '')
         self.declare_parameter('start_mode', 'auto')
         self.declare_parameter('cmd_vel_topic', '/cmd_vel')
+        self.declare_parameter('source_map_topic', '/map')
+        self.declare_parameter('repaired_map_topic', '')
+        self.declare_parameter('publish_live_repaired_map', False)
 
         # Get Parameters
         self.frontier_min_size = int(self.get_parameter('frontier_min_size').value)
         self.cluster_distance = float(self.get_parameter('cluster_distance').value)
+        self.min_unknown_region_area_m2 = float(
+            self.get_parameter('min_unknown_region_area_m2').value)
         self.exploration_frequency = float(self.get_parameter('exploration_frequency').value)
         self.nav_timeout = float(self.get_parameter('nav_timeout').value)
         self.max_frontier_candidates = int(
@@ -121,16 +136,40 @@ class WavefrontExplorer(Node):
         
         self.unreachable_region_radius = float(self.get_parameter('unreachable_region_radius').value)
         self.smart_blocking_enabled = bool(self.get_parameter('smart_blocking_enabled').value)
+        self.failed_frontier_retry_sec = float(
+            self.get_parameter('failed_frontier_retry_sec').value)
+        self.completion_retry_cycles = int(
+            self.get_parameter('completion_retry_cycles').value)
+        self.frontier_goal_search_radius = float(
+            self.get_parameter('frontier_goal_search_radius').value)
+        self.frontier_goal_unknown_radius = float(
+            self.get_parameter('frontier_goal_unknown_radius').value)
+        self.save_map_padding_m = float(
+            self.get_parameter('save_map_padding_m').value)
+        self.close_saved_map_boundary = bool(
+            self.get_parameter('close_saved_map_boundary').value)
+        self.saved_map_boundary_thickness_m = float(
+            self.get_parameter('saved_map_boundary_thickness_m').value)
         self.configured_map_name = self._sanitize_map_name(
             self.get_parameter('map_name').value)
         self.start_mode = str(self.get_parameter('start_mode').value).strip().lower()
         self.cmd_vel_topic = str(self.get_parameter('cmd_vel_topic').value)
+        self.source_map_topic = str(self.get_parameter('source_map_topic').value)
+        self.repaired_map_topic = str(self.get_parameter('repaired_map_topic').value)
+        self.publish_live_repaired_map = bool(
+            self.get_parameter('publish_live_repaired_map').value)
+        if self.source_map_topic == self.repaired_map_topic:
+            self.get_logger().warn(
+                'Live repaired map disabled because source_map_topic and '
+                'repaired_map_topic are the same.')
+            self.publish_live_repaired_map = False
 
         # ============================================================
         # STATE VARIABLES
         # ============================================================
         self.map_data = None
         self.map_info = None
+        self.map_header = None
         self.navigating = False
         self.exploration_active = False
         self.goals_reached = 0
@@ -155,6 +194,7 @@ class WavefrontExplorer(Node):
         self.region_attempts = {}
         self.region_successes = {}
         self.blocked_regions = set()
+        self.blocked_region_times = {}
         self.current_goal_region = None
         
         # ============================================================
@@ -162,6 +202,11 @@ class WavefrontExplorer(Node):
         # ============================================================
         self.unreachable_areas = []  # [(x, y, timestamp, reachable_regions), ...]
         self.unreachable_region_map = {}  # region -> bool (is reachable)
+        self.last_raw_frontier_count = 0
+        self.last_large_frontier_count = 0
+        self.last_filtered_frontier_count = 0
+        self.last_small_frontier_count = 0
+        self.completion_retry_count = 0
 
         # ============================================================
         # TIMEOUT TRACKING
@@ -172,11 +217,24 @@ class WavefrontExplorer(Node):
         # Setup maps directory
         self.maps_dir = self._setup_maps_directory()
 
+        map_qos = QoSProfile(
+            depth=1,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            reliability=ReliabilityPolicy.RELIABLE,
+        )
+
         # Subscribers
         self.map_sub = self.create_subscription(
-            OccupancyGrid, '/map', self.map_callback, 10)
+            OccupancyGrid, self.source_map_topic, self.map_callback, map_qos)
 
         # Publishers
+        self.repaired_map_pub = None
+        if self.publish_live_repaired_map and self.repaired_map_topic:
+            self.repaired_map_pub = self.create_publisher(
+                OccupancyGrid,
+                self.repaired_map_topic,
+                map_qos,
+            )
         self.frontier_pub = self.create_publisher(
             MarkerArray, '/exploration/frontiers', 10)
         self.blocked_regions_pub = self.create_publisher(
@@ -218,6 +276,8 @@ class WavefrontExplorer(Node):
         self.get_logger().info('   📋 FRONTIER DETECTION:')
         self.get_logger().info(f'      frontier_min_size: {self.frontier_min_size}')
         self.get_logger().info(
+            f'      min_unknown_region_area_m2: {self.min_unknown_region_area_m2:.2f}')
+        self.get_logger().info(
             f'      exploration_frequency: {self.exploration_frequency} Hz '
             f'(timer period: {self.timer_period:.2f}s)')
         self.get_logger().info(f'      max_frontier_candidates: {self.max_frontier_candidates}')
@@ -235,10 +295,21 @@ class WavefrontExplorer(Node):
         self.get_logger().info('   📏 SMART BLOCKING:')
         self.get_logger().info(f'      unreachable_region_radius: {self.unreachable_region_radius}m')
         self.get_logger().info(f'      smart_blocking_enabled: {self.smart_blocking_enabled}')
+        self.get_logger().info(f'      failed_frontier_retry_sec: {self.failed_frontier_retry_sec}s')
+        self.get_logger().info(f'      completion_retry_cycles: {self.completion_retry_cycles}')
+        self.get_logger().info(
+            f'      frontier_goal_search_radius: {self.frontier_goal_search_radius}m')
+        self.get_logger().info(f'      save_map_padding_m: {self.save_map_padding_m:.2f}m')
+        self.get_logger().info(
+            f'      close_saved_map_boundary: {self.close_saved_map_boundary} '
+            f'thickness={self.saved_map_boundary_thickness_m:.2f}m')
         self.get_logger().info('   CONTROL:')
         self.get_logger().info(f'      map_name: {self.configured_map_name or "(missing)"}')
         self.get_logger().info(f'      start_mode: {self.exploration_mode}')
         self.get_logger().info(f'      cmd_vel_topic: {self.cmd_vel_topic}')
+        self.get_logger().info(f'      source_map_topic: {self.source_map_topic}')
+        self.get_logger().info(
+            f'      repaired_map_topic: {self.repaired_map_topic or "(disabled)"}')
         self.get_logger().info('      /set_manual_control true=manual false=auto')
         self.get_logger().info('      /stop_exploration_and_save map_url=<name>')
         self.get_logger().info('=' * 70)
@@ -264,7 +335,9 @@ class WavefrontExplorer(Node):
         """Receive occupancy grid map."""
         self.map_data = np.array(msg.data, dtype=np.int8).reshape(
             (msg.info.height, msg.info.width))
-        self.map_info = msg.info
+        self.map_info = copy.deepcopy(msg.info)
+        self.map_header = copy.deepcopy(msg.header)
+        self._publish_live_repaired_map()
 
     def _timer_period_from_frequency(self, frequency_hz):
         """Convert configured Hz into a ROS timer period in seconds."""
@@ -500,6 +573,7 @@ class WavefrontExplorer(Node):
 
     def _is_near_unreachable_area(self, world_x, world_y):
         """Check whether a frontier is part of a recently failed patch."""
+        self._prune_failed_frontier_blocks()
         for unreachable_x, unreachable_y, _ in self.unreachable_areas:
             distance = math.hypot(world_x - unreachable_x, world_y - unreachable_y)
 
@@ -530,6 +604,44 @@ class WavefrontExplorer(Node):
         self.unreachable_areas.append((world_x, world_y, datetime.now()))
         self.get_logger().warn(f'📍 Unreachable area recorded: ({world_x:.2f}, {world_y:.2f})')
 
+    def _prune_failed_frontier_blocks(self):
+        """Let failed frontier blocks expire so final sweeps can retry changed maps."""
+        if self.failed_frontier_retry_sec <= 0.0:
+            return
+
+        now = datetime.now()
+        self.unreachable_areas = [
+            area for area in self.unreachable_areas
+            if (now - area[2]).total_seconds() <= self.failed_frontier_retry_sec
+        ]
+
+        expired_regions = [
+            region_key for region_key, blocked_at in self.blocked_region_times.items()
+            if (now - blocked_at).total_seconds() > self.failed_frontier_retry_sec
+        ]
+        for region_key in expired_regions:
+            self.blocked_regions.discard(region_key)
+            self.blocked_region_times.pop(region_key, None)
+
+    def _block_region(self, region_key):
+        """Block a failed region for a limited time."""
+        if not region_key:
+            return
+        self.blocked_regions.add(region_key)
+        self.blocked_region_times[region_key] = datetime.now()
+
+    def _open_completion_retry_sweep(self):
+        """Clear temporary filters so remaining frontiers get another chance."""
+        self.completion_retry_count += 1
+        self.no_frontier_count = 0
+        self.blocked_regions.clear()
+        self.blocked_region_times.clear()
+        self.unreachable_areas.clear()
+        self.get_logger().warn(
+            'Remaining raw frontiers are only blocked by retry filters. '
+            f'Opening completion retry sweep {self.completion_retry_count}/'
+            f'{self.completion_retry_cycles}.')
+
     # ============================================================
     # WALL OFFSET ALGORITHM
     # ============================================================
@@ -540,14 +652,17 @@ class WavefrontExplorer(Node):
         fx = max(0, min(fx, width - 1))
         fy = max(0, min(fy, height - 1))
 
-        offset_cells = int(self.goal_offset_distance / self.map_info.resolution)
-        if offset_cells < 1:
-            offset_cells = 1
+        min_offset_cells = max(1, int(self.goal_offset_distance / self.map_info.resolution))
+        search_cells = max(
+            min_offset_cells,
+            int(self.frontier_goal_search_radius / self.map_info.resolution),
+        )
 
         best_position = None
+        best_score = float('-inf')
         best_distance_to_wall = 0.0
 
-        for distance in range(offset_cells, offset_cells + 14):
+        for distance in range(min_offset_cells, search_cells + 1):
             for angle_idx in range(16):
                 angle = (angle_idx * 2 * math.pi) / 16
                 offset_x = int(round(fx + distance * math.cos(angle)))
@@ -564,10 +679,17 @@ class WavefrontExplorer(Node):
 
                 world_x, world_y = self._map_to_world(offset_x, offset_y)
                 dist_to_wall = self._distance_to_wall(offset_x, offset_y)
+                unknown_score = self._count_unknown_cells_near(offset_x, offset_y)
+                dist_to_frontier = math.hypot(offset_x - fx, offset_y - fy)
 
-                if dist_to_wall > best_distance_to_wall:
-                    best_distance_to_wall = dist_to_wall
+                if unknown_score <= 0:
+                    continue
+
+                score = (unknown_score * 20.0) + (dist_to_wall * 2.0) - dist_to_frontier
+                if score > best_score:
+                    best_score = score
                     best_position = (world_x, world_y)
+                    best_distance_to_wall = dist_to_wall
 
             if best_position is not None:
                 clearance_m = best_distance_to_wall * self.map_info.resolution
@@ -585,6 +707,24 @@ class WavefrontExplorer(Node):
         goal_x, goal_y, _clearance_m = self._find_safe_goal_from_walls(
             frontier_x, frontier_y, log=True)
         return goal_x, goal_y
+
+    def _count_unknown_cells_near(self, x, y):
+        """Count nearby unknown cells to prefer goals that reveal new map area."""
+        height, width = self.map_data.shape
+        radius_cells = max(
+            1,
+            int(self.frontier_goal_unknown_radius / self.map_info.resolution),
+        )
+        count = 0
+        for dx in range(-radius_cells, radius_cells + 1):
+            for dy in range(-radius_cells, radius_cells + 1):
+                if dx * dx + dy * dy > radius_cells * radius_cells:
+                    continue
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < width and 0 <= ny < height:
+                    if self.map_data[ny, nx] == -1:
+                        count += 1
+        return count
 
     def _has_clearance(self, x, y):
         """Check if position has enough clearance."""
@@ -634,6 +774,7 @@ class WavefrontExplorer(Node):
 
     def _is_region_blocked(self, world_x, world_y):
         """Check if region is blocked."""
+        self._prune_failed_frontier_blocks()
         region_key = self._get_region_key(world_x, world_y)
         return region_key in self.blocked_regions
 
@@ -673,21 +814,33 @@ class WavefrontExplorer(Node):
             if candidate_limit > 0 and len(frontier_cells) >= candidate_limit:
                 break
 
-        frontiers = self._cluster_frontiers(frontier_cells)
+        frontiers = self._cluster_frontiers(frontier_cells, apply_filters=True)
         self.get_logger().info(
-            f'📊 Frontiers: {len(frontier_cells)} raw → {len(frontiers)} clustered | '
-            f'Unreachable areas: {len(self.unreachable_areas)}',
+            f'📊 Frontiers: {len(frontier_cells)} cells, '
+            f'{self.last_raw_frontier_count} raw clusters, '
+            f'{self.last_large_frontier_count} large -> '
+            f'{len(frontiers)} large usable | ignored small: '
+            f'{self.last_small_frontier_count} | Unreachable areas: '
+            f'{len(self.unreachable_areas)}',
             throttle_duration_sec=5.0)
         return frontiers
 
-    def _cluster_frontiers(self, cells):
+    def _cluster_frontiers(self, cells, apply_filters=True):
         """Cluster adjacent frontier cells without an O(n^2) all-pairs pass."""
         if not cells:
+            if apply_filters:
+                self.last_raw_frontier_count = 0
+                self.last_large_frontier_count = 0
+                self.last_filtered_frontier_count = 0
+                self.last_small_frontier_count = 0
             return []
 
         cell_set = set(cells)
         visited = set()
         clusters = []
+        raw_cluster_count = 0
+        large_cluster_count = 0
+        small_cluster_count = 0
 
         for cell in cells:
             if cell in visited:
@@ -708,8 +861,11 @@ class WavefrontExplorer(Node):
                         visited.add(neighbor)
                         queue.append(neighbor)
 
+            raw_cluster_count += 1
             if len(cluster) < self.frontier_min_size:
+                small_cluster_count += 1
                 continue
+            large_cluster_count += 1
 
             cx = sum(c[0] for c in cluster) / len(cluster)
             cy = sum(c[1] for c in cluster) / len(cluster)
@@ -721,6 +877,15 @@ class WavefrontExplorer(Node):
             frontier_y = self.map_info.origin.position.y + (goal_cell[1] + 0.5) * self.map_info.resolution
             goal_x, goal_y, clearance_m = self._find_safe_goal_from_walls(
                 frontier_x, frontier_y, log=False)
+            goal_mx, goal_my = self._world_to_map(goal_x, goal_y)
+            unknown_area_m2 = (
+                self._count_unknown_cells_near(goal_mx, goal_my)
+                * self.map_info.resolution
+                * self.map_info.resolution
+            )
+            if apply_filters and unknown_area_m2 < self.min_unknown_region_area_m2:
+                small_cluster_count += 1
+                continue
 
             if self._is_region_blocked(goal_x, goal_y):
                 continue
@@ -732,7 +897,12 @@ class WavefrontExplorer(Node):
             clusters.append((frontier_x, frontier_y, len(cluster), region_key,
                              goal_x, goal_y, clearance_m))
 
-        clusters.sort(key=lambda c: c[2], reverse=True)
+        clusters.sort(key=lambda c: (c[4], c[2]), reverse=True)
+        if apply_filters:
+            self.last_raw_frontier_count = raw_cluster_count
+            self.last_large_frontier_count = large_cluster_count
+            self.last_filtered_frontier_count = len(clusters)
+            self.last_small_frontier_count = small_cluster_count
         return clusters
 
     def _get_robot_position(self):
@@ -894,6 +1064,11 @@ class WavefrontExplorer(Node):
         self._publish_unreachable_areas()
 
         if not frontiers:
+            if (self.last_large_frontier_count > 0
+                    and self.completion_retry_count < self.completion_retry_cycles):
+                self._open_completion_retry_sweep()
+                return
+
             self.no_frontier_count += 1
             self.get_logger().info(
                 f'ℹ️  No valid frontiers ({self.no_frontier_count}/{self.no_frontier_finish_count})')
@@ -940,7 +1115,9 @@ class WavefrontExplorer(Node):
         attempts = self.region_attempts[region_key]
 
         self.get_logger().info(
-            f'📍 Goal: ({goal_x:.2f}, {goal_y:.2f}) | Attempt: {attempts}/{self.max_attempts_per_frontier}')
+            f'📍 Goal: ({goal_x:.2f}, {goal_y:.2f}) | '
+            f'Unknown area: {self._cells_to_area_m2(unknown_cells):.2f} m² | '
+            f'Attempt: {attempts}/{self.max_attempts_per_frontier}')
 
         goal_msg = NavigateToPose.Goal()
         goal_msg.pose = self._make_pose_stamped(goal_x, goal_y)
@@ -1017,6 +1194,7 @@ class WavefrontExplorer(Node):
             if result.status == GoalStatus.STATUS_SUCCEEDED:
                 self.goals_reached += 1
                 self.consecutive_timeout_count = 0
+                self.completion_retry_count = 0
 
                 if region_key not in self.region_successes:
                     self.region_successes[region_key] = 0
@@ -1052,7 +1230,7 @@ class WavefrontExplorer(Node):
         if successes == 0:
             self._add_unreachable_area(frontier_x, frontier_y)
             self.get_logger().warn(f'🚫 BLOCKING REGION: {region_key}')
-            self.blocked_regions.add(region_key)
+            self._block_region(region_key)
 
     # ============================================================
     # COMPLETION
@@ -1093,9 +1271,16 @@ class WavefrontExplorer(Node):
         try:
             pgm_file = os.path.join(self.maps_dir, f'{map_name}.pgm')
             yaml_file = os.path.join(self.maps_dir, f'{map_name}.yaml')
+            map_data, origin_x, origin_y = self._saved_map_snapshot()
 
-            self._save_pgm_file(pgm_file)
-            self._save_yaml_file(yaml_file, pgm_file, exploration_time)
+            self._save_pgm_file(pgm_file, map_data)
+            self._save_yaml_file(
+                yaml_file,
+                pgm_file,
+                exploration_time,
+                origin_x,
+                origin_y,
+            )
 
             self.get_logger().info('=' * 70)
             self.get_logger().info('💾 MAP SAVED SUCCESSFULLY')
@@ -1109,14 +1294,112 @@ class WavefrontExplorer(Node):
             self.get_logger().error(f'❌ {message}')
             return False, message
 
-    def _save_pgm_file(self, filename):
+    def _saved_map_snapshot(self):
+        return self._processed_map_snapshot(include_padding=True, log=True)
+
+    def _processed_map_snapshot(self, include_padding, log=False):
+        map_data = np.array(self.map_data, copy=True)
+        origin_x = float(self.map_info.origin.position.x)
+        origin_y = float(self.map_info.origin.position.y)
+        resolution = float(self.map_info.resolution)
+        map_data = self._close_saved_map_boundary(map_data, resolution, log=log)
+        if not include_padding:
+            return map_data, origin_x, origin_y
+
+        if self.save_map_padding_m <= 0.0 or resolution <= 0.0:
+            return map_data, origin_x, origin_y
+
+        padding_cells = int(math.ceil(self.save_map_padding_m / resolution))
+        if padding_cells <= 0:
+            return map_data, origin_x, origin_y
+
+        padded = np.full(
+            (
+                map_data.shape[0] + padding_cells * 2,
+                map_data.shape[1] + padding_cells * 2,
+            ),
+            -1,
+            dtype=np.int8,
+        )
+        padded[
+            padding_cells:padding_cells + map_data.shape[0],
+            padding_cells:padding_cells + map_data.shape[1],
+        ] = map_data
+        origin_x -= padding_cells * resolution
+        origin_y -= padding_cells * resolution
+        if log:
+            self.get_logger().info(
+                f'Adding {padding_cells} unknown padding cells '
+                f'({padding_cells * resolution:.2f}m) around saved map.')
+        return padded, origin_x, origin_y
+
+    def _publish_live_repaired_map(self):
+        if self.repaired_map_pub is None or self.map_header is None:
+            return
+        if self.map_data is None or self.map_info is None:
+            return
+
+        map_data, origin_x, origin_y = self._processed_map_snapshot(
+            include_padding=True,
+            log=False,
+        )
+        msg = OccupancyGrid()
+        msg.header = copy.deepcopy(self.map_header)
+        msg.info = copy.deepcopy(self.map_info)
+        msg.info.width = int(map_data.shape[1])
+        msg.info.height = int(map_data.shape[0])
+        msg.info.origin.position.x = origin_x
+        msg.info.origin.position.y = origin_y
+        msg.data = [int(value) for value in map_data.reshape(-1)]
+        self.repaired_map_pub.publish(msg)
+
+    def _close_saved_map_boundary(self, map_data, resolution, log=False):
+        if not self.close_saved_map_boundary or resolution <= 0.0:
+            return map_data
+
+        known_y, known_x = np.where(map_data != -1)
+        if known_x.size == 0 or known_y.size == 0:
+            return map_data
+
+        min_x = int(known_x.min())
+        max_x = int(known_x.max())
+        min_y = int(known_y.min())
+        max_y = int(known_y.max())
+        if max_x <= min_x or max_y <= min_y:
+            return map_data
+
+        thickness = max(
+            1,
+            int(math.ceil(max(0.0, self.saved_map_boundary_thickness_m) / resolution)),
+        )
+        repaired = np.array(map_data, copy=True)
+        for offset in range(thickness):
+            left = min_x + offset
+            right = max_x - offset
+            bottom = min_y + offset
+            top = max_y - offset
+            if left > right or bottom > top:
+                break
+            repaired[bottom, left:right + 1] = 100
+            repaired[top, left:right + 1] = 100
+            repaired[bottom:top + 1, left] = 100
+            repaired[bottom:top + 1, right] = 100
+
+        if log:
+            self.get_logger().info(
+                'Closed saved map outer boundary: '
+                f'x=[{min_x},{max_x}] y=[{min_y},{max_y}] '
+                f'thickness={thickness} cells ({thickness * resolution:.2f}m).')
+        return repaired
+
+    def _save_pgm_file(self, filename, map_data):
         """Save map as PGM."""
-        height, width = self.map_data.shape
+        height, width = map_data.shape
         image_data = np.zeros((height, width), dtype=np.uint8)
 
         for y in range(height):
             for x in range(width):
-                cell = self.map_data[y, x]
+                cell = map_data[y, x]
                 if cell == -1:
                     image_data[y, x] = 128
                 elif cell == 0:
@@ -1130,11 +1413,11 @@ class WavefrontExplorer(Node):
             f.write(b'255\n')
             f.write(np.flipud(image_data).tobytes())
 
-    def _save_yaml_file(self, filename, pgm_file, exploration_time):
+    def _save_yaml_file(self, filename, pgm_file, exploration_time, origin_x, origin_y):
         """Save metadata."""
         yaml_content = f"""image: {os.path.basename(pgm_file)}
 resolution: {self.map_info.resolution}
-origin: [{self.map_info.origin.position.x}, {self.map_info.origin.position.y}, 0.0]
+origin: [{origin_x}, {origin_y}, 0.0]
 negate: 0
 occupied_thresh: 0.65
 free_thresh: 0.196

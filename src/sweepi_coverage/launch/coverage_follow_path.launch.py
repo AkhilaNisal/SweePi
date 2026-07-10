@@ -21,12 +21,18 @@ def generate_launch_description():
     auto_start = LaunchConfiguration('auto_start')
     require_robot_near_start = LaunchConfiguration('require_robot_near_start')
     max_start_distance_m = LaunchConfiguration('max_start_distance_m')
+    use_robot_arm = LaunchConfiguration('use_robot_arm')
 
     use_sim_time_param = {
         'use_sim_time': ParameterValue(use_sim_time, value_type=bool),
     }
 
     return LaunchDescription([
+        DeclareLaunchArgument(
+            'use_robot_arm',
+            default_value='false',
+            description='Enable rear robot-arm handling for eligible obstacles',
+        ),
         DeclareLaunchArgument(
             'use_sim_time',
             default_value='true',
@@ -68,7 +74,7 @@ def generate_launch_description():
         ),
         Node(
             package='sweepi_coverage',
-            executable='coverage_follow_path_executor_node.py',
+            executable='coverage_arm_follow_path_executor_node.py',
             name='coverage_follow_path_executor_node',
             output='screen',
             parameters=[
@@ -76,6 +82,7 @@ def generate_launch_description():
                 use_sim_time_param,
                 {
                     'auto_start': ParameterValue(auto_start, value_type=bool),
+                    'use_robot_arm': ParameterValue(use_robot_arm, value_type=bool),
                     'require_robot_near_start': ParameterValue(
                         require_robot_near_start,
                         value_type=bool,

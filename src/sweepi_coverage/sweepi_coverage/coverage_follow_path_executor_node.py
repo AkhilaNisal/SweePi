@@ -45,7 +45,6 @@ class CoverageFollowPathExecutorNode(Node):
     STATUS_STOPPED = 'STOPPED'
     STATUS_RETURNING_HOME = 'RETURNING_HOME'
     STATUS_RETURNED_HOME = 'RETURNED_HOME'
-
     FOLLOW_PATH_ERROR_CODES = {
         0: 'NONE',
         100: 'UNKNOWN',
@@ -89,10 +88,10 @@ class CoverageFollowPathExecutorNode(Node):
             durability=DurabilityPolicy.TRANSIENT_LOCAL,
             reliability=ReliabilityPolicy.RELIABLE,
         )
-
         self.cached_raw_path = None
         self.coverage_path_frozen = False
         self.active_path = None
+        self.display_active_path = None
         self.smoothed_path = None
         self.latest_path_error = 'No coverage path received yet'
         self.latest_status_msg = String()
@@ -167,6 +166,7 @@ class CoverageFollowPathExecutorNode(Node):
         self.pause_resume_path = None
         self.pause_resume_source_label = ''
         self.pause_resume_start_index = 0
+        self.pause_resume_has_robot_anchor = False
         self.cleanup_pass_count = 0
         self.cleanup_waiting_for_path = False
         self.cleanup_wait_started_monotonic = 0.0
@@ -224,7 +224,6 @@ class CoverageFollowPathExecutorNode(Node):
             self.static_map_callback,
             static_map_qos,
         )
-
         self.raw_path_pub = self.create_publisher(Path, self.raw_path_topic, qos)
         self.smoothed_path_pub = self.create_publisher(
             Path,
@@ -272,7 +271,6 @@ class CoverageFollowPathExecutorNode(Node):
             self.cmd_vel_topic,
             10,
         )
-
         self.start_service = self.create_service(
             Trigger,
             '/start_coverage_follow_path',
@@ -313,7 +311,6 @@ class CoverageFollowPathExecutorNode(Node):
             '/reset_coverage_follow_path',
             self.reset_service_callback,
         )
-
         publish_period = 1.0 / max(0.1, self.republish_active_path_hz)
         self.timer = self.create_timer(publish_period, self.timer_callback)
         self.dynamic_timer = None
@@ -323,7 +320,6 @@ class CoverageFollowPathExecutorNode(Node):
                 dynamic_period,
                 self.dynamic_timer_callback,
             )
-
         self._set_status(self.STATUS_WAITING_FOR_PATH)
         self.get_logger().info(
             'Coverage FollowPath executor started: action=%s controller_id=%s '
@@ -374,10 +370,10 @@ class CoverageFollowPathExecutorNode(Node):
             'robot_radius_m': 0.20,
             'enable_costmap_validation': True,
             'require_costmap_for_validation': True,
-            'max_allowed_nav_cost': 99,
-            'max_tolerated_blocked_costmap_samples': 20,
-            'max_tolerated_blocked_costmap_ratio': 0.01,
-            'max_tolerated_blocked_cost': 99,
+            'max_allowed_nav_cost': 50,
+            'max_tolerated_blocked_costmap_samples': 0,
+            'max_tolerated_blocked_costmap_ratio': 0.0,
+            'max_tolerated_blocked_cost': 50,
             'treat_unknown_cost_as_blocked': True,
             'freeze_path_on_start': True,
             'ignore_path_updates_while_executing': True,
@@ -422,8 +418,8 @@ class CoverageFollowPathExecutorNode(Node):
             'dynamic_connector_tracking_clearance_m': 0.04,
             'dynamic_use_corridor_for_detection': True,
             'dynamic_monitor_temporary_paths': True,
-            'dynamic_connector_allow_blocked_start': True,
-            'dynamic_connector_start_grace_m': 0.20,
+            'dynamic_connector_allow_blocked_start': False,
+            'dynamic_connector_start_grace_m': 0.0,
             'dynamic_refresh_temporary_rejoin': False,
             'dynamic_temporary_rejoin_check_distance_m': 0.80,
             'dynamic_temporary_rejoin_refresh_cooldown_sec': 0.75,
@@ -433,9 +429,9 @@ class CoverageFollowPathExecutorNode(Node):
             'dynamic_connector_refinement_iterations': 3,
             'dynamic_connector_refinement_step_m': 0.04,
             'dynamic_connector_refinement_influence_m': 0.45,
-            'dynamic_skip_lookahead_m': 0.30,
-            'dynamic_skip_padding_m': 0.02,
-            'dynamic_rejoin_min_clearance_m': 0.03,
+            'dynamic_skip_lookahead_m': 0.60,
+            'dynamic_skip_padding_m': 0.05,
+            'dynamic_rejoin_min_clearance_m': 0.08,
             'dynamic_rejoin_max_search_distance_m': 5.00,
             'dynamic_max_rejoin_candidates': 60,
             'dynamic_required_consecutive_detections': 4,
@@ -457,8 +453,8 @@ class CoverageFollowPathExecutorNode(Node):
             'stuck_start_grace_sec': 4.0,
             'stuck_min_movement_m': 0.03,
             'stuck_skip_distance_m': 0.60,
-            'enable_cleanup_after_main_path': True,
-            'cleanup_max_passes': 1,
+            'enable_cleanup_after_main_path': False,
+            'cleanup_max_passes': 0,
             'cleanup_wait_for_path_timeout_sec': 6.0,
             'retry_skipped_segments_at_end': False,
             'mark_skipped_segments_uncovered': True,
@@ -470,7 +466,7 @@ class CoverageFollowPathExecutorNode(Node):
             'dynamic_connector_start_with_robot_pose': True,
             'dynamic_connector_goal_tolerance_m': 0.25,
             'dynamic_static_encroachment_tolerance_m': 0.05,
-            'dynamic_require_safe_connector': False,
+            'dynamic_require_safe_connector': True,
             'dynamic_enable_local_astar_detour': True,
             'dynamic_enable_local_detour': True,
             'dynamic_detour_min_lateral_offset_m': 0.10,
@@ -1292,6 +1288,7 @@ class CoverageFollowPathExecutorNode(Node):
         self.pause_resume_path = None
         self.pause_resume_source_label = ''
         self.pause_resume_start_index = 0
+        self.pause_resume_has_robot_anchor = False
 
     def _pause_resume_source_path(self):
         if self.active_path is not None and len(self.active_path.poses) >= 2:
@@ -1319,7 +1316,7 @@ class CoverageFollowPathExecutorNode(Node):
             source_path,
             robot_pose,
         )
-        resume_path = self._build_pause_resume_path(
+        resume_path, has_robot_anchor = self._build_pause_resume_path(
             source_path,
             start_index,
             robot_pose,
@@ -1335,6 +1332,7 @@ class CoverageFollowPathExecutorNode(Node):
         self.pause_resume_path = resume_path
         self.pause_resume_source_label = source_label
         self.pause_resume_start_index = start_index
+        self.pause_resume_has_robot_anchor = has_robot_anchor
         self.get_logger().info(
             '[PAUSE_RESUME] saved remaining path from %s start_index=%d '
             'poses=%d length=%.2fm distance_to_path=%.3f'
@@ -1428,9 +1426,15 @@ class CoverageFollowPathExecutorNode(Node):
         start_index = max(0, min(start_index, pose_count - 2))
         return start_index, nearest_distance
 
-    def _build_pause_resume_path(self, path, start_index, robot_pose):
+    def _build_pause_resume_path(
+        self,
+        path,
+        start_index,
+        robot_pose,
+        escape_distance_m=0.0,
+    ):
         if path is None or len(path.poses) < 2:
-            return None
+            return None, False
 
         path_frame = self._path_frame(path)
         start_index = max(0, min(start_index, len(path.poses) - 2))
@@ -1438,6 +1442,7 @@ class CoverageFollowPathExecutorNode(Node):
         resume_path.header = copy.deepcopy(path.header)
         resume_path.header.frame_id = path_frame
 
+        has_robot_anchor = False
         robot_in_path_frame = None
         if robot_pose is not None:
             robot_in_path_frame = self._transform_pose_to_frame(
@@ -1447,16 +1452,185 @@ class CoverageFollowPathExecutorNode(Node):
         if robot_in_path_frame is not None:
             robot_in_path_frame.header.frame_id = path_frame
             self._append_pose_without_duplicate(resume_path, robot_in_path_frame)
+            has_robot_anchor = True
+            connector_start = robot_in_path_frame
+            if escape_distance_m > 0.0:
+                connector_start = self._append_pause_resume_forward_escape_samples(
+                    resume_path,
+                    robot_in_path_frame,
+                    escape_distance_m,
+                )
+            self._append_pause_resume_connector_samples(
+                resume_path,
+                connector_start,
+                path.poses[start_index],
+            )
+            start_index += 1
 
         for index in range(start_index, len(path.poses)):
             self._append_pose_without_duplicate(resume_path, path.poses[index])
 
         if len(resume_path.poses) < self.min_path_poses:
-            return None
+            return None, has_robot_anchor
 
         self._recompute_orientations(resume_path)
         self._stamp_path(resume_path)
-        return resume_path
+        return resume_path, has_robot_anchor
+
+    def _append_pause_resume_forward_escape_samples(
+        self,
+        path,
+        start_pose,
+        distance_m,
+    ):
+        yaw = self._yaw_from_quaternion(start_pose.pose.orientation)
+        start = start_pose.pose.position
+        target = copy.deepcopy(start_pose)
+        target.pose.position.x = start.x + math.cos(yaw) * distance_m
+        target.pose.position.y = start.y + math.sin(yaw) * distance_m
+        target.pose.position.z = start.z
+
+        sample_step_m = min(
+            max(0.02, self.dynamic_detour_sample_step_m),
+            max(0.02, self.max_consecutive_pose_jump_m * 0.5),
+        )
+        steps = max(1, int(math.ceil(distance_m / sample_step_m)))
+        last_pose = start_pose
+        for step in range(1, steps + 1):
+            if step == steps:
+                sample = target
+            else:
+                ratio = float(step) / float(steps)
+                sample = PoseStamped()
+                sample.header = copy.deepcopy(path.header)
+                sample.pose.position.x = start.x + ratio * (
+                    target.pose.position.x - start.x
+                )
+                sample.pose.position.y = start.y + ratio * (
+                    target.pose.position.y - start.y
+                )
+                sample.pose.position.z = start.z
+                sample.pose.orientation = copy.deepcopy(start_pose.pose.orientation)
+            self._append_pose_without_duplicate(path, sample)
+            last_pose = sample
+        return last_pose
+
+    def _append_pause_resume_connector_samples(self, path, start_pose, end_pose):
+        start = start_pose.pose.position
+        end = end_pose.pose.position
+        distance = self._distance_2d(start.x, start.y, end.x, end.y)
+        if distance < 1.0e-6:
+            self._append_pose_without_duplicate(path, end_pose)
+            return
+
+        sample_step_m = min(
+            max(0.02, self.dynamic_detour_sample_step_m),
+            max(0.02, self.max_consecutive_pose_jump_m * 0.5),
+        )
+        steps = max(1, int(math.ceil(distance / sample_step_m)))
+        for step in range(1, steps + 1):
+            if step == steps:
+                self._append_pose_without_duplicate(path, end_pose)
+                continue
+            ratio = float(step) / float(steps)
+            sample = PoseStamped()
+            sample.header = copy.deepcopy(path.header)
+            sample.pose.position.x = start.x + ratio * (end.x - start.x)
+            sample.pose.position.y = start.y + ratio * (end.y - start.y)
+            sample.pose.position.z = start.z + ratio * (end.z - start.z)
+            sample.pose.orientation.w = 1.0
+            self._append_pose_without_duplicate(path, sample)
+
+    def _nearest_pause_resume_rejoin_index(self, path, robot_pose, start_index):
+        if path is None or robot_pose is None or not path.poses:
+            return None, float('inf')
+
+        path_frame = self._path_frame(path)
+        robot_in_path_frame = self._transform_pose_to_frame(robot_pose, path_frame)
+        if robot_in_path_frame is None:
+            return None, float('inf')
+
+        start_index = max(0, min(start_index, len(path.poses) - 1))
+        robot_position = robot_in_path_frame.pose.position
+        nearest_index = start_index
+        nearest_distance = float('inf')
+        for index in range(start_index, len(path.poses)):
+            position = path.poses[index].pose.position
+            distance = self._distance_2d(
+                robot_position.x,
+                robot_position.y,
+                position.x,
+                position.y,
+            )
+            if distance < nearest_distance:
+                nearest_index = index
+                nearest_distance = distance
+        return nearest_index, nearest_distance
+
+    def _rebuild_pause_resume_path_from_current_pose(self, saved_path):
+        if saved_path is None or len(saved_path.poses) < 2:
+            self.latest_path_error = 'Saved pause path is too short to resume'
+            return None, -1, float('inf')
+
+        path_frame = self._path_frame(saved_path)
+        robot_pose = self._lookup_robot_pose(path_frame)
+        if robot_pose is None:
+            self.latest_path_error = (
+                'Cannot resume coverage because robot pose is unavailable'
+            )
+            return None, -1, float('inf')
+
+        if self.pause_resume_has_robot_anchor:
+            nearest_index = min(1, len(saved_path.poses) - 1)
+            path_frame = self._path_frame(saved_path)
+            robot_in_path_frame = self._transform_pose_to_frame(robot_pose, path_frame)
+            if robot_in_path_frame is None:
+                self.latest_path_error = (
+                    'Cannot transform robot pose into saved path frame'
+                )
+                return None, -1, float('inf')
+            robot_position = robot_in_path_frame.pose.position
+            rejoin_position = saved_path.poses[nearest_index].pose.position
+            nearest_distance = self._distance_2d(
+                robot_position.x,
+                robot_position.y,
+                rejoin_position.x,
+                rejoin_position.y,
+            )
+        else:
+            nearest_index, nearest_distance = self._nearest_pause_resume_rejoin_index(
+                saved_path,
+                robot_pose,
+                0,
+            )
+            if nearest_index is None:
+                self.latest_path_error = (
+                    'Cannot transform robot pose into saved path frame'
+                )
+                return None, -1, float('inf')
+
+        max_resume_distance = max(
+            self.max_nearest_path_distance_m,
+            self.max_start_distance_m,
+            self.max_consecutive_pose_jump_m,
+        )
+        if nearest_distance > max_resume_distance:
+            self.latest_path_error = (
+                'nearest saved resume path pose is %.3fm from robot, exceeds %.3fm'
+                % (nearest_distance, max_resume_distance)
+            )
+            return None, nearest_index, nearest_distance
+
+        rebuilt_path, _ = self._build_pause_resume_path(
+            saved_path,
+            nearest_index,
+            robot_pose,
+        )
+        if rebuilt_path is None or len(rebuilt_path.poses) < self.min_path_poses:
+            self.latest_path_error = 'Rebuilt pause resume path is too short'
+            return None, nearest_index, nearest_distance
+
+        return rebuilt_path, nearest_index, nearest_distance
 
     def _request_pause_resume_execution(self):
         if self.pause_resume_path is None:
@@ -1468,7 +1642,13 @@ class CoverageFollowPathExecutorNode(Node):
             )
             return False
 
-        resume_path = copy.deepcopy(self.pause_resume_path)
+        resume_path, rejoin_index, rejoin_distance = (
+            self._rebuild_pause_resume_path_from_current_pose(
+                copy.deepcopy(self.pause_resume_path)
+            )
+        )
+        if resume_path is None:
+            return False
         self.coverage_pause_requested = False
         self.coverage_control_cancel_reason = None
         self.cleanup_waiting_for_path = False
@@ -1491,10 +1671,12 @@ class CoverageFollowPathExecutorNode(Node):
 
         self.get_logger().info(
             '[PAUSE_RESUME] resuming saved path source=%s start_index=%d '
-            'poses=%d length=%.2fm'
+            'rejoin_index=%d rejoin_distance=%.3fm poses=%d length=%.2fm'
             % (
                 self.pause_resume_source_label,
                 self.pause_resume_start_index,
+                rejoin_index,
+                rejoin_distance,
                 len(resume_path.poses),
                 self._path_length(resume_path),
             )
@@ -1566,6 +1748,7 @@ class CoverageFollowPathExecutorNode(Node):
         self.cached_raw_path = None
         self.coverage_path_frozen = False
         self.active_path = None
+        self.display_active_path = None
         self.smoothed_path = None
         self.latest_path_error = 'No coverage path received yet'
         self.latest_debug_info = ''
@@ -1628,12 +1811,33 @@ class CoverageFollowPathExecutorNode(Node):
                 self._stamp_path(self.smoothed_path)
                 self.smoothed_path_pub.publish(self.smoothed_path)
 
-        if self.active_path is not None:
-            self._stamp_path(self.active_path)
-            self.active_path_pub.publish(self.active_path)
-            self.path_markers_pub.publish(self._make_path_markers(self.active_path))
+        published_active_path = self._active_path_for_publication()
+        if published_active_path is not None:
+            self._stamp_path(published_active_path)
+            self.active_path_pub.publish(published_active_path)
+            self.path_markers_pub.publish(
+                self._make_path_markers(published_active_path)
+            )
         elif self.cached_raw_path is not None:
             self.path_markers_pub.publish(self._make_path_markers(self.cached_raw_path))
+
+    def _display_path_for_follow_path_reason(self, reason):
+        if (
+            reason == 'continue_after_pause_saved_path'
+            and self.pause_resume_source_label == 'active_path'
+            and self.cached_raw_path is not None
+            and len(self.cached_raw_path.poses) >= self.min_path_poses
+        ):
+            return copy.deepcopy(self.cached_raw_path)
+        return None
+
+    def _active_path_for_publication(self):
+        if (
+            self.display_active_path is not None
+            and len(self.display_active_path.poses) >= self.min_path_poses
+        ):
+            return self.display_active_path
+        return self.active_path
 
     def dynamic_timer_callback(self):
         if not self.enable_dynamic_obstacle_skip:
@@ -1668,6 +1872,7 @@ class CoverageFollowPathExecutorNode(Node):
         self.coverage_pause_requested = False
         self.coverage_control_cancel_reason = None
         self._clear_pause_resume_snapshot()
+        self.display_active_path = None
         cleanup_run = str(reason).startswith('cleanup_pass')
         if not cleanup_run:
             self.skipped_segments = []
@@ -1850,7 +2055,11 @@ class CoverageFollowPathExecutorNode(Node):
             self._handle_smoothing_failure('SmoothPath result failed: %s' % exc)
             return
 
-        if self.coverage_control_cancel_reason in ('pause', 'stop', 'return_home'):
+        if self.coverage_control_cancel_reason in (
+            'pause',
+            'stop',
+            'return_home',
+        ):
             self.get_logger().info(
                 'Ignoring SmoothPath result after %s request'
                 % self.coverage_control_cancel_reason
@@ -1972,8 +2181,14 @@ class CoverageFollowPathExecutorNode(Node):
 
         self.active_path = copy.deepcopy(path)
         self._stamp_path(self.active_path)
-        self.active_path_pub.publish(self.active_path)
-        self.path_markers_pub.publish(self._make_path_markers(self.active_path))
+        self.display_active_path = self._display_path_for_follow_path_reason(reason)
+        published_active_path = self._active_path_for_publication()
+        if published_active_path is not None:
+            self._stamp_path(published_active_path)
+            self.active_path_pub.publish(published_active_path)
+            self.path_markers_pub.publish(
+                self._make_path_markers(published_active_path)
+            )
         self.coverage_path_frozen = self.freeze_path_on_start or self.coverage_path_frozen
         self.goal_in_flight = True
         self.current_goal_handle = None
@@ -2134,7 +2349,11 @@ class CoverageFollowPathExecutorNode(Node):
             )
             return
 
-        if self.coverage_control_cancel_reason in ('pause', 'stop', 'return_home'):
+        if self.coverage_control_cancel_reason in (
+            'pause',
+            'stop',
+            'return_home',
+        ):
             reason = self.coverage_control_cancel_reason
             self.get_logger().info(
                 'Ignoring FollowPath terminal result after %s request' % reason
@@ -2599,6 +2818,7 @@ class CoverageFollowPathExecutorNode(Node):
             'costmap_valid': True,
             'costmap_reason': 'ok',
             'blocked_pose_count': 0,
+            'ignored_blocked_pose_count': 0,
             'unknown_pose_count': 0,
             'max_observed_cost': 0,
             'tolerated_blocked_pose_count': 0,
@@ -2621,6 +2841,7 @@ class CoverageFollowPathExecutorNode(Node):
         sample_step = max(0.01, self.nav_costmap.info.resolution * 0.5)
         sample_count = 0
         blocked_count = 0
+        ignored_blocked_count = 0
         unknown_count = 0
         max_cost = 0
         max_blocked_cost = 0
@@ -2633,9 +2854,19 @@ class CoverageFollowPathExecutorNode(Node):
                 unknown_count += 1
             max_cost = max(max_cost, cost_info['cost'])
             if cost_info['blocked']:
-                blocked_count += 1
-                max_blocked_cost = max(max_blocked_cost, cost_info['cost'])
-                self._append_blocked_debug_point(pose.position)
+                if self._ignore_costmap_validation_blocked_sample(
+                    pose.position.x,
+                    pose.position.y,
+                    cost_info['cost'],
+                    cost_info['unknown'],
+                    index,
+                    path,
+                ):
+                    ignored_blocked_count += 1
+                else:
+                    blocked_count += 1
+                    max_blocked_cost = max(max_blocked_cost, cost_info['cost'])
+                    self._append_blocked_debug_point(pose.position)
 
             if index == 0:
                 continue
@@ -2654,17 +2885,40 @@ class CoverageFollowPathExecutorNode(Node):
                     unknown_count += 1
                 max_cost = max(max_cost, cost_info['cost'])
                 if cost_info['blocked']:
-                    blocked_count += 1
-                    max_blocked_cost = max(max_blocked_cost, cost_info['cost'])
-                    point = Point()
-                    point.x = x
-                    point.y = y
-                    point.z = 0.0
-                    self._append_blocked_debug_point(point)
+                    if self._ignore_costmap_validation_blocked_sample(
+                        x,
+                        y,
+                        cost_info['cost'],
+                        cost_info['unknown'],
+                        index,
+                        path,
+                    ):
+                        ignored_blocked_count += 1
+                    else:
+                        blocked_count += 1
+                        max_blocked_cost = max(max_blocked_cost, cost_info['cost'])
+                        point = Point()
+                        point.x = x
+                        point.y = y
+                        point.z = 0.0
+                        self._append_blocked_debug_point(point)
 
         report['blocked_pose_count'] = blocked_count
+        report['ignored_blocked_pose_count'] = ignored_blocked_count
         report['unknown_pose_count'] = unknown_count
         report['max_observed_cost'] = max_cost
+        if ignored_blocked_count > 0 and blocked_count == 0:
+            report['costmap_reason'] = (
+                'ignored %d handled obstacle inflated costmap samples'
+                % ignored_blocked_count
+            )
+            self.get_logger().warn(
+                'Coverage path has %d inflated costmap samples near a handled '
+                'obstacle; allowing this validation pass.'
+                % ignored_blocked_count,
+                throttle_duration_sec=5.0,
+            )
+            return report
         if blocked_count > 0:
             blocked_ratio = (
                 float(blocked_count) / float(sample_count)
@@ -2707,6 +2961,12 @@ class CoverageFollowPathExecutorNode(Node):
                 )
             )
         return report
+
+    def _ignore_costmap_validation_blocked_sample(
+        self, x, y, cost, unknown, pose_index, path
+    ):
+        del x, y, cost, unknown, pose_index, path
+        return False
 
     def _costmap_value_at(self, x, y):
         try:
@@ -3041,6 +3301,16 @@ class CoverageFollowPathExecutorNode(Node):
                 )
             return False
 
+        static_or_inflated_reason = self._stuck_skip_static_or_inflated_reason(
+            robot_pose,
+            'robot_pose',
+        )
+        if static_or_inflated_reason:
+            self._reject_stuck_skip_static_or_inflated(
+                static_or_inflated_reason,
+            )
+            return False
+
         report = self._make_stuck_skip_report(
             self.active_path,
             nearest_index,
@@ -3064,6 +3334,16 @@ class CoverageFollowPathExecutorNode(Node):
             return None
 
         nearest_index = max(0, min(int(nearest_index), len(path.poses) - 1))
+        static_or_inflated_reason = self._stuck_skip_static_or_inflated_reason(
+            path.poses[nearest_index],
+            'nearest_path_pose',
+        )
+        if static_or_inflated_reason:
+            self._reject_stuck_skip_static_or_inflated(
+                static_or_inflated_reason,
+            )
+            return None
+
         blocked_end_index = self._index_after_distance(
             path,
             nearest_index,
@@ -3129,6 +3409,15 @@ class CoverageFollowPathExecutorNode(Node):
         path_frame = self._path_frame(self.active_path)
         robot_pose = self._lookup_robot_pose(path_frame)
         if robot_pose is None:
+            return None
+        static_or_inflated_reason = self._stuck_skip_static_or_inflated_reason(
+            robot_pose,
+            'robot_pose',
+        )
+        if static_or_inflated_reason:
+            self._reject_stuck_skip_static_or_inflated(
+                static_or_inflated_reason,
+            )
             return None
 
         nearest_index, nearest_distance = self._find_nearest_path_index(
@@ -3713,6 +4002,80 @@ class CoverageFollowPathExecutorNode(Node):
             'unknown_cells': unknown_cells,
             'max_value': max_value,
         }
+
+    def _stuck_skip_static_or_inflated_reason(self, pose_stamped, label):
+        if pose_stamped is None:
+            return ''
+
+        static_radius = max(
+            self.robot_radius_m,
+            self.robot_radius_m + self.static_reference_padding_m,
+        )
+        static = self._check_static_corridor_at_pose(pose_stamped, static_radius)
+        if static.get('valid') and static.get('blocked'):
+            return (
+                '%s near static map obstacle: %s radius=%.3f checked=%d '
+                'unknown=%d max_value=%d'
+                % (
+                    label,
+                    static.get('reason', 'static_blocked'),
+                    static_radius,
+                    static.get('checked_cells', 0),
+                    static.get('unknown_cells', 0),
+                    static.get('max_value', 0),
+                )
+            )
+
+        if self.local_costmap is None:
+            return ''
+
+        collision_radius = self._get_dynamic_collision_radius_m()
+        local = self._check_local_corridor_at_pose(
+            pose_stamped,
+            collision_radius,
+        )
+        if not local.get('valid') or not local.get('inside'):
+            return ''
+
+        max_cost = int(local.get('max_cost', 0))
+        if (
+            max_cost > self.max_allowed_nav_cost
+            and max_cost < self.dynamic_obstacle_cost_threshold
+        ):
+            return (
+                '%s in inflated/non-lethal local cost band: max_cost=%d '
+                'max_allowed_nav_cost=%d dynamic_threshold=%d radius=%.3f'
+                % (
+                    label,
+                    max_cost,
+                    self.max_allowed_nav_cost,
+                    self.dynamic_obstacle_cost_threshold,
+                    collision_radius,
+                )
+            )
+
+        return ''
+
+    def _reject_stuck_skip_static_or_inflated(self, reason):
+        now = time.monotonic()
+        if (
+            now
+            - getattr(
+                self,
+                'last_stuck_skip_static_reject_log_monotonic',
+                0.0,
+            )
+            < 2.0
+        ):
+            return
+        self.last_stuck_skip_static_reject_log_monotonic = now
+        text = (
+            '[STUCK_SKIP] not skipping current coverage points because the '
+            'blockage looks static/inflated: %s'
+            % reason
+        )
+        self.get_logger().warn(text)
+        self._publish_dynamic_skip_status(text)
 
     def _validate_connector_corridor(
         self,

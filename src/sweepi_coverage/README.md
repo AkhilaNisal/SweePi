@@ -55,6 +55,12 @@ Start the FollowPath coverage stack:
 
 ```bash
 ros2 launch sweepi_coverage coverage_follow_path.launch.py
+
+# Enable rear-arm-assisted handling of eligible local-only obstacles
+ros2 launch sweepi_coverage coverage_follow_path.launch.py use_robot_arm:=true
+
+# Explicitly retain the original dynamic-bypass-only behavior (the default)
+ros2 launch sweepi_coverage coverage_follow_path.launch.py use_robot_arm:=false
 ```
 
 Optional arguments:
