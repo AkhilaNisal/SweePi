@@ -23,6 +23,7 @@ install(
 install(
   PROGRAMS
     scripts/odom_tf_broadcaster.py
+    scripts/front_tof_range_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

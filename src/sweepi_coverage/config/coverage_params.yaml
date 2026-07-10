@@ -43,11 +43,13 @@ coverage_planner_node:
     debug_path_continuity: true
     use_nav_costmap_for_planning: true
     use_global_costmap_for_planning: true
-    max_allowed_nav_cost: 99
+    max_allowed_nav_cost: 50
     treat_unknown_cost_as_blocked: true
     nav_costmap_timeout_sec: 2.0
     wait_for_nav_costmap_before_planning: false
     wait_for_robot_pose_before_planning: true
+    cleanup_after_main_path: false
+    cleanup_max_passes: 0
 
 coverage_executor_node:
   ros__parameters:

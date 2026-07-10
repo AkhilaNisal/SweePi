@@ -7,6 +7,7 @@
   <arg name="x_pose" default="0.0"/>
   <arg name="y_pose" default="0.0"/>
   <arg name="headless" default="false"/>
+  <arg name="world" default="$(find-pkg-share sweepi_bringup)/worlds/world2.sdf"/>
   <!-- world2.sdf already contains the sweepi model. Set true only for empty worlds. -->
   <arg name="spawn_robot" default="false"/>
 
@@ -25,7 +26,7 @@
   <!-- <let name="world_path"
        value="$(find-pkg-share sweepi_bringup)/worlds/turtlebot3_house.world" /> -->
   <let name="world_path"
-       value="$(find-pkg-share sweepi_bringup)/worlds/world2.sdf" />
+       value="$(var world)" />
 
 
   <!-- Gazebo Server -->
@@ -87,6 +88,17 @@
         exec="odom_tf_broadcaster.py"
         name="odom_tf_broadcaster"
         output="screen">
+    <param name="use_sim_time" value="$(var use_sim_time)" />
+  </node>
+
+  <!-- Convert the simulated one-beam front ToF scan to sensor_msgs/Range. -->
+  <node pkg="sweepi_bringup"
+        exec="front_tof_range_node.py"
+        name="front_tof_range_node"
+        output="screen">
+    <param name="scan_topic" value="/tof/front/scan" />
+    <param name="range_topic" value="/tof/front/range" />
+    <param name="frame_id" value="front_tof_link" />
     <param name="use_sim_time" value="$(var use_sim_time)" />
   </node>
 

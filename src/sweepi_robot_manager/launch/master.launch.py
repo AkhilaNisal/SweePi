@@ -4,7 +4,7 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, LogInfo, OpaqueFunction
 from launch.conditions import IfCondition
 from launch.launch_description_sources import AnyLaunchDescriptionSource, PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression
@@ -15,12 +15,52 @@ def as_bool(value):
     return PythonExpression(["'", value, "' == 'true'"])
 
 
+def include_sim_launch(context, sim_launch, default_sim_world):
+    requested_world = LaunchConfiguration('sim_world').perform(context)
+    world = os.path.expandvars(os.path.expanduser(requested_world))
+    spawn_robot = LaunchConfiguration('spawn_robot').perform(context)
+    actions = []
+
+    if not os.path.exists(world):
+        actions.append(LogInfo(
+            msg=(
+                'WARNING: Requested sim_world does not exist: %s. Falling back to %s.'
+                % (world, default_sim_world)
+            )
+        ))
+        world = default_sim_world
+
+    default_world = os.path.abspath(default_sim_world)
+    if os.path.abspath(world) == default_world and spawn_robot == 'true':
+        actions.append(LogInfo(
+            msg=(
+                'WARNING: world2.sdf already contains the SweePi model; forcing '
+                'spawn_robot=false to avoid a duplicate robot.'
+            )
+        ))
+        spawn_robot = 'false'
+
+    actions.append(
+        IncludeLaunchDescription(
+            AnyLaunchDescriptionSource(sim_launch),
+            launch_arguments={
+                'use_sim_time': LaunchConfiguration('use_sim_time'),
+                'headless': LaunchConfiguration('headless'),
+                'world': world,
+                'spawn_robot': spawn_robot,
+            }.items(),
+        )
+    )
+    return actions
+
+
 def generate_launch_description():
     bringup_dir = get_package_share_directory('sweepi_bringup')
     real_bringup_dir = get_package_share_directory('sweepi_real_bringup')
     api_bridge_dir = get_package_share_directory('sweepi_api_bridge')
 
     sim_launch = os.path.join(bringup_dir, 'launch', 'gazebo.launch.xml')
+    default_sim_world = os.path.join(bringup_dir, 'worlds', 'world2.sdf')
     hardware_launch = os.path.join(
         real_bringup_dir,
         'launch',
@@ -132,6 +172,16 @@ def generate_launch_description():
             description='Run Gazebo without GUI when launch_sim is true',
         ),
         DeclareLaunchArgument(
+            'sim_world',
+            default_value=default_sim_world,
+            description='Gazebo world path when launch_sim is true',
+        ),
+        DeclareLaunchArgument(
+            'spawn_robot',
+            default_value='false',
+            description='Spawn robot from robot_description when launch_sim is true',
+        ),
+        DeclareLaunchArgument(
             'launch_api_bridge',
             default_value='false',
             description='Launch sweepi_api_bridge HTTP server',
@@ -146,13 +196,15 @@ def generate_launch_description():
             default_value='8080',
             description='HTTP API bind port when launch_api_bridge is true',
         ),
-        IncludeLaunchDescription(
-            AnyLaunchDescriptionSource(sim_launch),
+        DeclareLaunchArgument(
+            'use_arm_assist',
+            default_value='false',
+            description='Deprecated compatibility argument; coverage arm assist is disabled',
+        ),
+        OpaqueFunction(
+            function=include_sim_launch,
+            args=[sim_launch, default_sim_world],
             condition=IfCondition(launch_sim),
-            launch_arguments={
-                'use_sim_time': use_sim_time,
-                'headless': headless,
-            }.items(),
         ),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(hardware_launch),

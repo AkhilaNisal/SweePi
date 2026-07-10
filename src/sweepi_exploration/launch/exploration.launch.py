@@ -18,11 +18,11 @@ def generate_launch_description():
     declare_use_sim_time = DeclareLaunchArgument(
         'use_sim_time', default_value='true')
     declare_frontier_min_size = DeclareLaunchArgument(
-        'frontier_min_size', default_value='8')
+        'frontier_min_size', default_value='3')
     declare_cluster_distance = DeclareLaunchArgument(
         'cluster_distance', default_value='1.2') # 1.2
     declare_min_unknown_region_area_m2 = DeclareLaunchArgument(
-        'min_unknown_region_area_m2', default_value='0.25',
+        'min_unknown_region_area_m2', default_value='0.05',
         description='Ignore frontier regions exposing less unknown area than this')
     declare_exploration_frequency = DeclareLaunchArgument(
         'exploration_frequency', default_value='1.0')
@@ -86,12 +86,30 @@ def generate_launch_description():
     declare_frontier_goal_unknown_radius = DeclareLaunchArgument(
         'frontier_goal_unknown_radius', default_value='0.8',
         description='Unknown-cell radius used to score frontier viewpoints')
+    declare_save_map_padding_m = DeclareLaunchArgument(
+        'save_map_padding_m', default_value='0.50',
+        description='Unknown border padding added around saved exploration maps')
+    declare_close_saved_map_boundary = DeclareLaunchArgument(
+        'close_saved_map_boundary', default_value='true',
+        description='Stamp the explored map outer contour as occupied on save')
+    declare_saved_map_boundary_thickness_m = DeclareLaunchArgument(
+        'saved_map_boundary_thickness_m', default_value='0.10',
+        description='Thickness of repaired saved-map boundary wall')
     declare_start_mode = DeclareLaunchArgument(
         'start_mode', default_value='auto',
         description='Initial exploration mode: auto, manual, or stopped')
     declare_cmd_vel_topic = DeclareLaunchArgument(
         'cmd_vel_topic', default_value='/cmd_vel',
         description='Velocity topic used by manual teleop and stop commands')
+    declare_source_map_topic = DeclareLaunchArgument(
+        'source_map_topic', default_value='/slam_map',
+        description='Raw SLAM map consumed by the frontier explorer')
+    declare_repaired_map_topic = DeclareLaunchArgument(
+        'repaired_map_topic', default_value='/map',
+        description='Live repaired map published for RViz/Nav2/API')
+    declare_publish_live_repaired_map = DeclareLaunchArgument(
+        'publish_live_repaired_map', default_value='true',
+        description='Publish boundary-repaired live map while exploring')
 
     slam_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -100,6 +118,7 @@ def generate_launch_description():
         launch_arguments={
             'use_sim_time': LaunchConfiguration('use_sim_time'),
             'autostart': 'true',
+            'map_topic': LaunchConfiguration('source_map_topic'),
         }.items(),
     )
 
@@ -142,8 +161,14 @@ def generate_launch_description():
                 'completion_retry_cycles': LaunchConfiguration('completion_retry_cycles'),
                 'frontier_goal_search_radius': LaunchConfiguration('frontier_goal_search_radius'),
                 'frontier_goal_unknown_radius': LaunchConfiguration('frontier_goal_unknown_radius'),
+                'save_map_padding_m': LaunchConfiguration('save_map_padding_m'),
+                'close_saved_map_boundary': LaunchConfiguration('close_saved_map_boundary'),
+                'saved_map_boundary_thickness_m': LaunchConfiguration('saved_map_boundary_thickness_m'),
                 'start_mode': LaunchConfiguration('start_mode'),
                 'cmd_vel_topic': LaunchConfiguration('cmd_vel_topic'),
+                'source_map_topic': LaunchConfiguration('source_map_topic'),
+                'repaired_map_topic': LaunchConfiguration('repaired_map_topic'),
+                'publish_live_repaired_map': LaunchConfiguration('publish_live_repaired_map'),
             }
         ],
     )
@@ -181,8 +206,14 @@ def generate_launch_description():
         declare_completion_retry_cycles,
         declare_frontier_goal_search_radius,
         declare_frontier_goal_unknown_radius,
+        declare_save_map_padding_m,
+        declare_close_saved_map_boundary,
+        declare_saved_map_boundary_thickness_m,
         declare_start_mode,
         declare_cmd_vel_topic,
+        declare_source_map_topic,
+        declare_repaired_map_topic,
+        declare_publish_live_repaired_map,
         
         LogInfo(msg='🚀 STARTING SWEEPI AUTONOMOUS EXPLORATION'),
         LogInfo(msg='💾 Map name: ${map_name}'),

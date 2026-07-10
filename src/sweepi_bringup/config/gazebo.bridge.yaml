@@ -46,6 +46,15 @@
   direction: GZ_TO_ROS
   lazy: false
 
+# Front ToF one-beam scan, converted to sensor_msgs/Range by
+# sweepi_bringup/front_tof_range_node.py.
+- ros_topic_name: "/tof/front/scan"
+  gz_topic_name: "/tof/front/scan"
+  ros_type_name: "sensor_msgs/msg/LaserScan"
+  gz_type_name: "gz.msgs.LaserScan"
+  direction: GZ_TO_ROS
+  lazy: false
+
 # Odometry
 - ros_topic_name: "/odom"
   gz_topic_name: "/odom"

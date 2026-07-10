@@ -73,14 +73,14 @@ class CoveragePlannerNode(Node):
         self.declare_parameter('tf_lookup_timeout_sec', 0.2)
         self.declare_parameter('use_nav_costmap_for_planning', True)
         self.declare_parameter('use_global_costmap_for_planning', True)
-        self.declare_parameter('max_allowed_nav_cost', 99)
+        self.declare_parameter('max_allowed_nav_cost', 50)
         self.declare_parameter('treat_unknown_cost_as_blocked', True)
         self.declare_parameter('nav_costmap_timeout_sec', 2.0)
         self.declare_parameter('wait_for_nav_costmap_before_planning', False)
         self.declare_parameter('wait_for_robot_pose_before_planning', False)
         self.declare_parameter('plan_only_reachable_from_robot', True)
-        self.declare_parameter('cleanup_after_main_path', True)
-        self.declare_parameter('cleanup_max_passes', 1)
+        self.declare_parameter('cleanup_after_main_path', False)
+        self.declare_parameter('cleanup_max_passes', 0)
         self.declare_parameter('coverage_execution_status_topic', '/coverage_execution_status')
 
         self.coverage_map_topic = (
