@@ -21,77 +21,42 @@ def generate_launch_description():
     launch_steppers = LaunchConfiguration('launch_steppers')
     launch_wheel_odom = LaunchConfiguration('launch_wheel_odom')
     launch_imu = LaunchConfiguration('launch_imu')
+    launch_cleaning_motors = LaunchConfiguration('launch_cleaning_motors')
     dry_run_gpio = LaunchConfiguration('dry_run_gpio')
 
     return LaunchDescription([
-        DeclareLaunchArgument(
-            'params_file',
-            default_value=default_params,
-            description='Temporary RPi hardware parameter file',
-        ),
-        DeclareLaunchArgument(
-            'use_sim_time',
-            default_value='false',
-            description='Use simulation clock',
-        ),
-        DeclareLaunchArgument(
-            'launch_steppers',
-            default_value='true',
-            description='Launch the GPIO stepper driver',
-        ),
-        DeclareLaunchArgument(
-            'launch_wheel_odom',
-            default_value='true',
-            description='Launch the step-count to wheel odometry node',
-        ),
-        DeclareLaunchArgument(
-            'launch_imu',
-            default_value='true',
-            description='Launch the MPU6050 IMU node',
-        ),
-        DeclareLaunchArgument(
-            'dry_run_gpio',
-            default_value='false',
-            description='Simulate step counts without accessing GPIO',
-        ),
+        DeclareLaunchArgument('params_file', default_value=default_params,
+                              description='RPi hardware parameter file'),
+        DeclareLaunchArgument('use_sim_time', default_value='false'),
+        DeclareLaunchArgument('launch_steppers', default_value='true'),
+        DeclareLaunchArgument('launch_wheel_odom', default_value='true'),
+        DeclareLaunchArgument('launch_imu', default_value='true'),
+        DeclareLaunchArgument('launch_cleaning_motors', default_value='false',
+                              description='Launch vacuum and brush GPIO controller'),
+        DeclareLaunchArgument('dry_run_gpio', default_value='false'),
         Node(
-            package='sweepi_temp_rpi_hardware',
-            executable='stepper_driver_node',
-            name='sweepi_temp_stepper_driver',
-            output='screen',
+            package='sweepi_temp_rpi_hardware', executable='stepper_driver_node',
+            name='sweepi_temp_stepper_driver', output='screen',
             condition=IfCondition(launch_steppers),
-            parameters=[
-                params_file,
-                {
-                    'use_sim_time': as_bool(use_sim_time),
-                    'dry_run_gpio': as_bool(dry_run_gpio),
-                },
-            ],
+            parameters=[params_file, {'use_sim_time': as_bool(use_sim_time),
+                                      'dry_run_gpio': as_bool(dry_run_gpio)}],
         ),
         Node(
-            package='sweepi_temp_rpi_hardware',
-            executable='stepper_ticks_to_odom_node',
-            name='sweepi_temp_stepper_odom',
-            output='screen',
+            package='sweepi_temp_rpi_hardware', executable='stepper_ticks_to_odom_node',
+            name='sweepi_temp_stepper_odom', output='screen',
             condition=IfCondition(launch_wheel_odom),
-            parameters=[
-                params_file,
-                {
-                    'use_sim_time': as_bool(use_sim_time),
-                },
-            ],
+            parameters=[params_file, {'use_sim_time': as_bool(use_sim_time)}],
         ),
         Node(
-            package='sweepi_temp_rpi_hardware',
-            executable='mpu6050_imu_node',
-            name='sweepi_temp_mpu6050',
-            output='screen',
-            condition=IfCondition(launch_imu),
-            parameters=[
-                params_file,
-                {
-                    'use_sim_time': as_bool(use_sim_time),
-                },
-            ],
+            package='sweepi_temp_rpi_hardware', executable='mpu6050_imu_node',
+            name='sweepi_temp_mpu6050', output='screen', condition=IfCondition(launch_imu),
+            parameters=[params_file, {'use_sim_time': as_bool(use_sim_time)}],
+        ),
+        Node(
+            package='sweepi_temp_rpi_hardware', executable='cleaning_motor_controller_node',
+            name='cleaning_motor_controller', output='screen',
+            condition=IfCondition(launch_cleaning_motors),
+            parameters=[params_file, {'use_sim_time': as_bool(use_sim_time),
+                                      'dry_run_gpio': as_bool(dry_run_gpio)}],
         ),
     ])
