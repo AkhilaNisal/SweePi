@@ -30,8 +30,10 @@ class RobotApiClient {
     required this.host,
     required this.apiPort,
     this.websocketPort = 8765,
+    Duration requestTimeout = robotApiRequestTimeout,
   }) : _httpClient = HttpClient() {
-    _httpClient.connectionTimeout = robotApiRequestTimeout;
+    _requestTimeout = requestTimeout;
+    _httpClient.connectionTimeout = requestTimeout;
   }
 
   factory RobotApiClient.fromDiscoveredRobot(RobotDiscoveredDevice robot) {
@@ -58,6 +60,7 @@ class RobotApiClient {
   final int apiPort;
   final int websocketPort;
   final HttpClient _httpClient;
+  late final Duration _requestTimeout;
 
   Uri get baseUri => Uri(scheme: 'http', host: host, port: apiPort);
   Uri get websocketUri => Uri(scheme: 'ws', host: host, port: websocketPort);
@@ -67,17 +70,16 @@ class RobotApiClient {
     return Uri(scheme: 'http', host: host, port: apiPort, path: normalizedPath);
   }
 
-  Future<Map<String, dynamic>> getJson(String path) async {
+  Future<Map<String, dynamic>> getJson(String path, {Duration? timeout}) async {
     final uri = _uri(path);
+    final requestTimeout = timeout ?? _requestTimeout;
     _logRequest('GET', uri);
     try {
-      final request = await _httpClient
-          .getUrl(uri)
-          .timeout(robotApiRequestTimeout);
+      final request = await _httpClient.getUrl(uri).timeout(requestTimeout);
       return _readJsonObject(
         'GET',
         uri,
-        await request.close().timeout(robotApiRequestTimeout),
+        await request.close().timeout(requestTimeout),
       );
     } catch (error) {
       if (error is! ApiException) {
@@ -93,14 +95,14 @@ class RobotApiClient {
   Future<Map<String, dynamic>> postJson(
     String path, {
     Map<String, dynamic>? body,
+    Duration? timeout,
   }) async {
     final uri = _uri(path);
+    final requestTimeout = timeout ?? _requestTimeout;
     _logRequest('POST', uri, body: body);
     try {
-      final request = await _httpClient
-          .postUrl(uri)
-          .timeout(robotApiRequestTimeout);
-      return _sendJson('POST', uri, request, body);
+      final request = await _httpClient.postUrl(uri).timeout(requestTimeout);
+      return _sendJson('POST', uri, request, body, timeout: requestTimeout);
     } catch (error) {
       if (error is! ApiException) {
         _logError('POST', uri, error);
@@ -115,14 +117,14 @@ class RobotApiClient {
   Future<Map<String, dynamic>> putJson(
     String path, {
     Map<String, dynamic>? body,
+    Duration? timeout,
   }) async {
     final uri = _uri(path);
+    final requestTimeout = timeout ?? _requestTimeout;
     _logRequest('PUT', uri, body: body);
     try {
-      final request = await _httpClient
-          .putUrl(uri)
-          .timeout(robotApiRequestTimeout);
-      return _sendJson('PUT', uri, request, body);
+      final request = await _httpClient.putUrl(uri).timeout(requestTimeout);
+      return _sendJson('PUT', uri, request, body, timeout: requestTimeout);
     } catch (error) {
       if (error is! ApiException) {
         _logError('PUT', uri, error);
@@ -138,8 +140,8 @@ class RobotApiClient {
     return RobotStatus.fromJson(await getJson('/api/robot/status'));
   }
 
-  Future<Map<String, dynamic>> fetchHealth() async {
-    return getJson('/api/system/health');
+  Future<Map<String, dynamic>> fetchHealth({Duration? timeout}) async {
+    return getJson('/api/system/health', timeout: timeout);
   }
 
   Future<ExplorationStartResponse> startExploration({
@@ -297,8 +299,9 @@ class RobotApiClient {
     String method,
     Uri uri,
     HttpClientRequest request,
-    Map<String, dynamic>? body,
-  ) async {
+    Map<String, dynamic>? body, {
+    Duration? timeout,
+  }) async {
     final bodyText = jsonEncode(body ?? const <String, dynamic>{});
     final bodyBytes = utf8.encode(bodyText);
 
@@ -318,7 +321,7 @@ class RobotApiClient {
     return _readJsonObject(
       method,
       uri,
-      await request.close().timeout(robotApiRequestTimeout),
+      await request.close().timeout(timeout ?? _requestTimeout),
     );
   }
 

@@ -96,7 +96,10 @@ class _WifiConnectingScreenState extends State<WifiConnectingScreen> {
                 robot.robotId == widget.robot.robotId,
           );
       if (discovered.isNotEmpty) {
-        await widget.controller.connectToDiscoveredRobot(discovered.first);
+        await widget.controller.connectToDiscoveredRobot(
+          discovered.first,
+          lastKnownWifiSsid: status.ssid,
+        );
       } else if (status.hostname != null || status.ip != null) {
         await widget.controller.connectToTemporaryRobotFallback(
           RobotDiscoveredDevice(
@@ -109,6 +112,7 @@ class _WifiConnectingScreenState extends State<WifiConnectingScreen> {
             websocketPort: 8765,
             model: widget.robot.model,
           ),
+          lastKnownWifiSsid: status.ssid,
         );
       } else {
         setState(() {

@@ -3,6 +3,7 @@ import 'robot_discovered_device.dart';
 
 enum RobotConnectionStatus {
   noRobotFound,
+  autoConnecting,
   scanning,
   bleFound,
   wifiFound,

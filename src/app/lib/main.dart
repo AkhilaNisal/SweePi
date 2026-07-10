@@ -11,7 +11,7 @@ Future<void> main() async {
   final controller = AppController();
   await controller.initialize();
   runApp(SweePiApp(controller: controller));
-  unawaited(controller.startRobotDiscovery());
+  unawaited(controller.startupAutoConnect());
 }
 
 class SweePiApp extends StatelessWidget {

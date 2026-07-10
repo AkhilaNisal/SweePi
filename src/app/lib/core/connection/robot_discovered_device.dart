@@ -15,6 +15,8 @@ class RobotDiscoveredDevice {
     this.rssi,
     this.status,
     this.txtRecords = const {},
+    this.lastKnownWifiSsid,
+    this.lastSuccessfulConnection,
     DateTime? lastSeen,
   }) : lastSeen = lastSeen ?? DateTime.now();
 
@@ -31,6 +33,8 @@ class RobotDiscoveredDevice {
   final int? rssi;
   final String? status;
   final Map<String, String> txtRecords;
+  final String? lastKnownWifiSsid;
+  final DateTime? lastSuccessfulConnection;
   final DateTime lastSeen;
 
   bool get hasWifi =>
@@ -60,6 +64,8 @@ class RobotDiscoveredDevice {
     int? rssi,
     String? status,
     Map<String, String>? txtRecords,
+    String? lastKnownWifiSsid,
+    DateTime? lastSuccessfulConnection,
     DateTime? lastSeen,
   }) {
     return RobotDiscoveredDevice(
@@ -76,6 +82,9 @@ class RobotDiscoveredDevice {
       rssi: rssi ?? this.rssi,
       status: status ?? this.status,
       txtRecords: txtRecords ?? this.txtRecords,
+      lastKnownWifiSsid: lastKnownWifiSsid ?? this.lastKnownWifiSsid,
+      lastSuccessfulConnection:
+          lastSuccessfulConnection ?? this.lastSuccessfulConnection,
       lastSeen: lastSeen ?? this.lastSeen,
     );
   }
@@ -100,6 +109,9 @@ class RobotDiscoveredDevice {
       rssi: other.rssi ?? rssi,
       status: other.status ?? status,
       txtRecords: {...txtRecords, ...other.txtRecords},
+      lastKnownWifiSsid: other.lastKnownWifiSsid ?? lastKnownWifiSsid,
+      lastSuccessfulConnection:
+          other.lastSuccessfulConnection ?? lastSuccessfulConnection,
       lastSeen: other.lastSeen,
     );
   }
@@ -108,6 +120,7 @@ class RobotDiscoveredDevice {
     return {
       'robot_id': robotId,
       'name': name,
+      'last_known_api_host': bestHost,
       'last_known_hostname': hostName,
       'last_known_mdns_service_name': serviceName,
       'last_known_ip_debug': ipAddress,
@@ -115,21 +128,31 @@ class RobotDiscoveredDevice {
       'api_port': apiPort,
       'websocket_port': websocketPort,
       'ble_device_id': bleDeviceId,
+      'last_known_wifi_ssid': lastKnownWifiSsid,
+      'last_successful_connection_at': lastSuccessfulConnection
+          ?.toIso8601String(),
     };
   }
 
   factory RobotDiscoveredDevice.fromPersistenceJson(Map<String, dynamic> json) {
+    final lastKnownApiHost = json['last_known_api_host'] as String?;
+    final lastSuccessfulConnectionText =
+        json['last_successful_connection_at'] as String?;
     return RobotDiscoveredDevice(
       robotId: json['robot_id'] as String? ?? 'unknown',
       name: json['name'] as String? ?? 'SweePi',
       channel: RobotChannel.none,
-      hostName: json['last_known_hostname'] as String?,
+      hostName: json['last_known_hostname'] as String? ?? lastKnownApiHost,
       ipAddress: json['last_known_ip_debug'] as String?,
       serviceName: json['last_known_mdns_service_name'] as String?,
       model: json['model'] as String?,
       apiPort: json['api_port'] as int? ?? 8080,
       websocketPort: json['websocket_port'] as int? ?? 8765,
       bleDeviceId: json['ble_device_id'] as String?,
+      lastKnownWifiSsid: json['last_known_wifi_ssid'] as String?,
+      lastSuccessfulConnection: lastSuccessfulConnectionText == null
+          ? null
+          : DateTime.tryParse(lastSuccessfulConnectionText),
     );
   }
 }

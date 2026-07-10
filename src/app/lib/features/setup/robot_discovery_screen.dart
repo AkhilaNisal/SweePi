@@ -27,6 +27,10 @@ class RobotDiscoveryScreen extends StatelessWidget {
           _supportingText(connectionState.status),
           style: Theme.of(context).textTheme.bodyMedium,
         ),
+        if (controller.errorMessage != null) ...[
+          const SizedBox(height: 12),
+          _TroubleshootingCard(message: controller.errorMessage!),
+        ],
         const SizedBox(height: 16),
         FilledButton.icon(
           onPressed: connectionState.isScanning || controller.isBusy
@@ -54,9 +58,11 @@ class RobotDiscoveryScreen extends StatelessWidget {
     switch (status) {
       case RobotConnectionStatus.scanning:
         return 'Looking on your Wi-Fi and nearby Bluetooth devices.';
+      case RobotConnectionStatus.autoConnecting:
+        return 'Checking the saved Wi-Fi connection before setup.';
       case RobotConnectionStatus.noRobotFound:
       case RobotConnectionStatus.discoveryFailed:
-        return 'Power on your robot or press its setup button, then start setup.';
+        return 'Power on your robot, check that your phone is on the same Wi-Fi or hotspot, then start setup if needed.';
       case RobotConnectionStatus.bleFound:
         return 'Use Bluetooth to set up or recover Wi-Fi.';
       case RobotConnectionStatus.wifiFound:
@@ -71,6 +77,39 @@ class RobotDiscoveryScreen extends StatelessWidget {
       case RobotConnectionStatus.error:
         return 'Check that your phone and SweePi are nearby and try again.';
     }
+  }
+}
+
+class _TroubleshootingCard extends StatelessWidget {
+  const _TroubleshootingCard({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Card(
+      color: colors.secondaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.info_outline, color: colors.onSecondaryContainer),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                '$message\n\nRPi API bridge:\n'
+                'ros2 launch sweepi_api_bridge api_bridge.launch.py\n\n'
+                'Health check:\n'
+                'http://<robot-ip>:8080/api/system/health',
+                style: TextStyle(color: colors.onSecondaryContainer),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

@@ -45,6 +45,16 @@ class RobotConnectionManager extends ChangeNotifier {
     }
   }
 
+  void markAutoConnecting({String message = 'Looking for SweePi...'}) {
+    state = state.copyWith(
+      status: RobotConnectionStatus.autoConnecting,
+      channel: RobotChannel.none,
+      message: message,
+      clearError: true,
+    );
+    notifyListeners();
+  }
+
   Future<List<RobotDiscoveredDevice>> discoverRobots({
     Duration mdnsTimeout = const Duration(seconds: 4),
     Duration bleTimeout = const Duration(seconds: 5),
@@ -151,6 +161,26 @@ class RobotConnectionManager extends ChangeNotifier {
     );
     notifyListeners();
     await _saveSelectedRobot(robot);
+  }
+
+  Future<void> markApiConnected(
+    RobotDiscoveredDevice robot, {
+    String? lastKnownWifiSsid,
+  }) async {
+    final connectedRobot = robot.copyWith(
+      channel: robot.hasBluetooth ? RobotChannel.both : RobotChannel.wifi,
+      lastKnownWifiSsid: lastKnownWifiSsid,
+      lastSuccessfulConnection: DateTime.now(),
+    );
+    state = state.copyWith(
+      selectedRobot: connectedRobot,
+      channel: connectedRobot.channel,
+      status: RobotConnectionStatus.connected,
+      message: 'Connected to SweePi.',
+      clearError: true,
+    );
+    notifyListeners();
+    await _saveSelectedRobot(connectedRobot);
   }
 
   void markTemporaryWifiConnected(RobotDiscoveredDevice robot) {

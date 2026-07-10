@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/connection/robot_channel.dart';
 import '../../core/connection/robot_connection_manager.dart';
 import '../../core/connection/robot_discovered_device.dart';
 import '../../core/models/cleaning_models.dart';
@@ -19,6 +20,13 @@ class AppController extends ChangeNotifier {
   }
 
   static const _themeModePreferenceKey = 'theme_mode';
+  static const startupHealthCheckTimeout = Duration(seconds: 3);
+  static const startupSavedRobotRetryWindow = Duration(seconds: 12);
+  static const startupDiscoveredRobotRetryWindow = Duration(seconds: 3);
+  static const startupConnectionFailureMessage =
+      'Could not reach SweePi over Wi-Fi. Make sure your phone is connected '
+      'to the same Wi-Fi/hotspot as SweePi and that the Raspberry Pi API '
+      'bridge is running.';
 
   final RobotConnectionManager connectionManager;
 
@@ -50,6 +58,51 @@ class AppController extends ChangeNotifier {
   Future<void> initialize() async {
     await loadThemeMode();
     await connectionManager.loadSavedRobot();
+  }
+
+  Future<void> startupAutoConnect({
+    Duration healthTimeout = startupHealthCheckTimeout,
+    Duration savedRobotRetryWindow = startupSavedRobotRetryWindow,
+    Duration discoveredRobotRetryWindow = startupDiscoveredRobotRetryWindow,
+  }) async {
+    errorMessage = null;
+    lastMessage = 'Looking for SweePi...';
+    connectionManager.markAutoConnecting();
+
+    final savedRobot = connectionManager.state.savedRobot;
+    if (savedRobot?.bestHost?.isNotEmpty == true) {
+      final connected = await _tryConnectToReachableApi(
+        savedRobot!,
+        healthTimeout: healthTimeout,
+        retryWindow: savedRobotRetryWindow,
+        message: 'Looking for SweePi on this Wi-Fi...',
+      );
+      if (connected) {
+        return;
+      }
+    }
+
+    await startRobotDiscovery(connectWhenWifiFound: false);
+    final wifiRobots = connectionManager.state.discoveredRobots.where(
+      (robot) => robot.hasWifi && robot.bestHost?.isNotEmpty == true,
+    );
+    for (final robot in wifiRobots) {
+      final connected = await _tryConnectToReachableApi(
+        robot,
+        healthTimeout: healthTimeout,
+        retryWindow: discoveredRobotRetryWindow,
+        message: 'Checking ${robot.name} over Wi-Fi...',
+      );
+      if (connected) {
+        return;
+      }
+    }
+
+    if (!isConnected) {
+      errorMessage = startupConnectionFailureMessage;
+      lastMessage = null;
+      notifyListeners();
+    }
   }
 
   Future<void> loadThemeMode() async {
@@ -121,6 +174,7 @@ class AppController extends ChangeNotifier {
       await _hydrateConnectedRobotState();
       isConnected = true;
       lastMessage = 'Connected to http://$host:$apiPort';
+      await connectionManager.markApiConnected(_currentEndpointRobot());
     } catch (error) {
       errorMessage = '$error';
       isConnected = false;
@@ -140,7 +194,10 @@ class AppController extends ChangeNotifier {
     }
   }
 
-  Future<void> connectToDiscoveredRobot(RobotDiscoveredDevice robot) async {
+  Future<void> connectToDiscoveredRobot(
+    RobotDiscoveredDevice robot, {
+    String? lastKnownWifiSsid,
+  }) async {
     await disconnect(notify: false);
     connectionManager.markWifiConnecting();
     isBusy = true;
@@ -155,7 +212,10 @@ class AppController extends ChangeNotifier {
       await _hydrateConnectedRobotState();
       isConnected = true;
       lastMessage = 'Connected to SweePi';
-      await connectionManager.markWifiConnected(robot);
+      await connectionManager.markApiConnected(
+        robot,
+        lastKnownWifiSsid: lastKnownWifiSsid,
+      );
     } catch (error) {
       errorMessage = '$error';
       isConnected = false;
@@ -169,8 +229,9 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> connectToTemporaryRobotFallback(
-    RobotDiscoveredDevice robot,
-  ) async {
+    RobotDiscoveredDevice robot, {
+    String? lastKnownWifiSsid,
+  }) async {
     await disconnect(notify: false);
     isBusy = true;
     errorMessage = null;
@@ -184,7 +245,10 @@ class AppController extends ChangeNotifier {
       apiPort = _client!.apiPort;
       await _hydrateConnectedRobotState();
       isConnected = true;
-      connectionManager.markTemporaryWifiConnected(robot);
+      await connectionManager.markApiConnected(
+        robot,
+        lastKnownWifiSsid: lastKnownWifiSsid,
+      );
     } catch (error) {
       errorMessage = '$error';
       isConnected = false;
@@ -668,6 +732,90 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<bool> _tryConnectToReachableApi(
+    RobotDiscoveredDevice robot, {
+    required Duration healthTimeout,
+    required Duration retryWindow,
+    required String message,
+  }) async {
+    final robotHost = robot.bestHost;
+    if (robotHost == null || robotHost.isEmpty) {
+      return false;
+    }
+
+    final deadline = DateTime.now().add(retryWindow);
+    Object? lastError;
+
+    do {
+      await disconnect(notify: false);
+      connectionManager.markAutoConnecting(message: message);
+      isBusy = true;
+      errorMessage = null;
+      lastMessage = message;
+      notifyListeners();
+
+      final client = RobotApiClient(
+        host: robotHost,
+        apiPort: robot.apiPort,
+        websocketPort: robot.websocketPort,
+      );
+      _client = client;
+      host = robotHost;
+      apiPort = robot.apiPort;
+
+      try {
+        await client.fetchHealth(timeout: healthTimeout);
+        await _hydrateConnectedRobotState(skipHealthCheck: true);
+        isConnected = true;
+        isBusy = false;
+        lastMessage = 'Connected to SweePi';
+        await connectionManager.markApiConnected(robot);
+        notifyListeners();
+        return true;
+      } catch (error) {
+        lastError = error;
+        debugPrint(
+          '[AppController] Startup API check failed for '
+          'http://$robotHost:${robot.apiPort}/api/system/health: $error',
+        );
+        await client.close();
+        if (_client == client) {
+          _client = null;
+        }
+        isConnected = false;
+        robotStatus = RobotStatus.offline;
+        cleaningStatus = CleaningStatus.empty;
+      } finally {
+        isBusy = false;
+        notifyListeners();
+      }
+
+      if (DateTime.now().isBefore(deadline)) {
+        await Future<void>.delayed(const Duration(seconds: 1));
+      }
+    } while (DateTime.now().isBefore(deadline));
+
+    debugPrint(
+      '[AppController] Startup auto-connect exhausted retries: $lastError',
+    );
+    return false;
+  }
+
+  RobotDiscoveredDevice _currentEndpointRobot() {
+    final savedRobot = connectionManager.state.savedRobot;
+    return RobotDiscoveredDevice(
+      robotId: savedRobot?.robotId ?? 'sweepi-manual',
+      name: savedRobot?.name ?? 'SweePi',
+      channel: RobotChannel.wifi,
+      hostName: host,
+      apiPort: apiPort,
+      websocketPort: savedRobot?.websocketPort ?? 8765,
+      model: savedRobot?.model,
+      bleDeviceId: savedRobot?.bleDeviceId,
+      lastKnownWifiSsid: savedRobot?.lastKnownWifiSsid,
+    );
+  }
+
   RobotApiClient _requireClient() {
     final client = _client;
     if (client == null) {
@@ -676,8 +824,13 @@ class AppController extends ChangeNotifier {
     return client;
   }
 
-  Future<void> _hydrateConnectedRobotState() async {
-    await _client!.fetchHealth();
+  Future<void> _hydrateConnectedRobotState({
+    Duration? healthTimeout,
+    bool skipHealthCheck = false,
+  }) async {
+    if (!skipHealthCheck) {
+      await _client!.fetchHealth(timeout: healthTimeout);
+    }
     await _refreshRobotStatusOnly();
     explorationStatus = await _requireClient().fetchExplorationStatus();
     await _refreshMapsOnly();
