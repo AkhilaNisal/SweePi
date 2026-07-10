@@ -354,12 +354,23 @@ class ColorfulMapCard extends StatelessWidget {
   final bool selected;
   final VoidCallback? onSelected;
 
+  String get formattedResolution {
+    final resolution = map.resolution;
+
+    if (resolution == null) {
+      return '--';
+    }
+
+    return resolution.toStringAsFixed(3);
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final borderColor = selected
         ? colorScheme.primary
         : colorScheme.outlineVariant;
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
       decoration: BoxDecoration(
@@ -367,12 +378,16 @@ class ColorfulMapCard extends StatelessWidget {
             ? colorScheme.primaryContainer.withValues(alpha: 0.45)
             : colorScheme.surface.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(SweePiRadius.lg),
-        border: Border.all(color: borderColor, width: selected ? 2 : 1),
+        border: Border.all(
+          color: borderColor,
+          width: selected ? 2 : 1,
+        ),
         boxShadow: selected ? SweePiTheme.softShadow(context) : null,
       ),
       child: Padding(
         padding: const EdgeInsets.all(SweePiSpacing.md),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
@@ -384,7 +399,10 @@ class ColorfulMapCard extends StatelessWidget {
                     color: colorScheme.primary.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(SweePiRadius.md),
                   ),
-                  child: Icon(Icons.map_rounded, color: colorScheme.primary),
+                  child: Icon(
+                    Icons.map_rounded,
+                    color: colorScheme.primary,
+                  ),
                 ),
                 const SizedBox(width: SweePiSpacing.md),
                 Expanded(
@@ -395,7 +413,10 @@ class ColorfulMapCard extends StatelessWidget {
                         map.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleSmall
+                            ?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -403,7 +424,10 @@ class ColorfulMapCard extends StatelessWidget {
                         map.mapId,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
                       ),
@@ -411,17 +435,24 @@ class ColorfulMapCard extends StatelessWidget {
                   ),
                 ),
                 if (selected)
-                  Icon(Icons.check_circle, color: colorScheme.primary),
+                  Icon(
+                    Icons.check_circle,
+                    color: colorScheme.primary,
+                  ),
               ],
             ),
             const SizedBox(height: SweePiSpacing.md),
             Text(
               'Created: ${map.createdAt.isEmpty ? '--' : map.createdAt}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodySmall,
             ),
             Text(
-              'Size: ${map.width ?? '--'} x ${map.height ?? '--'} | '
-              'Resolution: ${map.resolution}',
+              'Size: ${map.width ?? '--'} × ${map.height ?? '--'}'
+                  ' | Resolution: $formattedResolution',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: SweePiSpacing.md),
@@ -429,7 +460,9 @@ class ColorfulMapCard extends StatelessWidget {
               width: double.infinity,
               child: FilledButton.icon(
                 onPressed: onSelected,
-                icon: Icon(selected ? Icons.visibility : Icons.open_in_new),
+                icon: Icon(
+                  selected ? Icons.visibility : Icons.open_in_new,
+                ),
                 label: Text(selected ? 'Selected' : 'Open map'),
               ),
             ),
