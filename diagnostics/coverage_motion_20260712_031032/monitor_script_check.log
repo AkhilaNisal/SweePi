@@ -1,0 +1,4 @@
+===== monitor_script_check =====
+$ bash -lc python3 -m py_compile "$DIAG/tools/monitor_motion_chain.py" && echo ok
+ok
+exit=0

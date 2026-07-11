@@ -1,0 +1,8 @@
+===== git_status_diff =====
+$ bash -lc cd /home/sweepi/SweePi && git status --short --branch && git diff --stat && git diff -- src/sweepi_exploration/sweepi_exploration/wavefront_explorer.py src/sweepi_robot_manager/sweepi_robot_manager/sweepi_robot_manager_node.py src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py src/sweepi_api_bridge/sweepi_api_bridge/runtime_state.py src/sweepi_coverage/config/coverage_follow_path_params.yaml src/sweepi_coverage/config/nav2_coverage_params.yaml && git rev-parse HEAD && git branch --show-current
+## main...origin/main [ahead 1]
+?? diagnostics/coverage_motion_20260712_031032/
+?? diagnostics/coverage_motion_latest
+ca1ae9592f9101e2dc47172d142568a16e3b7b68
+main
+exit=0

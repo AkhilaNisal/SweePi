@@ -1,0 +1,12 @@
+===== map_store_unit_after_patch =====
+$ bash -lc PYTHONPATH=src/sweepi_api_bridge python3 - <<"PY"
+from sweepi_api_bridge.map_store import MapStore
+store=MapStore("/home/sweepi/SweePi/maps")
+for p in [(0,0),(-0.25908158,-0.64557917),(-0.2790927082423762,-0.6504112580713652),(-0.129,0.1)]:
+    print(p, store.check_pose("living_room", p[0], p[1]))
+PY
+(0, 0) {'ok': True, 'code': 'OK', 'message': 'Initial pose is in a free map cell.', 'map_id': 'living_room', 'cell': {'x': 144, 'y': 163, 'width': 243, 'height': 269, 'resolution': 0.05000000074505806, 'index': 39753}, 'occupancy': 0}
+(-0.25908158, -0.64557917) {'ok': True, 'code': 'OK', 'message': 'Initial pose is in a free map cell.', 'map_id': 'living_room', 'cell': {'x': 138, 'y': 150, 'width': 243, 'height': 269, 'resolution': 0.05000000074505806, 'index': 36588}, 'occupancy': 0}
+(-0.2790927082423762, -0.6504112580713652) {'ok': True, 'code': 'OK', 'message': 'Initial pose is in a free map cell.', 'map_id': 'living_room', 'cell': {'x': 138, 'y': 150, 'width': 243, 'height': 269, 'resolution': 0.05000000074505806, 'index': 36588}, 'occupancy': 0}
+(-0.129, 0.1) {'ok': True, 'code': 'OK', 'message': 'Initial pose is in a free map cell.', 'map_id': 'living_room', 'cell': {'x': 141, 'y': 165, 'width': 243, 'height': 269, 'resolution': 0.05000000074505806, 'index': 40236}, 'occupancy': 0}
+exit=0

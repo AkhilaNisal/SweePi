@@ -1,0 +1,76 @@
+[INFO] [launch]: All log files can be found below /home/sweepi/.ros/log/2026-07-12-03-24-18-888278-sweepi-9616
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [base_driver_node-1]: process started with pid [9620]
+[INFO] [ekf_node-2]: process started with pid [9621]
+[INFO] [sllidar_node-3]: process started with pid [9622]
+[INFO] [robot_state_publisher-4]: process started with pid [9623]
+[INFO] [sweepi_robot_manager_node.py-5]: process started with pid [9624]
+[INFO] [api_bridge_node-6]: process started with pid [9625]
+[sllidar_node-3] [INFO] [1783806859.323440138] [sllidar_node]: SLLidar running on ROS2 package SLLidar.ROS2 SDK Version:1.0.1, SLLIDAR SDK Version:2.1.0
+[robot_state_publisher-4] [INFO] [1783806859.424490809] [robot_state_publisher]: Robot initialized
+[ekf_node-2] [ERROR] [1783806859.456328764] [ekf_filter_node]: Warning: /imu/data is listed as an input topic, but all its update variables are false
+[sllidar_node-3] [INFO] [1783806859.848811779] [sllidar_node]: SLLidar S/N: 6325E0F6C1E092D4A19E9FF9F389461A
+[sllidar_node-3] [INFO] [1783806859.848908244] [sllidar_node]: Firmware Ver: 1.02
+[sllidar_node-3] [INFO] [1783806859.848928634] [sllidar_node]: Hardware Rev: 18
+[sllidar_node-3] [INFO] [1783806859.851597479] [sllidar_node]: SLLidar health status : 0
+[sllidar_node-3] [INFO] [1783806859.851755372] [sllidar_node]: SLLidar health status : OK.
+[sllidar_node-3] [INFO] [1783806860.138476985] [sllidar_node]: current scan mode: Standard, sample rate: 5 Khz, max_distance: 16.0 m, scan frequency:10.0 Hz, 
+[base_driver_node-1] [INFO] [1783806860.565940975] [base_driver_node]: SweePi base driver starting on /dev/ttyAMA0 at 115200 baud
+[base_driver_node-1] [INFO] [1783806860.566789145] [base_driver_node]: Base driver parameters: serial_port=/dev/ttyAMA0, baud_rate=115200, wheel_radius=0.0615, wheel_separation=0.29, ticks_per_revolution=7392.0, left_encoder_sign=1.0, right_encoder_sign=1.0, left_motor_command_sign=1.0, right_motor_command_sign=1.0, command_rate_hz=50.0, feedback_poll_rate_hz=100.0, cmd_vel_timeout=0.5, gyro_units=rad_s, accel_units=m_s2
+[base_driver_node-1] [INFO] [1783806860.568440391] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
+[api_bridge_node-6] [INFO] [1783806860.722120319] [sweepi_api_bridge]: SweePi API bridge listening on http://0.0.0.0:8080/api
+[sweepi_robot_manager_node.py-5] [INFO] [1783806860.724461452] [sweepi_robot_manager]: SweePi robot manager ready for service commands
+[WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+[INFO] [api_bridge_node-6]: sending signal 'SIGINT' to process[api_bridge_node-6]
+[INFO] [sweepi_robot_manager_node.py-5]: sending signal 'SIGINT' to process[sweepi_robot_manager_node.py-5]
+[INFO] [robot_state_publisher-4]: sending signal 'SIGINT' to process[robot_state_publisher-4]
+[INFO] [sllidar_node-3]: sending signal 'SIGINT' to process[sllidar_node-3]
+[INFO] [ekf_node-2]: sending signal 'SIGINT' to process[ekf_node-2]
+[INFO] [base_driver_node-1]: sending signal 'SIGINT' to process[base_driver_node-1]
+[robot_state_publisher-4] [INFO] [1783806927.228650567] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[ekf_node-2] [INFO] [1783806927.228916314] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[api_bridge_node-6] Traceback (most recent call last):
+[api_bridge_node-6]   File "/home/sweepi/SweePi/install/sweepi_api_bridge/lib/sweepi_api_bridge/api_bridge_node", line 33, in <module>
+[api_bridge_node-6]     sys.exit(load_entry_point('sweepi-api-bridge', 'console_scripts', 'api_bridge_node')())
+[api_bridge_node-6]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[api_bridge_node-6]   File "/home/sweepi/SweePi/build/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py", line 2562, in main
+[api_bridge_node-6]     node.destroy_node()
+[api_bridge_node-6]   File "/home/sweepi/SweePi/build/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py", line 202, in destroy_node
+[api_bridge_node-6]     self.http_server.shutdown()
+[api_bridge_node-6]   File "/usr/lib/python3.12/socketserver.py", line 255, in shutdown
+[api_bridge_node-6]     self.__is_shut_down.wait()
+[api_bridge_node-6]   File "/usr/lib/python3.12/threading.py", line 655, in wait
+[api_bridge_node-6]     signaled = self._cond.wait(timeout)
+[api_bridge_node-6]                ^^^^^^^^^^^^^^^^^^^^^^^^
+[api_bridge_node-6]   File "/usr/lib/python3.12/threading.py", line 355, in wait
+[api_bridge_node-6]     waiter.acquire()
+[api_bridge_node-6] KeyboardInterrupt
+[sweepi_robot_manager_node.py-5] Traceback (most recent call last):
+[sweepi_robot_manager_node.py-5]   File "/home/sweepi/SweePi/install/sweepi_robot_manager/lib/sweepi_robot_manager/sweepi_robot_manager_node.py", line 1270, in <module>
+[sweepi_robot_manager_node.py-5]     main()
+[sweepi_robot_manager_node.py-5]   File "/home/sweepi/SweePi/install/sweepi_robot_manager/lib/sweepi_robot_manager/sweepi_robot_manager_node.py", line 1264, in main
+[sweepi_robot_manager_node.py-5]     node.destroy_node()
+[sweepi_robot_manager_node.py-5]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/node.py", line 1958, in destroy_node
+[robot_state_publisher-4] [INFO] [1783806927.260850587] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[sweepi_robot_manager_node.py-5]     self.destroy_subscription(self._subscriptions[0])
+[sweepi_robot_manager_node.py-5]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/node.py", line 1854, in destroy_subscription
+[sweepi_robot_manager_node.py-5]     subscription.destroy()
+[sweepi_robot_manager_node.py-5]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/subscription.py", line 101, in destroy
+[sllidar_node-3] [INFO] [1783806927.262735727] [sllidar_node]: Stop motor
+[sweepi_robot_manager_node.py-5]     self.handle.destroy_when_not_in_use()
+[sweepi_robot_manager_node.py-5] KeyboardInterrupt
+[ERROR] [ekf_node-2]: process has died [pid 9621, exit code -2, cmd '/opt/ros/jazzy/lib/robot_localization/ekf_node --ros-args -r __node:=ekf_filter_node --params-file /home/sweepi/SweePi/install/sweepi_state_estimation/share/sweepi_state_estimation/config/ekf.yaml --params-file /tmp/launch_params_81dp_mtg -r odometry/filtered:=/odom'].
+[base_driver_node-1] Traceback (most recent call last):
+[base_driver_node-1]   File "/home/sweepi/SweePi/install/sweepi_base_driver/lib/sweepi_base_driver/base_driver_node", line 33, in <module>
+[base_driver_node-1]     sys.exit(load_entry_point('sweepi-base-driver==0.1.0', 'console_scripts', 'base_driver_node')())
+[base_driver_node-1]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[base_driver_node-1]   File "/home/sweepi/SweePi/install/sweepi_base_driver/lib/python3.12/site-packages/sweepi_base_driver/base_driver_node.py", line 483, in main
+[base_driver_node-1]     node.destroy_node()
+[base_driver_node-1]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/node.py", line 1968, in destroy_node
+[base_driver_node-1]     self.__node.destroy_when_not_in_use()
+[base_driver_node-1] KeyboardInterrupt
+[INFO] [robot_state_publisher-4]: process has finished cleanly [pid 9623]
+[INFO] [sllidar_node-3]: process has finished cleanly [pid 9622]
+[ERROR] [base_driver_node-1]: process has died [pid 9620, exit code -2, cmd '/home/sweepi/SweePi/install/sweepi_base_driver/lib/sweepi_base_driver/base_driver_node --ros-args -r __node:=base_driver_node --params-file /home/sweepi/SweePi/install/sweepi_base_driver/share/sweepi_base_driver/config/base_driver_params.yaml --params-file /tmp/launch_params_a21uqd9u'].
+[ERROR] [sweepi_robot_manager_node.py-5]: process has died [pid 9624, exit code -2, cmd '/home/sweepi/SweePi/install/sweepi_robot_manager/lib/sweepi_robot_manager/sweepi_robot_manager_node.py --ros-args -r __node:=sweepi_robot_manager --params-file /tmp/launch_params_tv5_u0p1'].
+[ERROR] [api_bridge_node-6]: process has died [pid 9625, exit code -2, cmd '/home/sweepi/SweePi/install/sweepi_api_bridge/lib/sweepi_api_bridge/api_bridge_node --ros-args -r __node:=sweepi_api_bridge --params-file /tmp/launch_params_crym3kq1'].

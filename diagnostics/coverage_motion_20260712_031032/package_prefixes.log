@@ -1,0 +1,11 @@
+===== package_prefixes =====
+$ bash -lc cd /home/sweepi/SweePi && source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install/setup.bash 2>/dev/null || true && for p in sweepi_robot_manager sweepi_coverage sweepi_api_bridge sweepi_base_driver; do echo $p; ros2 pkg prefix $p || true; done
+sweepi_robot_manager
+/home/sweepi/SweePi/install/sweepi_robot_manager
+sweepi_coverage
+/home/sweepi/SweePi/install/sweepi_coverage
+sweepi_api_bridge
+/home/sweepi/SweePi/install/sweepi_api_bridge
+sweepi_base_driver
+/home/sweepi/SweePi/install/sweepi_base_driver
+exit=0

@@ -210,15 +210,21 @@ class MapStore:
         occupied_thresh = float(yaml_data.get('occupied_thresh', 0.65))
         free_thresh = float(yaml_data.get('free_thresh', 0.196))
         occupancy = []
-        for pixel in image['pixels']:
-            value = 255 - pixel if negate else pixel
-            occ = (255 - value) / 255.0
-            if occ > occupied_thresh:
-                occupancy.append(100)
-            elif occ < free_thresh:
-                occupancy.append(0)
-            else:
-                occupancy.append(-1)
+        width = image['width']
+        height = image['height']
+        # PGM map images are stored top row first, while ROS OccupancyGrid
+        # data is indexed from the map origin at the bottom-left.
+        for row in range(height - 1, -1, -1):
+            start = row * width
+            for pixel in image['pixels'][start:start + width]:
+                value = 255 - pixel if negate else pixel
+                occ = (255 - value) / 255.0
+                if occ > occupied_thresh:
+                    occupancy.append(100)
+                elif occ < free_thresh:
+                    occupancy.append(0)
+                else:
+                    occupancy.append(-1)
 
         return {
             'available': True,

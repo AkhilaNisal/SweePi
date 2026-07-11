@@ -1,0 +1,148 @@
+===== build_install_current =====
+$ bash -lc cd /home/sweepi/SweePi && source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --packages-select sweepi_api_bridge sweepi_robot_manager sweepi_coverage --event-handlers console_direct+
+Starting >>> sweepi_coverage
+Starting >>> sweepi_api_bridge
+-- Found ament_cmake: 2.5.6 (/opt/ros/jazzy/share/ament_cmake/cmake)
+-- Override CMake install command with custom implementation using symlinks instead of copying resources
+-- Found action_msgs: 2.0.4 (/opt/ros/jazzy/share/action_msgs/cmake)
+-- Found rosidl_generator_c: 4.6.9 (/opt/ros/jazzy/share/rosidl_generator_c/cmake)
+-- Found rosidl_generator_cpp: 4.6.9 (/opt/ros/jazzy/share/rosidl_generator_cpp/cmake)
+-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+-- Found geometry_msgs: 5.3.8 (/opt/ros/jazzy/share/geometry_msgs/cmake)
+-- Found nav_msgs: 5.3.8 (/opt/ros/jazzy/share/nav_msgs/cmake)
+-- Found nav2_msgs: 1.3.12 (/opt/ros/jazzy/share/nav2_msgs/cmake)
+-- Found rclpy: 7.1.11 (/opt/ros/jazzy/share/rclpy/cmake)
+-- Found sensor_msgs: 5.3.8 (/opt/ros/jazzy/share/sensor_msgs/cmake)
+-- Found std_srvs: 5.3.8 (/opt/ros/jazzy/share/std_srvs/cmake)
+-- Found tf2_ros: 0.36.21 (/opt/ros/jazzy/share/tf2_ros/cmake)
+-- Found rmw_implementation_cmake: 7.3.3 (/opt/ros/jazzy/share/rmw_implementation_cmake/cmake)
+-- Found rmw_fastrtps_cpp: 8.4.4 (/opt/ros/jazzy/share/rmw_fastrtps_cpp/cmake)
+-- Using RMW implementation 'rmw_fastrtps_cpp' as default
+-- Found visualization_msgs: 5.3.8 (/opt/ros/jazzy/share/visualization_msgs/cmake)
+-- Found ament_cmake_pytest: 2.5.6 (/opt/ros/jazzy/share/ament_cmake_pytest/cmake)
+running develop
+-- Configuring done (3.0s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sweepi/SweePi/build/sweepi_coverage
+Built target ament_cmake_python_symlink_sweepi_coverage
+running egg_info
+writing sweepi_api_bridge.egg-info/PKG-INFO
+writing dependency_links to sweepi_api_bridge.egg-info/dependency_links.txt
+writing entry points to sweepi_api_bridge.egg-info/entry_points.txt
+writing requirements to sweepi_api_bridge.egg-info/requires.txt
+writing top-level names to sweepi_api_bridge.egg-info/top_level.txt
+reading manifest file 'sweepi_api_bridge.egg-info/SOURCES.txt'
+writing manifest file 'sweepi_api_bridge.egg-info/SOURCES.txt'
+running build_ext
+Creating /home/sweepi/SweePi/install/sweepi_api_bridge/lib/python3.12/site-packages/sweepi-api-bridge.egg-link (link to .)
+Installing api_bridge_node script to /home/sweepi/SweePi/install/sweepi_api_bridge/lib/sweepi_api_bridge
+
+Installed /home/sweepi/SweePi/build/sweepi_api_bridge
+running symlink_data
+symbolically linking /home/sweepi/SweePi/build/sweepi_api_bridge/resource/sweepi_api_bridge -> /home/sweepi/SweePi/install/sweepi_api_bridge/share/ament_index/resource_index/packages
+symbolically linking /home/sweepi/SweePi/build/sweepi_api_bridge/package.xml -> /home/sweepi/SweePi/install/sweepi_api_bridge/share/sweepi_api_bridge
+symbolically linking /home/sweepi/SweePi/build/sweepi_api_bridge/launch/api_bridge.launch.py -> /home/sweepi/SweePi/install/sweepi_api_bridge/share/sweepi_api_bridge/launch
+Finished <<< sweepi_api_bridge [3.71s]
+running egg_info
+writing sweepi_coverage.egg-info/PKG-INFO
+writing dependency_links to sweepi_coverage.egg-info/dependency_links.txt
+writing top-level names to sweepi_coverage.egg-info/top_level.txt
+reading manifest file 'sweepi_coverage.egg-info/SOURCES.txt'
+writing manifest file 'sweepi_coverage.egg-info/SOURCES.txt'
+Built target ament_cmake_python_build_sweepi_coverage_egg
+-- Install configuration: ""
+-- Execute custom install script
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/share/sweepi_coverage/environment/pythonpath.sh
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/share/sweepi_coverage/environment/pythonpath.dsv
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage-0.1.0-py3.12.egg-info/PKG-INFO
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage-0.1.0-py3.12.egg-info/SOURCES.txt
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage-0.1.0-py3.12.egg-info/dependency_links.txt
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage-0.1.0-py3.12.egg-info/top_level.txt
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage/__init__.py
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage/coverage_arm_follow_path_executor_node.py
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage/coverage_executor_node.py
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage/coverage_follow_path_executor_node.py
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage/coverage_manager_node.py
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage/coverage_planner_node.py
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage/coverage_tracker_node.py
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage/coverage_utils.py
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/share/sweepi_coverage/launch/coverage_follow_path.launch.py
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/share/sweepi_coverage/launch/coverage_system.launch.py
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/share/sweepi_coverage/launch/nav2_bringup.launch.py
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/share/sweepi_coverage/config/coverage_follow_path_params.yaml
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/share/sweepi_coverage/config/coverage_params.yaml
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/share/sweepi_coverage/config/nav2_coverage_params.yaml
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/lib/sweepi_coverage/coverage_tracker_node.py
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/lib/sweepi_coverage/coverage_planner_node.py
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/lib/sweepi_coverage/coverage_executor_node.py
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/lib/sweepi_coverage/coverage_follow_path_executor_node.py
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/lib/sweepi_coverage/coverage_arm_follow_path_executor_node.py
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/lib/sweepi_coverage/coverage_manager_node.py
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/share/ament_index/resource_index/package_run_dependencies/sweepi_coverage
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/share/ament_index/resource_index/parent_prefix_path/sweepi_coverage
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/share/sweepi_coverage/environment/ament_prefix_path.sh
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/share/sweepi_coverage/environment/ament_prefix_path.dsv
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/share/sweepi_coverage/environment/path.sh
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/share/sweepi_coverage/environment/path.dsv
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/share/sweepi_coverage/local_setup.bash
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/share/sweepi_coverage/local_setup.sh
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/share/sweepi_coverage/local_setup.zsh
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/share/sweepi_coverage/local_setup.dsv
+-- Symlinking: /home/sweepi/SweePi/install/sweepi_coverage/share/sweepi_coverage/package.dsv
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/share/ament_index/resource_index/packages/sweepi_coverage
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/share/sweepi_coverage/cmake/sweepi_coverageConfig.cmake
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/share/sweepi_coverage/cmake/sweepi_coverageConfig-version.cmake
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_coverage/share/sweepi_coverage/package.xml
+Listing '/home/sweepi/SweePi/install/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage'...
+Finished <<< sweepi_coverage [4.19s]
+Starting >>> sweepi_robot_manager
+-- Found ament_cmake: 2.5.6 (/opt/ros/jazzy/share/ament_cmake/cmake)
+-- Override CMake install command with custom implementation using symlinks instead of copying resources
+-- Found rclpy: 7.1.11 (/opt/ros/jazzy/share/rclpy/cmake)
+-- Configuring done (0.7s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sweepi/SweePi/build/sweepi_robot_manager
+Built target ament_cmake_python_symlink_sweepi_robot_manager
+running egg_info
+writing sweepi_robot_manager.egg-info/PKG-INFO
+writing dependency_links to sweepi_robot_manager.egg-info/dependency_links.txt
+writing top-level names to sweepi_robot_manager.egg-info/top_level.txt
+reading manifest file 'sweepi_robot_manager.egg-info/SOURCES.txt'
+writing manifest file 'sweepi_robot_manager.egg-info/SOURCES.txt'
+Built target ament_cmake_python_build_sweepi_robot_manager_egg
+-- Install configuration: ""
+-- Execute custom install script
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_robot_manager/share/sweepi_robot_manager/environment/pythonpath.sh
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_robot_manager/share/sweepi_robot_manager/environment/pythonpath.dsv
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_robot_manager/lib/python3.12/site-packages/sweepi_robot_manager-0.1.0-py3.12.egg-info/PKG-INFO
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_robot_manager/lib/python3.12/site-packages/sweepi_robot_manager-0.1.0-py3.12.egg-info/SOURCES.txt
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_robot_manager/lib/python3.12/site-packages/sweepi_robot_manager-0.1.0-py3.12.egg-info/dependency_links.txt
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_robot_manager/lib/python3.12/site-packages/sweepi_robot_manager-0.1.0-py3.12.egg-info/top_level.txt
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_robot_manager/lib/python3.12/site-packages/sweepi_robot_manager/__init__.py
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_robot_manager/lib/python3.12/site-packages/sweepi_robot_manager/sweepi_robot_manager_node.py
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_robot_manager/share/sweepi_robot_manager/launch/coverage_task.launch.py
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_robot_manager/share/sweepi_robot_manager/launch/exploration_task.launch.py
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_robot_manager/share/sweepi_robot_manager/launch/master.launch.py
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_robot_manager/lib/sweepi_robot_manager/sweepi_robot_manager_node.py
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_robot_manager/share/ament_index/resource_index/package_run_dependencies/sweepi_robot_manager
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_robot_manager/share/ament_index/resource_index/parent_prefix_path/sweepi_robot_manager
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_robot_manager/share/sweepi_robot_manager/environment/ament_prefix_path.sh
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_robot_manager/share/sweepi_robot_manager/environment/ament_prefix_path.dsv
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_robot_manager/share/sweepi_robot_manager/environment/path.sh
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_robot_manager/share/sweepi_robot_manager/environment/path.dsv
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_robot_manager/share/sweepi_robot_manager/local_setup.bash
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_robot_manager/share/sweepi_robot_manager/local_setup.sh
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_robot_manager/share/sweepi_robot_manager/local_setup.zsh
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_robot_manager/share/sweepi_robot_manager/local_setup.dsv
+-- Symlinking: /home/sweepi/SweePi/install/sweepi_robot_manager/share/sweepi_robot_manager/package.dsv
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_robot_manager/share/ament_index/resource_index/packages/sweepi_robot_manager
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_robot_manager/share/sweepi_robot_manager/cmake/sweepi_robot_managerConfig.cmake
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_robot_manager/share/sweepi_robot_manager/cmake/sweepi_robot_managerConfig-version.cmake
+-- Up-to-date symlink: /home/sweepi/SweePi/install/sweepi_robot_manager/share/sweepi_robot_manager/package.xml
+Listing '/home/sweepi/SweePi/install/sweepi_robot_manager/lib/python3.12/site-packages/sweepi_robot_manager'...
+Compiling '/home/sweepi/SweePi/install/sweepi_robot_manager/lib/python3.12/site-packages/sweepi_robot_manager/sweepi_robot_manager_node.py'...
+Finished <<< sweepi_robot_manager [1.62s]
+
+Summary: 3 packages finished [6.32s]
+exit=0

@@ -1,0 +1,39 @@
+===== full_stack_rates =====
+$ bash -lc cd /home/sweepi/SweePi && source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install/setup.bash && timeout 6 ros2 topic hz /hardware/status; timeout 6 ros2 topic hz /wheel/odom; timeout 6 ros2 topic hz /imu/data; timeout 6 ros2 topic hz /odom; timeout 6 ros2 topic hz /scan; timeout 4 ros2 topic echo /hardware/status --once
+average rate: 1.000
+	min: 0.998s max: 1.001s std dev: 0.00119s window: 3
+average rate: 1.000
+	min: 0.998s max: 1.001s std dev: 0.00123s window: 4
+average rate: 40.775
+	min: 0.000s max: 0.345s std dev: 0.05077s window: 42
+average rate: 44.392
+	min: 0.000s max: 0.345s std dev: 0.03460s window: 91
+average rate: 45.425
+	min: 0.000s max: 0.345s std dev: 0.02807s window: 139
+average rate: 45.944
+	min: 0.000s max: 0.345s std dev: 0.02425s window: 187
+WARNING: topic [/imu/data] does not appear to be published yet
+average rate: 47.608
+	min: 0.020s max: 0.030s std dev: 0.00302s window: 50
+average rate: 47.819
+	min: 0.020s max: 0.030s std dev: 0.00290s window: 99
+average rate: 47.724
+	min: 0.020s max: 0.030s std dev: 0.00296s window: 147
+average rate: 29.509
+	min: 0.025s max: 0.125s std dev: 0.02506s window: 31
+average rate: 34.215
+	min: 0.025s max: 0.125s std dev: 0.01731s window: 71
+average rate: 35.446
+	min: 0.025s max: 0.125s std dev: 0.01442s window: 109
+average rate: 36.563
+	min: 0.025s max: 0.125s std dev: 0.01242s window: 149
+WARNING: topic [/scan] does not appear to be published yet
+average rate: 9.968
+	min: 0.098s max: 0.101s std dev: 0.00069s window: 11
+average rate: 10.015
+	min: 0.098s max: 0.101s std dev: 0.00112s window: 22
+average rate: 10.002
+	min: 0.098s max: 0.101s std dev: 0.00104s window: 32
+data: '{"battery_voltage": 12.0, "connected": true, "dropped_feedback_packets": 0, "fault": 0, "feedback_age_sec": 0.009213205999913043...'
+---
+exit=0

@@ -1,0 +1,4 @@
+===== graceful_stop_before_restart =====
+$ bash -lc $DIAG/tools/emergency_stop.sh; sleep 2; pgrep -af "coverage_task|coverage_.*node|controller_server|amcl|map_server|bt_navigator|planner_server|behavior_server" || true; fuser -v /dev/ttyAMA0 /dev/ttyUSB0 2>/dev/null || true
+9422 bash -lc $DIAG/tools/emergency_stop.sh; sleep 2; pgrep -af "coverage_task|coverage_.*node|controller_server|amcl|map_server|bt_navigator|planner_server|behavior_server" || true; fuser -v /dev/ttyAMA0 /dev/ttyUSB0 2>/dev/null || true
+  8089  8091exit=0

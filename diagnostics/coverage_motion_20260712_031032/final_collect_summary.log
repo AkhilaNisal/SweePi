@@ -1,0 +1,180 @@
+===== final_collect_summary =====
+$ bash -lc $DIAG/tools/emergency_stop.sh >/dev/null 2>&1 || true; sleep 2; git status --short --branch; git diff --stat; git diff -- src/sweepi_api_bridge/sweepi_api_bridge/map_store.py src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py src/sweepi_api_bridge/sweepi_api_bridge/runtime_state.py; echo FINAL_API; curl --max-time 5 -sS http://localhost:8080/api/system/health; echo; curl --max-time 5 -sS http://localhost:8080/api/cleaning/status; echo; echo PROCESSES; pgrep -af "ros2 launch sweepi_robot_manager master|base_driver_node|sllidar_node|sweepi_robot_manager_node|api_bridge_node|coverage_task|coverage_.*node" || true; echo SERIAL; fuser -v /dev/ttyAMA0 /dev/ttyUSB0 2>/dev/null || true
+## main...origin/main [ahead 1]
+ M src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py
+ M src/sweepi_api_bridge/sweepi_api_bridge/map_store.py
+ M src/sweepi_api_bridge/sweepi_api_bridge/runtime_state.py
+?? diagnostics/coverage_motion_20260712_031032/
+?? diagnostics/coverage_motion_latest
+ .../sweepi_api_bridge/api_bridge_node.py           | 51 ++++++++++++++--------
+ .../sweepi_api_bridge/map_store.py                 | 24 ++++++----
+ .../sweepi_api_bridge/runtime_state.py             |  7 +++
+ 3 files changed, 56 insertions(+), 26 deletions(-)
+diff --git a/src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py b/src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py
+index e668790..1f36cf9 100644
+--- a/src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py
++++ b/src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py
+@@ -590,6 +590,7 @@ class SweePiApiBridge(Node):
+             task_id = self.state.snapshot().get('active_task_id')
+             result = self._call_trigger('/sweepi_robot_manager/coverage/stop')
+             if result['success']:
++                self._clear_coverage_cache()
+                 self.state.reset_cleaning()
+             return 200, self._service_payload(
+                 result,
+@@ -2351,11 +2352,8 @@ class SweePiApiBridge(Node):
+             snapshot = self.state.snapshot()
+             if snapshot['active_task'] == 'exploration':
+                 self.state.reset_exploration()
+-            elif (
+-                snapshot['active_task'] == 'cleaning'
+-                and snapshot['robot_state'] not in ('paused',)
+-                and not snapshot.get('task_finished')
+-            ):
++            elif snapshot['active_task'] == 'cleaning':
++                self._clear_coverage_cache()
+                 self.state.reset_cleaning()
+         elif task == 'exploration':
+             mode = fields.get('latest_exploration_mode', '')
+@@ -2408,12 +2406,25 @@ class SweePiApiBridge(Node):
+         self.state.update(live_map_available=True)
+ 
+     def _coverage_map_callback(self, msg):
++        snapshot = self.state.snapshot()
++        if snapshot.get('active_task') != 'cleaning' and not snapshot.get('cleaning_active'):
++            with self.data_lock:
++                self.coverage_map = None
++            return
+         available = bool(msg.info.width and msg.info.height and msg.data)
+         with self.data_lock:
+             self.coverage_map = msg if available else None
+         self.state.update(coverage_map_available=available)
+ 
+     def _coverage_path_callback(self, msg):
++        snapshot = self.state.snapshot()
++        if snapshot.get('active_task') != 'cleaning' and not snapshot.get('cleaning_active'):
++            with self.data_lock:
++                self.coverage_path = None
++                self.coverage_path_signature = None
++            self.validated_for_current_path = False
++            self.validated_coverage_path_signature = None
++            return
+         available = bool(msg.poses)
+         new_signature = self._coverage_path_signature(msg) if available else None
+         path_changed = new_signature != self.coverage_path_signature
+@@ -2431,21 +2442,24 @@ class SweePiApiBridge(Node):
+         poses = list(msg.poses or [])
+         if not poses:
+             return None
+-        first = poses[0].pose.position
+-        middle = poses[len(poses) // 2].pose.position
+-        last = poses[-1].pose.position
+-        stamp = msg.header.stamp
++        sample_indices = sorted(set([
++            0,
++            len(poses) // 4,
++            len(poses) // 2,
++            (len(poses) * 3) // 4,
++            len(poses) - 1,
++        ]))
++        samples = []
++        for index in sample_indices:
++            position = poses[index].pose.position
++            samples.extend((
++                round(float(position.x), 3),
++                round(float(position.y), 3),
++            ))
+         return (
+             len(poses),
+             msg.header.frame_id or '',
+-            int(stamp.sec),
+-            int(stamp.nanosec),
+-            round(float(first.x), 3),
+-            round(float(first.y), 3),
+-            round(float(middle.x), 3),
+-            round(float(middle.y), 3),
+-            round(float(last.x), 3),
+-            round(float(last.y), 3),
++            *samples,
+         )
+ 
+     def _current_coverage_path_state(self):
+@@ -2469,6 +2483,9 @@ class SweePiApiBridge(Node):
+         status = str(msg.data or '').strip()
+         if status:
+             self.coverage_execution_status = status
++        snapshot = self.state.snapshot()
++        if snapshot.get('active_task') != 'cleaning' and not snapshot.get('cleaning_active'):
++            return
+         if status == 'PAUSED':
+             self.state.update(robot_state='paused', cleaning_paused=True)
+         elif status in ('FOLLOWING_PATH', 'RUNNING'):
+diff --git a/src/sweepi_api_bridge/sweepi_api_bridge/map_store.py b/src/sweepi_api_bridge/sweepi_api_bridge/map_store.py
+index 40878e6..8378932 100644
+--- a/src/sweepi_api_bridge/sweepi_api_bridge/map_store.py
++++ b/src/sweepi_api_bridge/sweepi_api_bridge/map_store.py
+@@ -210,15 +210,21 @@ class MapStore:
+         occupied_thresh = float(yaml_data.get('occupied_thresh', 0.65))
+         free_thresh = float(yaml_data.get('free_thresh', 0.196))
+         occupancy = []
+-        for pixel in image['pixels']:
+-            value = 255 - pixel if negate else pixel
+-            occ = (255 - value) / 255.0
+-            if occ > occupied_thresh:
+-                occupancy.append(100)
+-            elif occ < free_thresh:
+-                occupancy.append(0)
+-            else:
+-                occupancy.append(-1)
++        width = image['width']
++        height = image['height']
++        # PGM map images are stored top row first, while ROS OccupancyGrid
++        # data is indexed from the map origin at the bottom-left.
++        for row in range(height - 1, -1, -1):
++            start = row * width
++            for pixel in image['pixels'][start:start + width]:
++                value = 255 - pixel if negate else pixel
++                occ = (255 - value) / 255.0
++                if occ > occupied_thresh:
++                    occupancy.append(100)
++                elif occ < free_thresh:
++                    occupancy.append(0)
++                else:
++                    occupancy.append(-1)
+ 
+         return {
+             'available': True,
+diff --git a/src/sweepi_api_bridge/sweepi_api_bridge/runtime_state.py b/src/sweepi_api_bridge/sweepi_api_bridge/runtime_state.py
+index 9952d67..782ab7a 100644
+--- a/src/sweepi_api_bridge/sweepi_api_bridge/runtime_state.py
++++ b/src/sweepi_api_bridge/sweepi_api_bridge/runtime_state.py
+@@ -83,10 +83,17 @@ class StateStore:
+             if self._state.robot_state in (
+                 'coverage_preparing',
+                 'waiting_for_initial_pose',
++                'initial_pose_failed',
+                 'coverage_ready',
++                'coverage_validated',
++                'coverage_validation_failed',
++                'cleaning_start_failed',
+                 'cleaning',
+                 'paused',
+                 'returning_home',
++                'cleaning_completed',
++                'cleaning_failed',
++                'stopped',
+             ):
+                 self._state.robot_state = 'idle'
+             self._state.last_updated_sec = time.time()
+FINAL_API
+{"success":true,"message":"API server is healthy.","error":null,"timestamp":"2026-07-11T22:27:16Z","status":"ok","robot_connected":true,"server":"sweepi_api_bridge","api":{"host":"0.0.0.0","port":8080,"prefix":"/api"},"manager_status":"task=idle map_name=(unset) arm_assist=false latest_coverage_status=STOPPED latest_exploration_mode=(none)","ros_time_sec":1783808836.830988}
+{"success":true,"message":"Cleaning status fetched.","error":null,"timestamp":"2026-07-11T22:27:16Z","task_finished":true,"state":"idle","active":false,"task_id":null,"map_id":null,"coverage_map_id":null,"cleaning_mode":null,"sections":[],"progress_percent":0.0,"pose":null,"nav":{"execution_status":"WAITING_FOR_PATH"},"coverage":{"covered_area_m2":0.0,"total_area_m2":0.0},"paused":false,"initial_pose_received":false,"initial_pose_confirmed":false,"initial_pose_source":null,"coverage_path_available":false,"path_available":false,"coverage_map_available":false,"coverage_validated":false,"pose_available":false,"ready_to_validate":false,"ready_to_start_motion":false,"task_result":"stopped","last_error":null,"next_steps":["Call POST /api/cleaning/start."],"status_message":"Cleaning is idle"}
+PROCESSES
+12679 /usr/bin/python3 /opt/ros/jazzy/bin/ros2 launch sweepi_robot_manager master.launch.py use_sim_time:=false launch_sim:=false launch_hardware:=true launch_rviz:=false launch_api_bridge:=true use_arm_assist:=false api_host:=0.0.0.0 api_port:=8080 base_serial_port:=/dev/ttyAMA0 base_baud_rate:=115200 lidar_serial_port:=/dev/ttyUSB0 lidar_baud_rate:=460800 lidar_frame_id:=lidar_link
+12699 /usr/bin/python3 /home/sweepi/SweePi/install/sweepi_base_driver/lib/sweepi_base_driver/base_driver_node --ros-args -r __node:=base_driver_node --params-file /home/sweepi/SweePi/install/sweepi_base_driver/share/sweepi_base_driver/config/base_driver_params.yaml --params-file /tmp/launch_params__2odpk80
+12701 /home/sweepi/SweePi/install/sllidar_ros2/lib/sllidar_ros2/sllidar_node --ros-args -r __node:=sllidar_node --params-file /tmp/launch_params_la34lwv2
+12703 python3 /home/sweepi/SweePi/install/sweepi_robot_manager/lib/sweepi_robot_manager/sweepi_robot_manager_node.py --ros-args -r __node:=sweepi_robot_manager --params-file /tmp/launch_params_bvgp1dha
+12704 /usr/bin/python3 /home/sweepi/SweePi/install/sweepi_api_bridge/lib/sweepi_api_bridge/api_bridge_node --ros-args -r __node:=sweepi_api_bridge --params-file /tmp/launch_params_g209zo0l
+13894 bash -lc $DIAG/tools/emergency_stop.sh >/dev/null 2>&1 || true; sleep 2; git status --short --branch; git diff --stat; git diff -- src/sweepi_api_bridge/sweepi_api_bridge/map_store.py src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py src/sweepi_api_bridge/sweepi_api_bridge/runtime_state.py; echo FINAL_API; curl --max-time 5 -sS http://localhost:8080/api/system/health; echo; curl --max-time 5 -sS http://localhost:8080/api/cleaning/status; echo; echo PROCESSES; pgrep -af "ros2 launch sweepi_robot_manager master|base_driver_node|sllidar_node|sweepi_robot_manager_node|api_bridge_node|coverage_task|coverage_.*node" || true; echo SERIAL; fuser -v /dev/ttyAMA0 /dev/ttyUSB0 2>/dev/null || true
+SERIAL
+ 12699 12701exit=0

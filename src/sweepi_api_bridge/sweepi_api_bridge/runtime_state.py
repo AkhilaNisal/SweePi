@@ -83,10 +83,17 @@ class StateStore:
             if self._state.robot_state in (
                 'coverage_preparing',
                 'waiting_for_initial_pose',
+                'initial_pose_failed',
                 'coverage_ready',
+                'coverage_validated',
+                'coverage_validation_failed',
+                'cleaning_start_failed',
                 'cleaning',
                 'paused',
                 'returning_home',
+                'cleaning_completed',
+                'cleaning_failed',
+                'stopped',
             ):
                 self._state.robot_state = 'idle'
             self._state.last_updated_sec = time.time()

@@ -1,0 +1,616 @@
+===== pre_start_motion_graph =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install/setup.bash; echo NODES; timeout 8 ros2 node list; echo EXECUTOR_INFO; timeout 8 ros2 node info /coverage_follow_path_executor_node; echo EXECUTOR_PARAMS; timeout 8 ros2 param dump /coverage_follow_path_executor_node; echo ACTIONS; timeout 8 ros2 action list -t; echo FOLLOW_PATH; timeout 8 ros2 action info /follow_path -t; echo LIFECYCLE; for n in /controller_server /planner_server /behavior_server /bt_navigator /map_server /amcl /smoother_server /waypoint_follower /velocity_smoother; do echo $n; timeout 5 ros2 lifecycle get $n || true; done; echo VELOCITY_TOPICS; timeout 8 ros2 topic list | grep -Ei "cmd_vel|velocity|twist" || true; for t in /cmd_vel /cmd_vel_nav /cmd_vel_smoothed /cmd_vel_teleop; do echo TOPIC $t; timeout 8 ros2 topic info $t -v || true; done; echo PATH_TOPIC; timeout 8 ros2 topic info /coverage_path -v; echo EXEC_STATUS; timeout 8 ros2 topic echo /coverage_execution_status --once || true
+NODES
+/amcl
+/base_driver_node
+/behavior_server
+/bt_navigator
+/bt_navigator_navigate_through_poses_rclcpp_node
+/bt_navigator_navigate_to_pose_rclcpp_node
+/collision_monitor
+/controller_server
+/coverage_follow_path_executor_node
+/coverage_manager_node
+/coverage_planner_node
+/coverage_tracker_node
+/docking_server
+/ekf_filter_node
+/global_costmap/global_costmap
+/launch_ros_9944
+/lifecycle_manager_localization
+/lifecycle_manager_navigation
+/local_costmap/local_costmap
+/map_server
+/nav2_container
+/planner_server
+/robot_state_publisher
+/route_server
+/sllidar_node
+/smoother_server
+/sweepi_api_bridge
+/sweepi_robot_manager
+/transform_listener_impl_aaaad4982d90
+/transform_listener_impl_aaaaf2882790
+/transform_listener_impl_ffff700020f0
+/velocity_smoother
+/waypoint_follower
+EXECUTOR_INFO
+/coverage_follow_path_executor_node
+  Subscribers:
+    /coverage_path: nav_msgs/msg/Path
+    /global_costmap/costmap: nav_msgs/msg/OccupancyGrid
+    /local_costmap/costmap: nav_msgs/msg/OccupancyGrid
+    /map: nav_msgs/msg/OccupancyGrid
+    /scan: sensor_msgs/msg/LaserScan
+    /sweepi_arm/status: std_msgs/msg/String
+    /tf: tf2_msgs/msg/TFMessage
+    /tf_static: tf2_msgs/msg/TFMessage
+    /tof/front/range: sensor_msgs/msg/Range
+  Publishers:
+    /cmd_vel: geometry_msgs/msg/Twist
+    /coverage_active_path: nav_msgs/msg/Path
+    /coverage_arm_status: std_msgs/msg/String
+    /coverage_debug_info: std_msgs/msg/String
+    /coverage_debug_markers: visualization_msgs/msg/MarkerArray
+    /coverage_dynamic_skip_status: std_msgs/msg/String
+    /coverage_execution_status: std_msgs/msg/String
+    /coverage_nav2_feedback: std_msgs/msg/String
+    /coverage_path_markers: visualization_msgs/msg/MarkerArray
+    /coverage_path_raw: nav_msgs/msg/Path
+    /coverage_skipped_segments: visualization_msgs/msg/MarkerArray
+    /coverage_smoothed_path: nav_msgs/msg/Path
+    /parameter_events: rcl_interfaces/msg/ParameterEvent
+    /rosout: rcl_interfaces/msg/Log
+    /sweepi_arm/command: std_msgs/msg/String
+  Service Servers:
+    /cancel_coverage_follow_path: std_srvs/srv/Trigger
+    /continue_coverage_follow_path: std_srvs/srv/Trigger
+    /coverage_arm/manual_complete: std_srvs/srv/Trigger
+    /coverage_follow_path_executor_node/describe_parameters: rcl_interfaces/srv/DescribeParameters
+    /coverage_follow_path_executor_node/get_parameter_types: rcl_interfaces/srv/GetParameterTypes
+    /coverage_follow_path_executor_node/get_parameters: rcl_interfaces/srv/GetParameters
+    /coverage_follow_path_executor_node/get_type_description: type_description_interfaces/srv/GetTypeDescription
+    /coverage_follow_path_executor_node/list_parameters: rcl_interfaces/srv/ListParameters
+    /coverage_follow_path_executor_node/set_parameters: rcl_interfaces/srv/SetParameters
+    /coverage_follow_path_executor_node/set_parameters_atomically: rcl_interfaces/srv/SetParametersAtomically
+    /pause_coverage_follow_path: std_srvs/srv/Trigger
+    /reset_coverage_follow_path: std_srvs/srv/Trigger
+    /return_home_coverage_follow_path: std_srvs/srv/Trigger
+    /start_coverage_follow_path: std_srvs/srv/Trigger
+    /stop_coverage_follow_path: std_srvs/srv/Trigger
+    /validate_coverage_follow_path: std_srvs/srv/Trigger
+  Service Clients:
+    /replan_coverage_planner: std_srvs/srv/Trigger
+  Action Servers:
+
+  Action Clients:
+    /compute_path_to_pose: nav2_msgs/action/ComputePathToPose
+    /follow_path: nav2_msgs/action/FollowPath
+    /navigate_to_pose: nav2_msgs/action/NavigateToPose
+    /smooth_path: nav2_msgs/action/SmoothPath
+    /spin: nav2_msgs/action/Spin
+EXECUTOR_PARAMS
+/coverage_follow_path_executor_node:
+  ros__parameters:
+    active_path_topic: /coverage_active_path
+    arm_command_topic: /sweepi_arm/command
+    arm_completion_timeout_sec: 60.0
+    arm_fallback_to_dynamic_bypass: false
+    arm_handled_object_radius_m: 0.5
+    arm_handled_path_index_margin: 10
+    arm_mark_failed_object_handled: true
+    arm_replan_after_completion: true
+    arm_replan_max_tolerated_blocked_cost: 99
+    arm_replan_max_tolerated_blocked_costmap_ratio: 0.05
+    arm_replan_max_tolerated_blocked_costmap_samples: 75
+    arm_replan_on_resume_failure: true
+    arm_replan_planner_service: /replan_coverage_planner
+    arm_resume_handled_costmap_radius_m: 0.75
+    arm_resume_on_failure: true
+    arm_resume_suppress_detection_sec: 3.0
+    arm_spin_action_name: /spin
+    arm_spin_timeout_sec: 15.0
+    arm_start_ack_timeout_sec: 3.0
+    arm_static_obstacle_reject_radius_m: 0.45
+    arm_status_topic: /sweepi_arm/status
+    arm_turn_angle_rad: 3.141592653589793
+    auto_start: false
+    check_smooth_path_for_collisions: true
+    cleanup_max_passes: 0
+    cleanup_wait_for_path_timeout_sec: 6.0
+    cmd_vel_topic: /cmd_vel
+    compute_path_to_pose_action_name: /compute_path_to_pose
+    controller_id: FollowPath
+    costmap_topic: /global_costmap/costmap
+    coverage_arm_status_topic: /coverage_arm_status
+    coverage_path_topic: /coverage_path
+    debug_info_topic: /coverage_debug_info
+    debug_markers_topic: /coverage_debug_markers
+    dynamic_cancel_only_if_imminent_blocked: true
+    dynamic_collision_check_radius_m: 0.23
+    dynamic_connector_allow_blocked_start: false
+    dynamic_connector_goal_tolerance_m: 0.15
+    dynamic_connector_refinement_influence_m: 0.45
+    dynamic_connector_refinement_iterations: 3
+    dynamic_connector_refinement_step_m: 0.04
+    dynamic_connector_start_grace_m: 0.0
+    dynamic_connector_start_with_robot_pose: true
+    dynamic_connector_tracking_clearance_m: 0.04
+    dynamic_detection_hysteresis_sec: 0.75
+    dynamic_detour_max_lateral_offset_m: 0.8
+    dynamic_detour_min_lateral_offset_m: 0.1
+    dynamic_detour_offset_step_m: 0.05
+    dynamic_detour_sample_step_m: 0.05
+    dynamic_enable_local_astar_detour: true
+    dynamic_enable_local_detour: true
+    dynamic_enable_local_only_inscribed_fallback: true
+    dynamic_imminent_block_distance_m: 0.22
+    dynamic_inscribed_cost_threshold: 99
+    dynamic_inscribed_static_reference_padding_m: 0.03
+    dynamic_max_connector_replacement_excess_m: 0.75
+    dynamic_max_connector_replacement_ratio: 3.0
+    dynamic_max_rejoin_candidates: 60
+    dynamic_min_blocked_path_length_m: 0.15
+    dynamic_min_blocked_pose_count: 3
+    dynamic_monitor_temporary_paths: true
+    dynamic_object_clearance_m: 0.03
+    dynamic_obstacle_cost_threshold: 100
+    dynamic_obstacle_distance_threshold_m: 0.02
+    dynamic_planner_id: GridBased
+    dynamic_planner_timeout_sec: 2.0
+    dynamic_progress_search_backtrack_m: 0.2
+    dynamic_progress_search_forward_m: 1.0
+    dynamic_refine_connector_path: true
+    dynamic_refresh_temporary_rejoin: true
+    dynamic_rejoin_max_search_distance_m: 5.0
+    dynamic_rejoin_min_clearance_m: 0.03
+    dynamic_require_safe_connector: true
+    dynamic_required_consecutive_detections: 4
+    dynamic_resume_ignore_index_margin: 5
+    dynamic_skip_check_rate_hz: 5.0
+    dynamic_skip_lookahead_m: 0.3
+    dynamic_skip_max_consecutive_failures: 5
+    dynamic_skip_min_remaining_poses: 2
+    dynamic_skip_padding_m: 0.02
+    dynamic_skip_replan_cooldown_sec: 3.0
+    dynamic_skip_status_topic: /coverage_dynamic_skip_status
+    dynamic_static_encroachment_tolerance_m: 0.05
+    dynamic_temporary_rejoin_check_distance_m: 0.8
+    dynamic_temporary_rejoin_refresh_cooldown_sec: 0.75
+    dynamic_treat_unknown_as_blocked: true
+    dynamic_use_corridor_for_detection: true
+    dynamic_use_nav2_planner_connector: true
+    dynamic_use_static_reference_check: true
+    dynamic_validate_rejoin_before_cancel: true
+    enable_cleanup_after_main_path: false
+    enable_costmap_validation: true
+    enable_coverage_turn_smoothing: true
+    enable_dynamic_obstacle_skip: true
+    enable_nav2_smoothing: true
+    enable_stuck_detection: true
+    execution_status_topic: /coverage_execution_status
+    fallback_to_raw_path_on_smoothing_failure: true
+    follow_path_action_name: /follow_path
+    freeze_path_on_start: true
+    front_lidar_message_timeout_sec: 0.5
+    front_lidar_object_max_angle_rad: 0.25
+    front_lidar_object_threshold_m: 0.5
+    front_lidar_required_object_readings: 5
+    front_lidar_sector_half_angle_rad: 0.35
+    front_lidar_topic: /scan
+    front_tof_topic: /tof/front/range
+    global_frame: map
+    goal_checker_id: goal_checker
+    ignore_path_updates_while_executing: true
+    local_costmap_topic: /local_costmap/costmap
+    log_dynamic_detection_debug: false
+    mark_skipped_segments_uncovered: true
+    max_allowed_nav_cost: 85
+    max_consecutive_pose_jump_m: 0.5
+    max_nearest_path_distance_m: 1.5
+    max_smoothing_duration_s: 2.0
+    max_start_distance_m: 0.75
+    max_tolerated_blocked_cost: 99
+    max_tolerated_blocked_costmap_ratio: 0.06
+    max_tolerated_blocked_costmap_samples: 25
+    min_path_poses: 2
+    minimum_path_length_m: 0.1
+    nav2_feedback_topic: /coverage_nav2_feedback
+    navigate_to_pose_action_name: /navigate_to_pose
+    path_markers_topic: /coverage_path_markers
+    preserve_strip_lines: true
+    progress_checker_id: progress_checker
+    publish_debug_markers: true
+    publish_raw_and_smoothed_paths: true
+    publish_skipped_segments: true
+    raw_path_topic: /coverage_path_raw
+    republish_active_path_hz: 1.0
+    require_costmap_for_validation: true
+    require_robot_near_start: false
+    retry_skipped_segments_at_end: false
+    robot_base_frame: base_footprint
+    robot_radius_m: 0.2
+    skipped_segments_topic: /coverage_skipped_segments
+    smoothed_path_topic: /coverage_smoothed_path
+    smoother_action_name: /smooth_path
+    smoother_id: simple_smoother
+    start_from_nearest_valid_pose_if_far: true
+    start_type_description_service: true
+    static_map_occupied_threshold: 50
+    static_map_topic: /map
+    static_reference_padding_m: 0.03
+    stuck_min_movement_m: 0.03
+    stuck_skip_distance_m: 0.6
+    stuck_start_grace_sec: 4.0
+    stuck_timeout_sec: 10.0
+    tf_lookup_timeout_sec: 1.0
+    tof_free_space_threshold_m: 0.5
+    tof_message_timeout_sec: 0.5
+    tof_required_free_readings: 5
+    treat_unknown_cost_as_blocked: true
+    turn_smoothing_radius_m: 0.15
+    use_robot_arm: false
+    use_sim_time: false
+    validate_turn_smoothing_against_costmap: true
+    wait_for_nav2_timeout_sec: 10.0
+
+ACTIONS
+/assisted_teleop [nav2_msgs/action/AssistedTeleop]
+/backup [nav2_msgs/action/BackUp]
+/compute_and_track_route [nav2_msgs/action/ComputeAndTrackRoute]
+/compute_path_through_poses [nav2_msgs/action/ComputePathThroughPoses]
+/compute_path_to_pose [nav2_msgs/action/ComputePathToPose]
+/compute_route [nav2_msgs/action/ComputeRoute]
+/dock_robot [nav2_msgs/action/DockRobot]
+/drive_on_heading [nav2_msgs/action/DriveOnHeading]
+/follow_gps_waypoints [nav2_msgs/action/FollowGPSWaypoints]
+/follow_path [nav2_msgs/action/FollowPath]
+/follow_waypoints [nav2_msgs/action/FollowWaypoints]
+/navigate_through_poses [nav2_msgs/action/NavigateThroughPoses]
+/navigate_to_pose [nav2_msgs/action/NavigateToPose]
+/smooth_path [nav2_msgs/action/SmoothPath]
+/spin [nav2_msgs/action/Spin]
+/undock_robot [nav2_msgs/action/UndockRobot]
+/wait [nav2_msgs/action/Wait]
+FOLLOW_PATH
+Action: /follow_path
+Action clients: 3
+    /bt_navigator_navigate_to_pose_rclcpp_node [nav2_msgs/action/FollowPath]
+    /bt_navigator_navigate_through_poses_rclcpp_node [nav2_msgs/action/FollowPath]
+    /coverage_follow_path_executor_node [nav2_msgs/action/FollowPath]
+Action servers: 1
+    /controller_server [nav2_msgs/action/FollowPath]
+LIFECYCLE
+/controller_server
+active [3]
+/planner_server
+active [3]
+/behavior_server
+active [3]
+/bt_navigator
+active [3]
+/map_server
+active [3]
+/amcl
+active [3]
+/smoother_server
+active [3]
+/waypoint_follower
+active [3]
+/velocity_smoother
+active [3]
+VELOCITY_TOPICS
+/cmd_vel
+/cmd_vel_nav
+/cmd_vel_smoothed
+/cmd_vel_teleop
+/velocity_smoother/transition_event
+TOPIC /cmd_vel
+Type: geometry_msgs/msg/Twist
+
+Publisher count: 4
+
+Node name: sweepi_api_bridge
+Node namespace: /
+Topic type: geometry_msgs/msg/Twist
+Topic type hash: RIHS01_9c45bf16fe0983d80e3cfe750d6835843d265a9a6c46bd2e609fcddde6fb8d2a
+Endpoint type: PUBLISHER
+GID: 01.0f.81.bf.55.26.d5.8e.00.00.00.00.00.00.37.03
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Node name: collision_monitor
+Node namespace: /
+Topic type: geometry_msgs/msg/Twist
+Topic type hash: RIHS01_9c45bf16fe0983d80e3cfe750d6835843d265a9a6c46bd2e609fcddde6fb8d2a
+Endpoint type: PUBLISHER
+GID: 01.0f.81.bf.ed.26.c6.12.00.00.00.00.00.02.d8.03
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Node name: docking_server
+Node namespace: /
+Topic type: geometry_msgs/msg/Twist
+Topic type hash: RIHS01_9c45bf16fe0983d80e3cfe750d6835843d265a9a6c46bd2e609fcddde6fb8d2a
+Endpoint type: PUBLISHER
+GID: 01.0f.81.bf.ed.26.c6.12.00.00.00.00.00.03.35.03
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Node name: coverage_follow_path_executor_node
+Node namespace: /
+Topic type: geometry_msgs/msg/Twist
+Topic type hash: RIHS01_9c45bf16fe0983d80e3cfe750d6835843d265a9a6c46bd2e609fcddde6fb8d2a
+Endpoint type: PUBLISHER
+GID: 01.0f.81.bf.f0.26.6c.f1.00.00.00.00.00.00.43.03
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Subscription count: 1
+
+Node name: base_driver_node
+Node namespace: /
+Topic type: geometry_msgs/msg/Twist
+Topic type hash: RIHS01_9c45bf16fe0983d80e3cfe750d6835843d265a9a6c46bd2e609fcddde6fb8d2a
+Endpoint type: SUBSCRIPTION
+GID: 01.0f.81.bf.50.26.94.d6.00.00.00.00.00.00.13.04
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+TOPIC /cmd_vel_nav
+Type: geometry_msgs/msg/Twist
+
+Publisher count: 6
+
+Node name: controller_server
+Node namespace: /
+Topic type: geometry_msgs/msg/Twist
+Topic type hash: RIHS01_9c45bf16fe0983d80e3cfe750d6835843d265a9a6c46bd2e609fcddde6fb8d2a
+Endpoint type: PUBLISHER
+GID: 01.0f.81.bf.ed.26.c6.12.00.00.00.00.00.02.31.03
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Node name: behavior_server
+Node namespace: /
+Topic type: geometry_msgs/msg/Twist
+Topic type hash: RIHS01_9c45bf16fe0983d80e3cfe750d6835843d265a9a6c46bd2e609fcddde6fb8d2a
+Endpoint type: PUBLISHER
+GID: 01.0f.81.bf.ed.26.c6.12.00.00.00.00.00.02.aa.03
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Node name: behavior_server
+Node namespace: /
+Topic type: geometry_msgs/msg/Twist
+Topic type hash: RIHS01_9c45bf16fe0983d80e3cfe750d6835843d265a9a6c46bd2e609fcddde6fb8d2a
+Endpoint type: PUBLISHER
+GID: 01.0f.81.bf.ed.26.c6.12.00.00.00.00.00.02.b3.03
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Node name: behavior_server
+Node namespace: /
+Topic type: geometry_msgs/msg/Twist
+Topic type hash: RIHS01_9c45bf16fe0983d80e3cfe750d6835843d265a9a6c46bd2e609fcddde6fb8d2a
+Endpoint type: PUBLISHER
+GID: 01.0f.81.bf.ed.26.c6.12.00.00.00.00.00.02.bc.03
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Node name: behavior_server
+Node namespace: /
+Topic type: geometry_msgs/msg/Twist
+Topic type hash: RIHS01_9c45bf16fe0983d80e3cfe750d6835843d265a9a6c46bd2e609fcddde6fb8d2a
+Endpoint type: PUBLISHER
+GID: 01.0f.81.bf.ed.26.c6.12.00.00.00.00.00.02.c5.03
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Node name: behavior_server
+Node namespace: /
+Topic type: geometry_msgs/msg/Twist
+Topic type hash: RIHS01_9c45bf16fe0983d80e3cfe750d6835843d265a9a6c46bd2e609fcddde6fb8d2a
+Endpoint type: PUBLISHER
+GID: 01.0f.81.bf.ed.26.c6.12.00.00.00.00.00.02.d0.03
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Subscription count: 1
+
+Node name: velocity_smoother
+Node namespace: /
+Topic type: geometry_msgs/msg/Twist
+Topic type hash: RIHS01_9c45bf16fe0983d80e3cfe750d6835843d265a9a6c46bd2e609fcddde6fb8d2a
+Endpoint type: SUBSCRIPTION
+GID: 01.0f.81.bf.ed.26.c6.12.00.00.00.00.00.02.d2.04
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+TOPIC /cmd_vel_smoothed
+Type: geometry_msgs/msg/Twist
+
+Publisher count: 1
+
+Node name: velocity_smoother
+Node namespace: /
+Topic type: geometry_msgs/msg/Twist
+Topic type hash: RIHS01_9c45bf16fe0983d80e3cfe750d6835843d265a9a6c46bd2e609fcddde6fb8d2a
+Endpoint type: PUBLISHER
+GID: 01.0f.81.bf.ed.26.c6.12.00.00.00.00.00.02.d1.03
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Subscription count: 1
+
+Node name: collision_monitor
+Node namespace: /
+Topic type: geometry_msgs/msg/Twist
+Topic type hash: RIHS01_9c45bf16fe0983d80e3cfe750d6835843d265a9a6c46bd2e609fcddde6fb8d2a
+Endpoint type: SUBSCRIPTION
+GID: 01.0f.81.bf.ed.26.c6.12.00.00.00.00.00.02.d7.04
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+TOPIC /cmd_vel_teleop
+Type: geometry_msgs/msg/Twist
+
+Publisher count: 0
+
+Subscription count: 1
+
+Node name: behavior_server
+Node namespace: /
+Topic type: geometry_msgs/msg/Twist
+Topic type hash: RIHS01_9c45bf16fe0983d80e3cfe750d6835843d265a9a6c46bd2e609fcddde6fb8d2a
+Endpoint type: SUBSCRIPTION
+GID: 01.0f.81.bf.ed.26.c6.12.00.00.00.00.00.02.c6.04
+QoS profile:
+  Reliability: BEST_EFFORT
+  History (Depth): UNKNOWN
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+PATH_TOPIC
+Type: nav_msgs/msg/Path
+
+Publisher count: 1
+
+Node name: coverage_planner_node
+Node namespace: /
+Topic type: nav_msgs/msg/Path
+Topic type hash: RIHS01_1957a5bb3cee5da65c4e52e52b65a93df227efce4c20f8458b36e73066ca334b
+Endpoint type: PUBLISHER
+GID: 01.0f.81.bf.ef.26.b5.c1.00.00.00.00.00.00.18.03
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: TRANSIENT_LOCAL
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Subscription count: 2
+
+Node name: sweepi_api_bridge
+Node namespace: /
+Topic type: nav_msgs/msg/Path
+Topic type hash: RIHS01_1957a5bb3cee5da65c4e52e52b65a93df227efce4c20f8458b36e73066ca334b
+Endpoint type: SUBSCRIPTION
+GID: 01.0f.81.bf.55.26.d5.8e.00.00.00.00.00.00.40.04
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: TRANSIENT_LOCAL
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Node name: coverage_follow_path_executor_node
+Node namespace: /
+Topic type: nav_msgs/msg/Path
+Topic type hash: RIHS01_1957a5bb3cee5da65c4e52e52b65a93df227efce4c20f8458b36e73066ca334b
+Endpoint type: SUBSCRIPTION
+GID: 01.0f.81.bf.f0.26.6c.f1.00.00.00.00.00.00.35.04
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: TRANSIENT_LOCAL
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+EXEC_STATUS
+data: IDLE
+---
+exit=0

@@ -1,0 +1,315 @@
+===== api_callbacks_cleanup_source =====
+$ bash -lc sed -n "520,630p" src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py; sed -n "2310,2510p" src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py
+                pose = self.robot_pose
+            if live_map is None:
+                return 200, {'ok': True, 'available': False, 'message': 'No live map cached'}
+            payload = occupancy_grid_to_json(live_map, include_occupancy=True)
+            payload.update({
+                'ok': True,
+                'map_id': self.state.snapshot().get('active_map_id'),
+                'robot_pose': pose,
+            })
+            return 200, payload
+        if method == 'GET' and route == []:
+            return 200, self._success(
+                'Maps fetched.',
+                items=[
+                    self._contract_map_metadata(metadata)
+                    for metadata in self.map_store.list_maps()
+                ],
+            )
+        if len(route) >= 1:
+            map_id = sanitize_map_id(route[0])
+            if method == 'GET' and len(route) == 1:
+                return 200, self._api_get_map(map_id)
+            if method == 'GET' and len(route) == 2 and route[1] == 'metadata':
+                return 200, self._api_get_map_metadata(map_id)
+            if method == 'PUT' and len(route) == 2 and route[1] == 'metadata':
+                return 200, self._api_update_map_metadata(map_id, body)
+            if method == 'PUT' and len(route) == 2 and route[1] == 'sections':
+                return 200, self._api_store_sections(map_id, body)
+        return 404, self._error('Unknown maps route', 'VALIDATION_ERROR')
+
+    def _handle_cleaning(self, method, route, body, query):
+        if method == 'POST' and route == ['start']:
+            return 200, self._api_start_cleaning(body)
+        if method == 'GET' and route == ['status']:
+            return 200, self._cleaning_status()
+        if method == 'GET' and route == ['path']:
+            stride = int(query.get('stride', ['1'])[0] or '1')
+            return 200, self._cleaning_path(stride)
+        if method == 'GET' and route == ['coverage-map']:
+            return 200, self._cleaning_coverage_map()
+        if method == 'POST' and route == ['validate']:
+            return 200, self._api_validate_cleaning()
+        if method == 'POST' and route == ['start-motion']:
+            return 200, self._api_start_cleaning_motion()
+        if method == 'POST' and route == ['pause']:
+            result = self._call_trigger('/sweepi_robot_manager/coverage/pause')
+            if result['success']:
+                self.state.update(robot_state='paused', cleaning_paused=True, task_phase='paused')
+            return 200, self._service_payload(
+                result,
+                success_message='Cleaning paused.',
+                command='pause_cleaning',
+                state='paused',
+                task_finished=False,
+                task_id=self.state.snapshot().get('active_task_id'),
+            )
+        if method == 'POST' and route == ['resume']:
+            result = self._call_trigger('/sweepi_robot_manager/coverage/continue')
+            if result['success']:
+                self.state.update(robot_state='cleaning', cleaning_paused=False, task_phase='cleaning')
+            return 200, self._service_payload(
+                result,
+                success_message='Cleaning resumed.',
+                command='resume_cleaning',
+                state='cleaning',
+                task_finished=False,
+                task_id=self.state.snapshot().get('active_task_id'),
+            )
+        if method == 'POST' and route == ['stop']:
+            self._publish_zero_velocity()
+            task_id = self.state.snapshot().get('active_task_id')
+            result = self._call_trigger('/sweepi_robot_manager/coverage/stop')
+            if result['success']:
+                self.state.reset_cleaning()
+            return 200, self._service_payload(
+                result,
+                success_message='Cleaning stopped.',
+                command='stop_cleaning',
+                state='stopped',
+                task_finished=True,
+                task_result='stopped',
+                task_id=task_id,
+            )
+        if method == 'POST' and route == ['reset']:
+            self._publish_zero_velocity()
+            task_id = self.state.snapshot().get('active_task_id')
+            result = self._call_trigger('/sweepi_robot_manager/coverage/reset')
+            if result['success']:
+                self._clear_coverage_cache()
+                self.state.reset_cleaning()
+            return 200, self._service_payload(
+                result,
+                success_message='Cleaning state reset.',
+                command='reset_cleaning',
+                state='idle',
+                task_finished=True,
+                task_result='reset',
+                task_id=None if result['success'] else task_id,
+            )
+        if method == 'POST' and route == ['return-home']:
+            result = self._call_trigger('/sweepi_robot_manager/coverage/return_home')
+            if result['success']:
+                self.state.update(robot_state='returning_home', task_phase='returning_home')
+            return 200, self._service_payload(
+                result,
+                success_message='Robot is returning home.',
+                command='return_home',
+                state='returning_home',
+                task_finished=False,
+            )
+        if method == 'GET' and route == ['last-summary']:
+        if self.tf_buffer is not None:
+            return
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
+
+    def _update_coverage_readiness(self):
+        snapshot = self.state.snapshot()
+        if not snapshot['cleaning_active']:
+            return
+        path_available = snapshot['coverage_path_available']
+        map_available = snapshot['coverage_map_available']
+        if snapshot['robot_state'] in ('cleaning', 'paused', 'returning_home'):
+            self.state.update(
+                coverage_path_available=path_available,
+                coverage_map_available=map_available,
+            )
+            return
+        if (
+            not snapshot['initial_pose_confirmed']
+            and snapshot['robot_state'] == 'initial_pose_failed'
+        ):
+            next_state = 'initial_pose_failed'
+        elif not snapshot['initial_pose_confirmed']:
+            next_state = 'waiting_for_initial_pose'
+        elif snapshot['coverage_validated']:
+            next_state = 'coverage_validated'
+        elif self.pose_available and path_available:
+            next_state = 'coverage_ready'
+        else:
+            next_state = 'coverage_preparing'
+        self.state.update(
+            robot_state=next_state,
+            coverage_path_available=path_available,
+            coverage_map_available=map_available,
+        )
+
+    def _manager_status_callback(self, msg):
+        self.manager_status = str(msg.data or '')
+        fields = self._parse_status_fields(self.manager_status)
+        task = fields.get('task')
+        if task == 'idle':
+            snapshot = self.state.snapshot()
+            if snapshot['active_task'] == 'exploration':
+                self.state.reset_exploration()
+            elif (
+                snapshot['active_task'] == 'cleaning'
+                and snapshot['robot_state'] not in ('paused',)
+                and not snapshot.get('task_finished')
+            ):
+                self.state.reset_cleaning()
+        elif task == 'exploration':
+            mode = fields.get('latest_exploration_mode', '')
+            robot_state = (
+                'exploration_stopped'
+                if mode == 'stopped'
+                else 'exploring'
+            )
+            self.state.update(
+                robot_state=robot_state,
+                active_task='exploration',
+                exploration_active=True,
+            )
+        elif task == 'coverage':
+            self.state.update(active_task='cleaning', cleaning_active=True)
+
+    def _coverage_last_summary_topic_callback(self, msg):
+        self.last_coverage_summary_topic = str(msg.data or '')
+
+    def _exploration_mode_callback(self, msg):
+        mode = str(msg.data or '').strip().lower()
+        if mode == 'auto':
+            mode = 'automatic'
+        if mode not in ('automatic', 'manual', 'stopped'):
+            mode = 'unknown'
+
+        snapshot = self.state.snapshot()
+        if snapshot.get('active_task') != 'exploration' and not snapshot.get('exploration_active'):
+            return
+
+        updates = {
+            'exploration_mode': mode,
+        }
+        if mode == 'stopped':
+            updates.update(
+                robot_state='exploration_stopped',
+                exploration_active=True,
+            )
+        elif mode in ('automatic', 'manual'):
+            updates.update(
+                robot_state='exploring',
+                active_task='exploration',
+                exploration_active=True,
+            )
+        self.state.update(**updates)
+
+    def _map_callback(self, msg):
+        with self.data_lock:
+            self.live_map = msg
+        self.state.update(live_map_available=True)
+
+    def _coverage_map_callback(self, msg):
+        available = bool(msg.info.width and msg.info.height and msg.data)
+        with self.data_lock:
+            self.coverage_map = msg if available else None
+        self.state.update(coverage_map_available=available)
+
+    def _coverage_path_callback(self, msg):
+        available = bool(msg.poses)
+        new_signature = self._coverage_path_signature(msg) if available else None
+        path_changed = new_signature != self.coverage_path_signature
+        with self.data_lock:
+            self.coverage_path = msg if available else None
+            self.coverage_path_signature = new_signature
+        updates = {'coverage_path_available': available}
+        if not available or path_changed:
+            self.validated_for_current_path = False
+            self.validated_coverage_path_signature = None
+            updates['coverage_validated'] = False
+        self.state.update(**updates)
+
+    def _coverage_path_signature(self, msg):
+        poses = list(msg.poses or [])
+        if not poses:
+            return None
+        sample_indices = sorted(set([
+            0,
+            len(poses) // 4,
+            len(poses) // 2,
+            (len(poses) * 3) // 4,
+            len(poses) - 1,
+        ]))
+        samples = []
+        for index in sample_indices:
+            position = poses[index].pose.position
+            samples.extend((
+                round(float(position.x), 3),
+                round(float(position.y), 3),
+            ))
+        return (
+            len(poses),
+            msg.header.frame_id or '',
+            *samples,
+        )
+
+    def _current_coverage_path_state(self):
+        with self.data_lock:
+            path = self.coverage_path
+            signature = self.coverage_path_signature
+        pose_count = len(path.poses) if path is not None else 0
+        return {
+            'available': path is not None and pose_count > 0 and signature is not None,
+            'pose_count': pose_count,
+            'signature': signature,
+        }
+
+    def _coverage_percentage_callback(self, msg):
+        self.coverage_percentage = float(msg.data)
+
+    def _coverage_stats_callback(self, msg):
+        self.coverage_stats = str(msg.data or '')
+
+    def _coverage_execution_status_callback(self, msg):
+        status = str(msg.data or '').strip()
+        if status:
+            self.coverage_execution_status = status
+        if status == 'PAUSED':
+            self.state.update(robot_state='paused', cleaning_paused=True)
+        elif status in ('FOLLOWING_PATH', 'RUNNING'):
+            self.state.update(
+                robot_state='cleaning',
+                cleaning_paused=False,
+                task_finished=False,
+                task_result=None,
+                task_phase='cleaning',
+            )
+        elif status in ('COMPLETED', 'SUCCEEDED', 'DONE'):
+            self.state.update(
+                robot_state='cleaning_completed',
+                cleaning_paused=False,
+                task_finished=True,
+                task_result='completed',
+                task_phase='completed',
+            )
+        elif status in ('FAILED', 'ABORTED', 'CANCELED', 'CANCELLED'):
+            self.state.update(
+                robot_state='cleaning_failed',
+                cleaning_paused=False,
+                task_finished=True,
+                task_result='failed',
+                task_phase='failed',
+                last_error={
+                    'code': 'CLEANING_TASK_FAILED',
+                    'details': {'execution_status': status},
+                },
+            )
+
+    def _initial_pose_callback(self, msg):
+        if time.monotonic() - self.last_api_initial_pose_publish_time < 0.5:
+            return
+        pose = msg.pose.pose
+        yaw = pose_to_json(pose, frame=msg.header.frame_id or 'map')['yaw']
+exit=0

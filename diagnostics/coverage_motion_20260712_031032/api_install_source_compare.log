@@ -1,0 +1,164 @@
+===== api_install_source_compare =====
+$ bash -lc cd /home/sweepi/SweePi && cmp -s src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py install/sweepi_api_bridge/lib/python3.12/site-packages/sweepi_api_bridge/api_bridge_node.py; echo api_bridge_cmp=$?; cmp -s src/sweepi_api_bridge/sweepi_api_bridge/runtime_state.py install/sweepi_api_bridge/lib/python3.12/site-packages/sweepi_api_bridge/runtime_state.py; echo runtime_state_cmp=$?; diff -u src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py install/sweepi_api_bridge/lib/python3.12/site-packages/sweepi_api_bridge/api_bridge_node.py | sed -n "1,220p"; diff -u src/sweepi_api_bridge/sweepi_api_bridge/runtime_state.py install/sweepi_api_bridge/lib/python3.12/site-packages/sweepi_api_bridge/runtime_state.py | sed -n "1,220p"
+api_bridge_cmp=1
+runtime_state_cmp=1
+--- src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py	2026-07-12 01:43:18.573183172 +0530
++++ install/sweepi_api_bridge/lib/python3.12/site-packages/sweepi_api_bridge/api_bridge_node.py	2026-07-11 22:36:09.000000000 +0530
+@@ -1459,7 +1459,7 @@
+         )
+ 
+     def _api_validate_cleaning(self):
+-        ready = self._cleaning_preconditions(require_path=True)
++        ready = self._cleaning_preconditions(require_path=False)
+         if not ready['accepted']:
+             return self._error(
+                 ready['message'],
+@@ -1470,21 +1470,10 @@
+                 command='validate_cleaning',
+                 state=ready.get('state', 'validation_blocked'),
+             )
+-        path_state = self._current_coverage_path_state()
+-        if not path_state['available']:
+-            return self._error(
+-                'Coverage path is not available yet.',
+-                'INVALID_STATE',
+-                accepted=False,
+-                completed=False,
+-                task_finished=False,
+-                command='validate_cleaning',
+-                state='coverage_path_unavailable',
+-            )
+         result = self._call_trigger('/validate_coverage_follow_path')
+         if result['success']:
+             self.validated_for_current_path = True
+-            self.validated_coverage_path_signature = path_state['signature']
++            self.validated_coverage_path_signature = self.coverage_path_signature
+             self.state.update(coverage_validated=True, robot_state='coverage_validated', task_phase='coverage_validated')
+             return self._success(
+                 'Coverage validation completed successfully.',
+@@ -1496,8 +1485,6 @@
+                 task_id=self.state.snapshot().get('active_task_id'),
+                 map_id=self.state.snapshot().get('active_map_id'),
+                 coverage_map_id=self.state.snapshot().get('active_coverage_map_id'),
+-                path_pose_count=path_state['pose_count'],
+-                path_signature=path_state['signature'],
+                 next_steps=['Call POST /api/cleaning/start-motion.'],
+             )
+         self.validated_for_current_path = False
+@@ -1518,7 +1505,7 @@
+         )
+ 
+     def _api_start_cleaning_motion(self):
+-        ready = self._cleaning_preconditions(require_path=True)
++        ready = self._cleaning_preconditions(require_path=False)
+         if not ready['accepted']:
+             return self._error(
+                 ready['message'],
+@@ -1530,16 +1517,11 @@
+                 state=ready.get('state', 'start_blocked'),
+             )
+         snapshot = self.state.snapshot()
+-        path_state = self._current_coverage_path_state()
+         path_changed_after_validation = (
+-            self.validated_coverage_path_signature is None
+-            or path_state['signature'] != self.validated_coverage_path_signature
++            self.validated_coverage_path_signature is not None
++            and self.coverage_path_signature != self.validated_coverage_path_signature
+         )
+-        if (
+-            not path_state['available']
+-            or not snapshot.get('coverage_validated')
+-            or path_changed_after_validation
+-        ):
++        if not snapshot.get('coverage_validated') or path_changed_after_validation:
+             return self._error(
+                 'Coverage validation is required before starting motion.',
+                 'VALIDATION_REQUIRED',
+@@ -1551,8 +1533,6 @@
+                 task_id=snapshot.get('active_task_id'),
+                 map_id=snapshot.get('active_map_id'),
+                 coverage_map_id=snapshot.get('active_coverage_map_id'),
+-                path_available=path_state['available'],
+-                path_pose_count=path_state['pose_count'],
+             )
+         result = self._call_trigger('/start_coverage_follow_path')
+         if result['success']:
+@@ -1957,12 +1937,7 @@
+         if path is None or not path.poses:
+             return {'ok': True, 'available': False, 'map_id': map_id, 'points': []}
+         payload = path_to_json(path, stride=stride)
+-        payload.update({
+-            'ok': True,
+-            'map_id': map_id,
+-            'pose_count': len(path.poses),
+-            'path_signature': self.coverage_path_signature,
+-        })
++        payload.update({'ok': True, 'map_id': map_id})
+         return payload
+ 
+     def _cleaning_coverage_map(self):
+@@ -2381,17 +2356,13 @@
+             mode = 'automatic'
+         if mode not in ('automatic', 'manual', 'stopped'):
+             mode = 'unknown'
+-
+-        snapshot = self.state.snapshot()
+-        if snapshot.get('active_task') != 'exploration' and not snapshot.get('exploration_active'):
+-            return
+-
+         updates = {
+             'exploration_mode': mode,
+         }
+         if mode == 'stopped':
+             updates.update(
+                 robot_state='exploration_stopped',
++                active_task='exploration',
+                 exploration_active=True,
+             )
+         elif mode in ('automatic', 'manual'):
+@@ -2432,33 +2403,15 @@
+         if not poses:
+             return None
+         first = poses[0].pose.position
+-        middle = poses[len(poses) // 2].pose.position
+         last = poses[-1].pose.position
+-        stamp = msg.header.stamp
+         return (
+             len(poses),
+-            msg.header.frame_id or '',
+-            int(stamp.sec),
+-            int(stamp.nanosec),
+             round(float(first.x), 3),
+             round(float(first.y), 3),
+-            round(float(middle.x), 3),
+-            round(float(middle.y), 3),
+             round(float(last.x), 3),
+             round(float(last.y), 3),
+         )
+ 
+-    def _current_coverage_path_state(self):
+-        with self.data_lock:
+-            path = self.coverage_path
+-            signature = self.coverage_path_signature
+-        pose_count = len(path.poses) if path is not None else 0
+-        return {
+-            'available': path is not None and pose_count > 0 and signature is not None,
+-            'pose_count': pose_count,
+-            'signature': signature,
+-        }
+-
+     def _coverage_percentage_callback(self, msg):
+         self.coverage_percentage = float(msg.data)
+ 
+--- src/sweepi_api_bridge/sweepi_api_bridge/runtime_state.py	2026-07-12 01:43:18.573183172 +0530
++++ install/sweepi_api_bridge/lib/python3.12/site-packages/sweepi_api_bridge/runtime_state.py	2026-07-11 18:03:04.000000000 +0530
+@@ -104,7 +104,7 @@
+                 self._state.active_task = 'none'
+                 self._state.active_area_name = None
+                 self._state.active_map_id = None
+-            if self._state.robot_state in ('exploring', 'exploration_stopped'):
++            if self._state.robot_state == 'exploring':
+                 self._state.robot_state = 'idle'
+             self._state.last_updated_sec = time.time()
+             return asdict(self._state)
+exit=0

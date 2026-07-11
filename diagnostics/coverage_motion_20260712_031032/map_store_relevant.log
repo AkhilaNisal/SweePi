@@ -1,0 +1,184 @@
+===== map_store_relevant =====
+$ bash -lc sed -n "190,320p" src/sweepi_api_bridge/sweepi_api_bridge/map_store.py && sed -n "407,456p" src/sweepi_api_bridge/sweepi_api_bridge/map_store.py
+
+    def read_map(self, map_id):
+        clean_id = sanitize_map_id(map_id)
+        yaml_data = self.read_yaml(clean_id)
+        if not yaml_data:
+            return {'available': False, 'map_id': clean_id, 'message': 'Map not found'}
+
+        image_path = self.map_image_path(clean_id, yaml_data)
+        image = self._read_pgm(image_path)
+        if image is None:
+            return {
+                'available': False,
+                'map_id': clean_id,
+                'metadata': self.metadata(clean_id),
+                'message': 'Map image could not be read',
+            }
+
+        resolution = float(yaml_data.get('resolution', 0.05))
+        origin = yaml_data.get('origin', [0.0, 0.0, 0.0])
+        negate = int(yaml_data.get('negate', 0))
+        occupied_thresh = float(yaml_data.get('occupied_thresh', 0.65))
+        free_thresh = float(yaml_data.get('free_thresh', 0.196))
+        occupancy = []
+        for pixel in image['pixels']:
+            value = 255 - pixel if negate else pixel
+            occ = (255 - value) / 255.0
+            if occ > occupied_thresh:
+                occupancy.append(100)
+            elif occ < free_thresh:
+                occupancy.append(0)
+            else:
+                occupancy.append(-1)
+
+        return {
+            'available': True,
+            'map_id': clean_id,
+            'metadata': self.metadata(clean_id),
+            'resolution': resolution,
+            'width': image['width'],
+            'height': image['height'],
+            'origin': self._origin_to_dict(origin),
+            'occupancy': occupancy,
+        }
+
+    def check_pose(self, map_id, x, y, allow_unknown=False, occupied_threshold=50):
+        """Validate a world-frame pose against a saved occupancy map."""
+        clean_id = sanitize_map_id(map_id)
+        saved_map = self.read_map(clean_id)
+        if not saved_map.get('available'):
+            return {
+                'ok': False,
+                'code': 'MAP_NOT_FOUND',
+                'message': saved_map.get('message', 'Map not found'),
+                'map_id': clean_id,
+            }
+
+        width = int(saved_map.get('width') or 0)
+        height = int(saved_map.get('height') or 0)
+        resolution = float(saved_map.get('resolution') or 0.0)
+        occupancy = saved_map.get('occupancy') or []
+        if width <= 0 or height <= 0 or resolution <= 0.0:
+            return {
+                'ok': False,
+                'code': 'MAP_INVALID',
+                'message': 'Map metadata is invalid.',
+                'map_id': clean_id,
+            }
+
+        origin = self._origin_to_dict(saved_map.get('origin'))
+        dx = float(x) - origin['x']
+        dy = float(y) - origin['y']
+        yaw = origin.get('yaw', 0.0)
+        cos_yaw = math.cos(-yaw)
+        sin_yaw = math.sin(-yaw)
+        local_x = (dx * cos_yaw) - (dy * sin_yaw)
+        local_y = (dx * sin_yaw) + (dy * cos_yaw)
+        cell_x = int(math.floor(local_x / resolution))
+        cell_y = int(math.floor(local_y / resolution))
+
+        cell_info = {
+            'x': cell_x,
+            'y': cell_y,
+            'width': width,
+            'height': height,
+            'resolution': resolution,
+        }
+        if cell_x < 0 or cell_y < 0 or cell_x >= width or cell_y >= height:
+            return {
+                'ok': False,
+                'code': 'INITIAL_POSE_OUTSIDE_MAP',
+                'message': 'Initial pose is outside the map bounds.',
+                'map_id': clean_id,
+                'cell': cell_info,
+            }
+
+        index = (cell_y * width) + cell_x
+        value = int(occupancy[index]) if 0 <= index < len(occupancy) else 100
+        result = {
+            'ok': True,
+            'code': 'OK',
+            'message': 'Initial pose is in a free map cell.',
+            'map_id': clean_id,
+            'cell': dict(cell_info, index=index),
+            'occupancy': value,
+        }
+        if value < 0 and not allow_unknown:
+            result.update({
+                'ok': False,
+                'code': 'INITIAL_POSE_UNKNOWN',
+                'message': 'Initial pose is in an unknown map cell.',
+            })
+        elif value >= int(occupied_threshold):
+            result.update({
+                'ok': False,
+                'code': 'INITIAL_POSE_OCCUPIED',
+                'message': 'Initial pose is in an occupied map cell.',
+            })
+        return result
+
+    def read_yaml(self, map_id):
+        path = self.map_yaml_path(map_id)
+        if not os.path.exists(path):
+            return {}
+        data = {}
+        try:
+            with open(path, 'r', encoding='utf-8') as handle:
+                for raw_line in handle:
+                    line = raw_line.split('#', 1)[0].strip()
+                    if not line or ':' not in line:
+                        continue
+                    key, value = line.split(':', 1)
+    def _write_occupancy_as_map(
+        self,
+        map_id,
+        width,
+        height,
+        resolution,
+        origin,
+        occupancy,
+    ):
+        clean_id = sanitize_map_id(map_id)
+        pgm_name = clean_id + '.pgm'
+        yaml_name = clean_id + '.yaml'
+        pgm_path = os.path.join(self.maps_dir, pgm_name)
+        yaml_path = os.path.join(self.maps_dir, yaml_name)
+        with open(pgm_path, 'wb') as handle:
+            handle.write(('P5\n%d %d\n255\n' % (width, height)).encode('ascii'))
+            pixels = bytearray()
+            for row in range(height - 1, -1, -1):
+                start = row * width
+                for cell in occupancy[start:start + width]:
+                    if cell < 0:
+                        pixels.append(205)
+                    elif cell >= 50:
+                        pixels.append(0)
+                    else:
+                        pixels.append(254)
+            handle.write(bytes(pixels))
+
+        yaw = float(origin.get('yaw', 0.0))
+        if not math.isfinite(yaw):
+            yaw = 0.0
+        yaml_text = (
+            'image: %s\n'
+            'mode: trinary\n'
+            'resolution: %.12g\n'
+            'origin: [%.12g, %.12g, %.12g]\n'
+            'negate: 0\n'
+            'occupied_thresh: 0.65\n'
+            'free_thresh: 0.196\n'
+        ) % (
+            pgm_name,
+            float(resolution),
+            float(origin.get('x', 0.0)),
+            float(origin.get('y', 0.0)),
+            yaw,
+        )
+        with open(yaml_path, 'w', encoding='utf-8') as handle:
+            handle.write(yaml_text)
+
+    def _now_string(self):
+exit=0

@@ -1,0 +1,4 @@
+===== post_full_stack_stop_check =====
+$ bash -lc sleep 3; pgrep -af "ros2 launch sweepi_robot_manager master|base_driver_node|sllidar_node|sweepi_robot_manager_node|api_bridge_node|coverage_task|coverage_.*node|controller_server|amcl|map_server" || true; fuser -v /dev/ttyAMA0 /dev/ttyUSB0 2>/dev/null || true; ss -ltnp | grep ":8080" || true
+9563 bash -lc sleep 3; pgrep -af "ros2 launch sweepi_robot_manager master|base_driver_node|sllidar_node|sweepi_robot_manager_node|api_bridge_node|coverage_task|coverage_.*node|controller_server|amcl|map_server" || true; fuser -v /dev/ttyAMA0 /dev/ttyUSB0 2>/dev/null || true; ss -ltnp | grep ":8080" || true
+exit=0

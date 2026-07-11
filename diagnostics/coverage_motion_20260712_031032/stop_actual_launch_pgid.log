@@ -1,0 +1,5 @@
+===== stop_actual_launch_pgid =====
+$ bash -lc LAUNCH_PID=9786; if ps -p $LAUNCH_PID >/dev/null; then PGID=$(ps -o pgid= -p "$LAUNCH_PID" | tr -d " "); echo launch_pid=$LAUNCH_PID pgid=$PGID; kill -INT -"$PGID"; fi; sleep 8; pgrep -af "ros2 launch sweepi_robot_manager master|base_driver_node|sllidar_node|sweepi_robot_manager_node|api_bridge_node|coverage_task|coverage_.*node|controller_server|amcl|map_server" || true; fuser -v /dev/ttyAMA0 /dev/ttyUSB0 2>/dev/null || true; ss -ltnp | grep ":8080" || true
+launch_pid=9786 pgid=9786
+10784 bash -lc LAUNCH_PID=9786; if ps -p $LAUNCH_PID >/dev/null; then PGID=$(ps -o pgid= -p "$LAUNCH_PID" | tr -d " "); echo launch_pid=$LAUNCH_PID pgid=$PGID; kill -INT -"$PGID"; fi; sleep 8; pgrep -af "ros2 launch sweepi_robot_manager master|base_driver_node|sllidar_node|sweepi_robot_manager_node|api_bridge_node|coverage_task|coverage_.*node|controller_server|amcl|map_server" || true; fuser -v /dev/ttyAMA0 /dev/ttyUSB0 2>/dev/null || true; ss -ltnp | grep ":8080" || true
+exit=0

@@ -1,0 +1,239 @@
+===== diagnostics_resume_find =====
+$ bash -lc cd /home/sweepi/SweePi && find diagnostics -maxdepth 3 -type f -print 2>/dev/null | sort | tail -n 200
+===== resume_docs =====
+$ bash -lc cd /home/sweepi/SweePi && find . -name RESUME_DIAGNOSIS.md -print -exec sed -n "1,240p" {} \;
+===== git_status_diff =====
+$ bash -lc cd /home/sweepi/SweePi && git status --short --branch && git diff --stat && git diff -- src/sweepi_exploration/sweepi_exploration/wavefront_explorer.py src/sweepi_robot_manager/sweepi_robot_manager/sweepi_robot_manager_node.py src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py src/sweepi_api_bridge/sweepi_api_bridge/runtime_state.py src/sweepi_coverage/config/coverage_follow_path_params.yaml src/sweepi_coverage/config/nav2_coverage_params.yaml && git rev-parse HEAD && git branch --show-current
+===== package_prefixes =====
+$ bash -lc cd /home/sweepi/SweePi && source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install/setup.bash 2>/dev/null || true && for p in sweepi_robot_manager sweepi_coverage sweepi_api_bridge sweepi_base_driver; do echo $p; ros2 pkg prefix $p || true; done
+===== initial_process_state =====
+$ bash -lc pgrep -af "ros2|launch|sweepi|nav2|controller|planner|coverage|slam|amcl|map_server|uvicorn" || true; pstree -ap | sed -n "1,220p"; systemctl --failed; systemctl list-units --type=service --all | grep -Ei "sweepi|robot|ros" || true; ss -ltnp | grep ":8080" || true; fuser -v /dev/ttyAMA0 /dev/ttyUSB0 2>/dev/null || true
+===== installed_source_integrity =====
+$ bash -lc cd /home/sweepi/SweePi && git log -3 --oneline --decorate && for f in src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py src/sweepi_api_bridge/sweepi_api_bridge/runtime_state.py src/sweepi_robot_manager/sweepi_robot_manager/sweepi_robot_manager_node.py src/sweepi_exploration/sweepi_exploration/wavefront_explorer.py src/sweepi_coverage/sweepi_coverage/coverage_follow_path_executor_node.py; do echo ==== $f; ls -l install/*/lib/python3.12/site-packages/${f#src/*/} 2>/dev/null || true; done && readlink -f install/sweepi_api_bridge/lib/python3.12/site-packages/sweepi_api_bridge/api_bridge_node.py || true && readlink -f install/sweepi_robot_manager/lib/python3.12/site-packages/sweepi_robot_manager/sweepi_robot_manager_node.py || true && readlink -f install/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage/coverage_follow_path_executor_node.py || true
+===== py_compile_current =====
+$ bash -lc cd /home/sweepi/SweePi && python3 -m py_compile src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py src/sweepi_api_bridge/sweepi_api_bridge/runtime_state.py src/sweepi_robot_manager/sweepi_robot_manager/sweepi_robot_manager_node.py src/sweepi_coverage/sweepi_coverage/coverage_follow_path_executor_node.py
+===== api_install_source_compare =====
+$ bash -lc cd /home/sweepi/SweePi && cmp -s src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py install/sweepi_api_bridge/lib/python3.12/site-packages/sweepi_api_bridge/api_bridge_node.py; echo api_bridge_cmp=$?; cmp -s src/sweepi_api_bridge/sweepi_api_bridge/runtime_state.py install/sweepi_api_bridge/lib/python3.12/site-packages/sweepi_api_bridge/runtime_state.py; echo runtime_state_cmp=$?; diff -u src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py install/sweepi_api_bridge/lib/python3.12/site-packages/sweepi_api_bridge/api_bridge_node.py | sed -n "1,220p"; diff -u src/sweepi_api_bridge/sweepi_api_bridge/runtime_state.py install/sweepi_api_bridge/lib/python3.12/site-packages/sweepi_api_bridge/runtime_state.py | sed -n "1,220p"
+===== build_install_current =====
+$ bash -lc cd /home/sweepi/SweePi && source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --packages-select sweepi_api_bridge sweepi_robot_manager sweepi_coverage --event-handlers console_direct+
+===== full_stack_health =====
+$ bash -lc cd /home/sweepi/SweePi && source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install/setup.bash && sleep 6 && curl -sS http://localhost:8080/api/system/health && echo && curl -sS http://localhost:8080/api/robot/status && echo && ros2 node list && ros2 service list -t && ros2 action list -t && ros2 topic list -t
+===== full_stack_rates =====
+$ bash -lc cd /home/sweepi/SweePi && source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install/setup.bash && timeout 6 ros2 topic hz /hardware/status; timeout 6 ros2 topic hz /wheel/odom; timeout 6 ros2 topic hz /imu/data; timeout 6 ros2 topic hz /odom; timeout 6 ros2 topic hz /scan; timeout 4 ros2 topic echo /hardware/status --once
+===== full_stack_process_check =====
+$ bash -lc pgrep -af "ros2|launch|sweepi|nav2|controller|planner|coverage|slam|amcl|map_server|uvicorn" || true; ss -ltnp | grep ":8080" || true; fuser -v /dev/ttyAMA0 /dev/ttyUSB0 2>/dev/null || true
+===== cleanup_before_coverage =====
+$ bash -lc cd /home/sweepi/SweePi && source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install/setup.bash && curl -sS -X POST http://localhost:8080/api/cleaning/stop -H "Content-Type: application/json" -d "{}" || true; echo; curl -sS -X POST http://localhost:8080/api/cleaning/reset -H "Content-Type: application/json" -d "{}" || true; echo; sleep 2; pgrep -af "coverage|map_server|amcl|controller_server|planner_server|bt_navigator|velocity_smoother|smoother_server|waypoint_follower" || true; ros2 node list --all
+===== coverage_prepare =====
+$ bash -lc cd /home/sweepi/SweePi && curl -sS -X POST http://localhost:8080/api/cleaning/start -H "Content-Type: application/json" -d "{\"map_id\":\"living_room\",\"cleaning_mode\":\"full-map\"}" && echo && sleep 8 && curl -sS http://localhost:8080/api/cleaning/status && echo && curl -sS "http://localhost:8080/api/cleaning/path?stride=5" && echo
+===== coverage_graph_after_prepare =====
+$ bash -lc cd /home/sweepi/SweePi && source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install/setup.bash && pgrep -af "coverage|map_server|amcl|controller_server|planner_server|bt_navigator|velocity_smoother|smoother_server|waypoint_follower|lifecycle" || true; ros2 node list --all; ros2 action list -t; ros2 service list -t | grep -Ei "coverage|amcl|map|controller|planner|lifecycle|costmap|follow"; ros2 topic list -t | grep -Ei "coverage|cmd_vel|velocity|twist|costmap|amcl|map"
+===== coverage_initial_pose =====
+$ bash -lc cd /home/sweepi/SweePi && curl -sS -X POST http://localhost:8080/api/localization/initial-pose -H "Content-Type: application/json" -d "{\"map_id\":\"living_room\",\"x\":0.0,\"y\":0.0,\"yaw\":0.0,\"frame\":\"map\"}" && echo && sleep 10 && curl -sS http://localhost:8080/api/localization/status && echo && curl -sS http://localhost:8080/api/cleaning/status && echo && curl -sS "http://localhost:8080/api/cleaning/path?stride=5" && echo
+===== coverage_localization_tf_costmaps =====
+$ bash -lc cd /home/sweepi/SweePi && source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install/setup.bash && timeout 5 ros2 topic echo /amcl_pose --once; timeout 5 ros2 run tf2_ros tf2_echo map odom; timeout 5 ros2 run tf2_ros tf2_echo map base_footprint; timeout 5 ros2 topic echo /global_costmap/costmap --once | sed -n "1,50p"; timeout 5 ros2 topic echo /local_costmap/costmap --once | sed -n "1,50p"
+===== coverage_lifecycle_after_pose =====
+$ bash -lc cd /home/sweepi/SweePi && source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install/setup.bash && ros2 lifecycle nodes; for n in /controller_server /planner_server /behavior_server /bt_navigator /map_server /amcl /global_costmap/global_costmap /local_costmap/local_costmap /velocity_smoother /smoother_server /waypoint_follower; do echo ==== $n; ros2 lifecycle get $n || true; done
+===== living_room_map_analysis =====
+$ bash -lc cd /home/sweepi/SweePi && python3 - <<"PY"
+import math, yaml
+from pathlib import Path
+p=Path("maps/living_room.yaml")
+print(p.read_text())
+meta=yaml.safe_load(p.read_text())
+img=(p.parent/meta["image"]).resolve()
+print("image", img)
+raw=img.read_bytes()
+# parse PGM P5/P2
+idx=0
+def token():
+    global idx
+    while raw[idx:idx+1].isspace(): idx+=1
+    if raw[idx:idx+1]==b"#":
+        while raw[idx:idx+1] not in (b"\n", b""): idx+=1
+        return token()
+    j=idx
+    while idx < len(raw) and not raw[idx:idx+1].isspace(): idx+=1
+    return raw[j:idx]
+magic=token(); w=int(token()); h=int(token()); maxv=int(token())
+while raw[idx:idx+1].isspace(): idx+=1
+data=list(raw[idx:idx+w*h]) if magic==b"P5" else []
+print("magic",magic,"w",w,"h",h,"max",maxv,"len",len(data))
+res=float(meta["resolution"]); ox,oy,oyaw=map(float, meta["origin"])
+# map_server trinary default: occupied if occ>occ_thresh, free if occ<free_thresh, else unknown. For negate=0 occ=(255-p)/255.
+free=[]; occ=[]; unk=[]
+free_thresh=float(meta.get("free_thresh",0.196)); occ_thresh=float(meta.get("occupied_thresh",0.65)); negate=int(meta.get("negate",0))
+for y in range(h):
+  for x in range(w):
+    pix=data[y*w+x]
+    occprob=(pix/255.0 if negate else (255-pix)/255.0)
+    if occprob > occ_thresh: occ.append((x,y))
+    elif occprob < free_thresh: free.append((x,y))
+    else: unk.append((x,y))
+print("counts free occ unk",len(free),len(occ),len(unk))
+# API reported cell for 0,0; find nearest free to 0,0 and candidates around center
+def world(x,y): return (ox+(x+0.5)*res, oy+(h-y-0.5)*res)  # ROS map y? Need compare API may not invert; print both
+mx=int((0-ox)/res); my=int((0-oy)/res)
+print("cell no invert for 0,0",mx,my,"pix",data[my*w+mx] if 0<=mx<w and 0<=my<h else None)
+# API reported my 163, check world with no invert formula used by map_store likely oy+my*res
+for cx,cy in [(mx,my),(144,163)]:
+  if 0<=cx<w and 0<=cy<h:
+    print("cell",cx,cy,"pix",data[cy*w+cx],"world_noinv",(ox+(cx+0.5)*res, oy+(cy+0.5)*res),"world_invert",world(cx,cy))
+nearest=sorted(free, key=lambda c:(ox+(c[0]+0.5)*res)**2 + (oy+(c[1]+0.5)*res)**2)[:20]
+for c in nearest[:10]:
+  wx=ox+(c[0]+0.5)*res; wy=oy+(c[1]+0.5)*res
+  print("nearest_free_noinv",c,"world",round(wx,3),round(wy,3),"dist",round(math.hypot(wx,wy),3),"pix",data[c[1]*w+c[0]])
+PY
+===== coverage_initial_pose_nearest_free =====
+$ bash -lc cd /home/sweepi/SweePi && curl -sS -X POST http://localhost:8080/api/localization/initial-pose -H "Content-Type: application/json" -d "{\"map_id\":\"living_room\",\"x\":-0.129,\"y\":0.100,\"yaw\":0.0,\"frame\":\"map\"}" && echo && sleep 8 && curl -sS http://localhost:8080/api/localization/status && echo && curl -sS http://localhost:8080/api/cleaning/status && echo && curl -sS "http://localhost:8080/api/cleaning/path?stride=5" && echo
+===== coverage_tf_costmaps_after_valid_pose =====
+$ bash -lc cd /home/sweepi/SweePi && source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install/setup.bash && timeout 5 ros2 topic echo /amcl_pose --once; timeout 5 ros2 run tf2_ros tf2_echo map odom; timeout 5 ros2 run tf2_ros tf2_echo map base_footprint; timeout 5 ros2 topic echo /global_costmap/costmap --once | sed -n "1,35p"; timeout 5 ros2 topic echo /local_costmap/costmap --once | sed -n "1,35p"
+===== coverage_path_current =====
+$ bash -lc cd /home/sweepi/SweePi && source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install/setup.bash && curl -sS http://localhost:8080/api/cleaning/path > "$DIAG/path_full.json" && python3 - <<"PY"
+import json
+p=json.load(open("/home/sweepi/SweePi/diagnostics/coverage_motion_latest/path_full.json"))
+print("api_available",p.get("available"),"points",len(p.get("points",[])),"pose_count",p.get("pose_count"),"signature",p.get("path_signature"))
+print("first_points",p.get("points",[])[:5])
+PY
+ros2 topic info /coverage_path -v; timeout 5 ros2 topic echo /coverage_path --once | sed -n "1,120p"
+===== resume_state =====
+$ bash -lc git status --short --branch && ros2 pkg prefix sweepi_api_bridge && pgrep -af "ros2|launch|sweepi|nav2|controller|planner|coverage|amcl|map_server|uvicorn" && ss -ltnp | grep ":8080" || true
+===== initial_pose_amcl_settled =====
+$ bash -lc curl -sS -X POST http://localhost:8080/api/localization/initial-pose -H "Content-Type: application/json" -d "{\"map_id\":\"living_room\",\"x\":-0.25908158,\"y\":-0.64557917,\"yaw\":-0.05459046,\"frame\":\"map\"}"; echo; curl -sS http://localhost:8080/api/localization/status; echo; curl -sS http://localhost:8080/api/cleaning/status; echo
+===== source_grep =====
+$ bash -lc rg -n "initial_pose|INITIAL_POSE|pose_check|coverage_path|FollowPath|cmd_vel|cmd_vel_nav|cmd_vel_smoothed" src/sweepi_api_bridge src/sweepi_robot_manager src/sweepi_coverage -S | head -n 300
+===== coverage_params_src =====
+$ bash -lc sed -n "1,260p" src/sweepi_coverage/config/coverage_follow_path_params.yaml
+===== coverage_launch_src =====
+$ bash -lc sed -n "1,260p" src/sweepi_robot_manager/launch/coverage_task.launch.py
+===== path_occupancy_analysis =====
+$ bash -lc python3 - <<"PY"
+import yaml, math, pathlib, subprocess, json, re
+from PIL import Image
+mp=pathlib.Path("maps/living_room.yaml")
+y=yaml.safe_load(mp.read_text())
+img_path=mp.parent / y["image"]
+img=Image.open(img_path).convert("L")
+w,h=img.size
+res=float(y["resolution"]); ox,oy,oth=map(float,y["origin"])
+points=[(-0.2790927082423762,-0.6504112580713652),(-0.129,0.1),(0,0),(-0.25908158,-0.64557917)]
+print("map", img_path, "size", w,h,"res",res,"origin",ox,oy)
+for x,yy in points:
+    cx=math.floor((x-ox)/res); cy=math.floor((yy-oy)/res)
+    img_y=h-1-cy
+    pix=img.getpixel((cx,img_y)) if 0<=cx<w and 0<=img_y<h else None
+    print("world",x,yy,"cell",cx,cy,"img_y",img_y,"pixel",pix)
+# dump first few path points from API and sample pixels
+import urllib.request
+raw=urllib.request.urlopen("http://localhost:8080/api/cleaning/path").read().decode()
+data=json.loads(raw)
+pts=data.get("points") or []
+print("api points",len(pts),"signature",data.get("path_signature"))
+counts={"free":0,"occ":0,"unknown":0,"other":0,"out":0}
+for p in pts[:200]:
+    x=float(p.get("x",0)); yy=float(p.get("y",0))
+    cx=math.floor((x-ox)/res); cy=math.floor((yy-oy)/res); img_y=h-1-cy
+    if not(0<=cx<w and 0<=img_y<h): counts["out"]+=1; continue
+    pix=img.getpixel((cx,img_y))
+    # map_server trinary default: 255 free, 0 occ, 205 unknown usually
+    if pix > 250: counts["free"]+=1
+    elif pix < 10: counts["occ"]+=1
+    elif 120 <= pix <= 140 or 200 <= pix <= 210: counts["unknown"]+=1
+    else: counts["other"]+=1
+print("first200 image pixel buckets",counts)
+for p in pts[:10]:
+    x=float(p.get("x",0)); yy=float(p.get("y",0)); cx=math.floor((x-ox)/res); cy=math.floor((yy-oy)/res); img_y=h-1-cy
+    pix=img.getpixel((cx,img_y)) if 0<=cx<w and 0<=img_y<h else None
+    print("pt",round(x,3),round(yy,3),"cell",cx,cy,"pix",pix)
+PY
+===== map_store_source =====
+$ bash -lc rg -n "class .*Map|check_pose|occupancy|image|pgm|origin|height|width|resolution" src/sweepi_api_bridge/sweepi_api_bridge -S && sed -n "1,260p" src/sweepi_api_bridge/sweepi_api_bridge/map_store.py 2>/dev/null || true && rg -n "def check_pose|class Map" src/sweepi_api_bridge/sweepi_api_bridge -S
+===== map_store_relevant =====
+$ bash -lc sed -n "190,320p" src/sweepi_api_bridge/sweepi_api_bridge/map_store.py && sed -n "407,456p" src/sweepi_api_bridge/sweepi_api_bridge/map_store.py
+===== patch_map_store_pgm_flip =====
+$ bash -lc python3 - <<"PY"
+from pathlib import Path
+path = Path("src/sweepi_api_bridge/sweepi_api_bridge/map_store.py")
+text = path.read_text()
+old = """        occupancy = []\n        for pixel in image[pixels]:\n            value = 255 - pixel if negate else pixel\n            occ = (255 - value) / 255.0\n            if occ > occupied_thresh:\n                occupancy.append(100)\n            elif occ < free_thresh:\n                occupancy.append(0)\n            else:\n                occupancy.append(-1)\n"""
+new = """        occupancy = []\n        width = image[width]\n        height = image[height]\n        # PGM map images are stored top row first, while ROS OccupancyGrid\n        # data is indexed from the map origin at the bottom-left.\n        for row in range(height - 1, -1, -1):\n            start = row * width\n            for pixel in image[pixels][start:start + width]:\n                value = 255 - pixel if negate else pixel\n                occ = (255 - value) / 255.0\n                if occ > occupied_thresh:\n                    occupancy.append(100)\n                elif occ < free_thresh:\n                    occupancy.append(0)\n                else:\n                    occupancy.append(-1)\n"""
+if old not in text:
+    raise SystemExit("target block not found")
+path.write_text(text.replace(old, new))
+PY
+git diff -- src/sweepi_api_bridge/sweepi_api_bridge/map_store.py
+===== map_store_unit_after_patch =====
+$ bash -lc PYTHONPATH=src/sweepi_api_bridge python3 - <<"PY"
+from sweepi_api_bridge.map_store import MapStore
+store=MapStore("/home/sweepi/SweePi/maps")
+for p in [(0,0),(-0.25908158,-0.64557917),(-0.2790927082423762,-0.6504112580713652),(-0.129,0.1)]:
+    print(p, store.check_pose("living_room", p[0], p[1]))
+PY
+===== build_api_map_store_fix =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --packages-select sweepi_api_bridge --event-handlers console_direct+
+===== graceful_stop_before_restart =====
+$ bash -lc $DIAG/tools/emergency_stop.sh; sleep 2; pgrep -af "coverage_task|coverage_.*node|controller_server|amcl|map_server|bt_navigator|planner_server|behavior_server" || true; fuser -v /dev/ttyAMA0 /dev/ttyUSB0 2>/dev/null || true
+===== post_full_stack_stop_check =====
+$ bash -lc sleep 3; pgrep -af "ros2 launch sweepi_robot_manager master|base_driver_node|sllidar_node|sweepi_robot_manager_node|api_bridge_node|coverage_task|coverage_.*node|controller_server|amcl|map_server" || true; fuser -v /dev/ttyAMA0 /dev/ttyUSB0 2>/dev/null || true; ss -ltnp | grep ":8080" || true
+===== start_full_stack_after_map_fix =====
+$ bash -lc cd /home/sweepi/SweePi && source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install/setup.bash && ros2 launch sweepi_robot_manager master.launch.py use_sim_time:=false launch_sim:=false launch_hardware:=true launch_rviz:=false launch_api_bridge:=true use_arm_assist:=false api_host:=0.0.0.0 api_port:=8080 base_serial_port:=/dev/ttyAMA0 base_baud_rate:=115200 lidar_serial_port:=/dev/ttyUSB0 lidar_baud_rate:=460800 lidar_frame_id:=lidar_link > "$DIAG/full_stack_after_map_fix.log" 2>&1 & echo $! > "$DIAG/full_stack_after_map_fix.pid"; echo started_pid=$(cat "$DIAG/full_stack_after_map_fix.pid")
+===== after_map_fix_launch_debug =====
+$ bash -lc tail -n 220 "$DIAG/full_stack_after_map_fix.log"; echo PROCESSES; pgrep -af "ros2 launch sweepi_robot_manager master|base_driver_node|sllidar_node|sweepi_robot_manager_node|api_bridge_node" || true; echo PORTS; ss -ltnp | grep ":8080" || true; echo CURL; curl --max-time 3 -sv http://127.0.0.1:8080/api/system/health 2>&1 || true
+===== start_full_stack_detached =====
+$ bash -lc cd /home/sweepi/SweePi && setsid bash -lc "source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install/setup.bash && ros2 launch sweepi_robot_manager master.launch.py use_sim_time:=false launch_sim:=false launch_hardware:=true launch_rviz:=false launch_api_bridge:=true use_arm_assist:=false api_host:=0.0.0.0 api_port:=8080 base_serial_port:=/dev/ttyAMA0 base_baud_rate:=115200 lidar_serial_port:=/dev/ttyUSB0 lidar_baud_rate:=460800 lidar_frame_id:=lidar_link" > "$DIAG/full_stack_detached.log" 2>&1 < /dev/null & echo $! > "$DIAG/full_stack_detached.pid"; echo started_pid=$(cat "$DIAG/full_stack_detached.pid")
+===== coverage_flow_after_map_fix_prepare_pose =====
+$ bash -lc curl --max-time 5 -sS -X POST http://localhost:8080/api/cleaning/stop || true; echo; curl --max-time 5 -sS -X POST http://localhost:8080/api/cleaning/reset || true; echo; sleep 2; curl --max-time 10 -sS -X POST http://localhost:8080/api/cleaning/start -H "Content-Type: application/json" -d "{\"map_id\":\"living_room\",\"cleaning_mode\":\"full-map\"}"; echo; sleep 5; curl --max-time 20 -sS -X POST http://localhost:8080/api/localization/initial-pose -H "Content-Type: application/json" -d "{\"map_id\":\"living_room\",\"x\":0.0,\"y\":0.0,\"yaw\":0.0,\"frame\":\"map\"}"; echo; curl --max-time 5 -sS http://localhost:8080/api/localization/status; echo; curl --max-time 5 -sS http://localhost:8080/api/cleaning/status; echo
+===== coverage_flow_after_map_fix_pose2 =====
+$ bash -lc curl --max-time 20 -sS -X POST http://localhost:8080/api/localization/initial-pose -H "Content-Type: application/json" -d "{\"map_id\":\"living_room\",\"x\":-0.29033818,\"y\":-0.58181148,\"yaw\":-0.02872866,\"frame\":\"map\"}"; echo; sleep 5; curl --max-time 5 -sS http://localhost:8080/api/localization/status; echo; curl --max-time 5 -sS http://localhost:8080/api/cleaning/status; echo; curl --max-time 8 -sS http://localhost:8080/api/cleaning/path | python3 -m json.tool | head -n 80
+===== pre_start_motion_graph =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install/setup.bash; echo NODES; timeout 8 ros2 node list; echo EXECUTOR_INFO; timeout 8 ros2 node info /coverage_follow_path_executor_node; echo EXECUTOR_PARAMS; timeout 8 ros2 param dump /coverage_follow_path_executor_node; echo ACTIONS; timeout 8 ros2 action list -t; echo FOLLOW_PATH; timeout 8 ros2 action info /follow_path -t; echo LIFECYCLE; for n in /controller_server /planner_server /behavior_server /bt_navigator /map_server /amcl /smoother_server /waypoint_follower /velocity_smoother; do echo $n; timeout 5 ros2 lifecycle get $n || true; done; echo VELOCITY_TOPICS; timeout 8 ros2 topic list | grep -Ei "cmd_vel|velocity|twist" || true; for t in /cmd_vel /cmd_vel_nav /cmd_vel_smoothed /cmd_vel_teleop; do echo TOPIC $t; timeout 8 ros2 topic info $t -v || true; done; echo PATH_TOPIC; timeout 8 ros2 topic info /coverage_path -v; echo EXEC_STATUS; timeout 8 ros2 topic echo /coverage_execution_status --once || true
+===== monitor_script_check =====
+$ bash -lc python3 -m py_compile "$DIAG/tools/monitor_motion_chain.py" && echo ok
+===== coverage_validate_after_map_fix =====
+$ bash -lc curl --max-time 15 -sS -X POST http://localhost:8080/api/cleaning/validate; echo; curl --max-time 5 -sS http://localhost:8080/api/cleaning/status; echo
+===== start_motion_with_monitor =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install/setup.bash; "$DIAG/tools/monitor_motion_chain.py" --duration 35 > "$DIAG/start_motion_monitor_1.log" 2>&1 & MON=$!; echo monitor_pid=$MON; sleep 2; echo START_MOTION_RESPONSE; curl --max-time 15 -sS -X POST http://localhost:8080/api/cleaning/start-motion; echo; echo WAIT_MONITOR; wait $MON; echo MONITOR_DONE; cat "$DIAG/start_motion_monitor_1.log"; echo STATUS_AFTER; curl --max-time 5 -sS http://localhost:8080/api/cleaning/status; echo; echo DEBUG; timeout 5 ros2 topic echo /coverage_debug_info --once || true; echo EXEC_STATUS; timeout 5 ros2 topic echo /coverage_execution_status --once || true
+===== api_path_signature_source =====
+$ bash -lc sed -n "1450,1575p" src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py; sed -n "2410,2475p" src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py
+===== build_api_signature_fix =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && python3 -m py_compile src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py src/sweepi_api_bridge/sweepi_api_bridge/map_store.py && colcon build --symlink-install --packages-select sweepi_api_bridge --event-handlers console_direct+
+===== stop_detached_for_signature_restart =====
+$ bash -lc $DIAG/tools/emergency_stop.sh || true; sleep 2; LAUNCH_PID=$(pgrep -f "ros2 launch sweepi_robot_manager master.launch.py" | head -n 1 || true); echo launch_pid=$LAUNCH_PID; if [ -n "$LAUNCH_PID" ]; then PGID=$(ps -o pgid= -p "$LAUNCH_PID" | tr -d " "); echo pgid=$PGID; kill -INT -"$PGID"; fi; sleep 5; pgrep -af "ros2 launch sweepi_robot_manager master|base_driver_node|sllidar_node|sweepi_robot_manager_node|api_bridge_node|coverage_task|coverage_.*node|controller_server|amcl|map_server" || true; fuser -v /dev/ttyAMA0 /dev/ttyUSB0 2>/dev/null || true; ss -ltnp | grep ":8080" || true
+===== stop_actual_launch_pgid =====
+$ bash -lc LAUNCH_PID=9786; if ps -p $LAUNCH_PID >/dev/null; then PGID=$(ps -o pgid= -p "$LAUNCH_PID" | tr -d " "); echo launch_pid=$LAUNCH_PID pgid=$PGID; kill -INT -"$PGID"; fi; sleep 8; pgrep -af "ros2 launch sweepi_robot_manager master|base_driver_node|sllidar_node|sweepi_robot_manager_node|api_bridge_node|coverage_task|coverage_.*node|controller_server|amcl|map_server" || true; fuser -v /dev/ttyAMA0 /dev/ttyUSB0 2>/dev/null || true; ss -ltnp | grep ":8080" || true
+===== start_full_stack_signature_fixed =====
+$ bash -lc cd /home/sweepi/SweePi && setsid bash -c "source /opt/ros/jazzy/setup.bash; source /home/sweepi/SweePi/install/setup.bash; exec ros2 launch sweepi_robot_manager master.launch.py use_sim_time:=false launch_sim:=false launch_hardware:=true launch_rviz:=false launch_api_bridge:=true use_arm_assist:=false api_host:=0.0.0.0 api_port:=8080 base_serial_port:=/dev/ttyAMA0 base_baud_rate:=115200 lidar_serial_port:=/dev/ttyUSB0 lidar_baud_rate:=460800 lidar_frame_id:=lidar_link" > "$DIAG/full_stack_signature_fixed.log" 2>&1 < /dev/null & echo $! > "$DIAG/full_stack_signature_fixed.pid"; echo started_pid=$(cat "$DIAG/full_stack_signature_fixed.pid")
+===== signature_fixed_coverage_prepare_validate =====
+$ bash -lc curl --max-time 5 -sS -X POST http://localhost:8080/api/cleaning/stop || true; echo; curl --max-time 5 -sS -X POST http://localhost:8080/api/cleaning/reset || true; echo; sleep 2; echo PREPARE; curl --max-time 10 -sS -X POST http://localhost:8080/api/cleaning/start -H "Content-Type: application/json" -d "{\"map_id\":\"living_room\",\"cleaning_mode\":\"full-map\"}"; echo; sleep 5; echo POSE; curl --max-time 20 -sS -X POST http://localhost:8080/api/localization/initial-pose -H "Content-Type: application/json" -d "{\"map_id\":\"living_room\",\"x\":-0.29033818,\"y\":-0.58181148,\"yaw\":-0.02872866,\"frame\":\"map\"}"; echo; sleep 5; echo PATH; curl --max-time 8 -sS http://localhost:8080/api/cleaning/path | python3 -m json.tool | head -n 60; echo VALIDATE; curl --max-time 15 -sS -X POST http://localhost:8080/api/cleaning/validate; echo; sleep 3; echo STATUS; curl --max-time 5 -sS http://localhost:8080/api/cleaning/status; echo
+===== signature_fixed_validate_and_start_monitor =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install/setup.bash; echo PATH_STATE; curl --max-time 8 -sS http://localhost:8080/api/cleaning/path | python3 -m json.tool | head -n 40; echo VALIDATE; curl --max-time 15 -sS -X POST http://localhost:8080/api/cleaning/validate; echo; sleep 5; echo STATUS_AFTER_5S; curl --max-time 5 -sS http://localhost:8080/api/cleaning/status; echo; "$DIAG/tools/monitor_motion_chain.py" --duration 45 > "$DIAG/start_motion_monitor_signature_fixed_1.log" 2>&1 & MON=$!; echo monitor_pid=$MON; sleep 2; echo START_MOTION; curl --max-time 15 -sS -X POST http://localhost:8080/api/cleaning/start-motion; echo; wait $MON; echo MONITOR; cat "$DIAG/start_motion_monitor_signature_fixed_1.log"; echo STATUS_AFTER_MOTION; curl --max-time 5 -sS http://localhost:8080/api/cleaning/status; echo; echo EXEC_STATUS; timeout 5 ros2 topic echo /coverage_execution_status --once || true; echo ACTION_STATUS; timeout 5 ros2 topic echo /follow_path/_action/status --once || true
+===== pause_after_successful_motion =====
+$ bash -lc echo PAUSE; curl --max-time 10 -sS -X POST http://localhost:8080/api/cleaning/pause; echo; sleep 3; echo STATUS; curl --max-time 5 -sS http://localhost:8080/api/cleaning/status; echo; echo CMD_VEL_ONCE; timeout 5 ros2 topic echo /cmd_vel --once || true; echo WHEEL_ODOM_HZ; timeout 5 ros2 topic hz /wheel/odom || true
+===== zero_stop_after_run1 =====
+$ bash -lc $DIAG/tools/emergency_stop.sh; sleep 1; curl --max-time 5 -sS http://localhost:8080/api/cleaning/status; echo; pgrep -af "coverage_task|coverage_.*node|controller_server|amcl|map_server|bt_navigator|planner_server|behavior_server" || true
+===== coverage_run1_log_tail =====
+$ bash -lc tail -n 360 "$DIAG/full_stack_signature_fixed.log" | grep -Ei "coverage|FollowPath|cmd_vel|progress|failed|error|cancel|complete|stuck|dynamic|goal|result|shutdown" || true
+===== coverage_cycle2_pause_resume =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install/setup.bash; echo CLEANUP; curl --max-time 5 -sS -X POST http://localhost:8080/api/cleaning/stop || true; echo; curl --max-time 5 -sS -X POST http://localhost:8080/api/cleaning/reset || true; echo; sleep 2; echo PREPARE; curl --max-time 10 -sS -X POST http://localhost:8080/api/cleaning/start -H "Content-Type: application/json" -d "{\"map_id\":\"living_room\",\"cleaning_mode\":\"full-map\"}"; echo; sleep 5; echo POSE; curl --max-time 20 -sS -X POST http://localhost:8080/api/localization/initial-pose -H "Content-Type: application/json" -d "{\"map_id\":\"living_room\",\"x\":-1.08369662,\"y\":-2.78863092,\"yaw\":0.90361161,\"frame\":\"map\"}"; echo; for i in $(seq 1 12); do if curl --max-time 5 -sS http://localhost:8080/api/cleaning/status | tee "$DIAG/cycle2_status_wait_$i.json" | grep -q "ready_to_validate.*true\|coverage_ready"; then break; fi; sleep 2; done; echo VALIDATE; curl --max-time 15 -sS -X POST http://localhost:8080/api/cleaning/validate; echo; sleep 3; echo STATUS_VALIDATED; curl --max-time 5 -sS http://localhost:8080/api/cleaning/status; echo; "$DIAG/tools/monitor_motion_chain.py" --duration 45 > "$DIAG/cycle2_pause_resume_monitor.log" 2>&1 & MON=$!; echo monitor_pid=$MON; sleep 2; echo START; curl --max-time 15 -sS -X POST http://localhost:8080/api/cleaning/start-motion; echo; sleep 12; echo PAUSE; curl --max-time 10 -sS -X POST http://localhost:8080/api/cleaning/pause; echo; sleep 5; echo STATUS_PAUSED; curl --max-time 5 -sS http://localhost:8080/api/cleaning/status; echo; sleep 2; echo RESUME; curl --max-time 10 -sS -X POST http://localhost:8080/api/cleaning/resume; echo; sleep 12; echo STOP; curl --max-time 10 -sS -X POST http://localhost:8080/api/cleaning/stop; echo; wait $MON; echo MONITOR; cat "$DIAG/cycle2_pause_resume_monitor.log"; echo FINAL_STATUS; curl --max-time 5 -sS http://localhost:8080/api/cleaning/status; echo; $DIAG/tools/emergency_stop.sh >/dev/null 2>&1 || true
+===== post_cycle2_cleanup_state =====
+$ bash -lc curl --max-time 5 -sS http://localhost:8080/api/cleaning/status; echo; pgrep -af "coverage_task|coverage_.*node|controller_server|amcl|map_server|bt_navigator|planner_server|behavior_server" || true; timeout 8 ros2 topic list | grep -Ei "coverage_path|coverage_execution_status|cmd_vel" || true
+===== api_stop_reset_source =====
+$ bash -lc rg -n "def _api_.*cleaning|stop_cleaning|reset_cleaning|coverage_path_available|task_finished|_reset|clear" src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py src/sweepi_api_bridge/sweepi_api_bridge/runtime_state.py -S | head -n 250; sed -n "1500,1635p" src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py; sed -n "2220,2355p" src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py; sed -n "1,130p" src/sweepi_api_bridge/sweepi_api_bridge/runtime_state.py
+===== api_callbacks_cleanup_source =====
+$ bash -lc sed -n "520,630p" src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py; sed -n "2310,2510p" src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py
+===== manager_status_after_cycle2 =====
+$ bash -lc timeout 8 ros2 topic echo /sweepi_robot_manager/status --once || true; curl --max-time 5 -sS http://localhost:8080/api/robot/status; echo
+===== build_api_cleanup_fixes =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && python3 -m py_compile src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py src/sweepi_api_bridge/sweepi_api_bridge/runtime_state.py src/sweepi_api_bridge/sweepi_api_bridge/map_store.py && colcon build --symlink-install --packages-select sweepi_api_bridge --event-handlers console_direct+
+===== restart_stack_after_cleanup_build =====
+$ bash -lc $DIAG/tools/emergency_stop.sh || true; sleep 2; LAUNCH_PID=$(pgrep -f "ros2 launch sweepi_robot_manager master.launch.py" | head -n 1 || true); echo launch_pid=$LAUNCH_PID; if [ -n "$LAUNCH_PID" ]; then PGID=$(ps -o pgid= -p "$LAUNCH_PID" | tr -d " "); echo pgid=$PGID; kill -INT -"$PGID"; fi; sleep 8; pgrep -af "ros2 launch sweepi_robot_manager master|base_driver_node|sllidar_node|sweepi_robot_manager_node|api_bridge_node|coverage_task|coverage_.*node" || true; fuser -v /dev/ttyAMA0 /dev/ttyUSB0 2>/dev/null || true; ss -ltnp | grep ":8080" || true; cd /home/sweepi/SweePi && setsid bash -c "source /opt/ros/jazzy/setup.bash; source /home/sweepi/SweePi/install/setup.bash; exec ros2 launch sweepi_robot_manager master.launch.py use_sim_time:=false launch_sim:=false launch_hardware:=true launch_rviz:=false launch_api_bridge:=true use_arm_assist:=false api_host:=0.0.0.0 api_port:=8080 base_serial_port:=/dev/ttyAMA0 base_baud_rate:=115200 lidar_serial_port:=/dev/ttyUSB0 lidar_baud_rate:=460800 lidar_frame_id:=lidar_link" > "$DIAG/full_stack_cleanup_fixed.log" 2>&1 < /dev/null & echo $! > "$DIAG/full_stack_cleanup_fixed.pid"; echo new_pid=$(cat "$DIAG/full_stack_cleanup_fixed.pid")
+===== final_idle_state_after_restart =====
+$ bash -lc curl --max-time 5 -sS http://localhost:8080/api/cleaning/status; echo; curl --max-time 5 -sS http://localhost:8080/api/robot/status; echo; pgrep -af "ros2 launch sweepi_robot_manager master|base_driver_node|sllidar_node|sweepi_robot_manager_node|api_bridge_node"; fuser -v /dev/ttyAMA0 /dev/ttyUSB0 2>/dev/null || true
+===== final_restart_short_coverage_movement =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install/setup.bash; echo PREPARE; curl --max-time 10 -sS -X POST http://localhost:8080/api/cleaning/start -H "Content-Type: application/json" -d "{\"map_id\":\"living_room\",\"cleaning_mode\":\"full-map\"}"; echo; sleep 5; echo POSE; curl --max-time 20 -sS -X POST http://localhost:8080/api/localization/initial-pose -H "Content-Type: application/json" -d "{\"map_id\":\"living_room\",\"x\":-1.43906824,\"y\":-3.71318701,\"yaw\":-1.77878123,\"frame\":\"map\"}"; echo; for i in $(seq 1 15); do STATUS=$(curl --max-time 5 -sS http://localhost:8080/api/cleaning/status); echo "$STATUS" > "$DIAG/final_restart_status_wait_$i.json"; echo "$STATUS" | grep -q "ready_to_validate.*true\|coverage_ready\|coverage_validated" && break; sleep 2; done; echo VALIDATE; curl --max-time 15 -sS -X POST http://localhost:8080/api/cleaning/validate; echo; sleep 3; echo STATUS_VALIDATED; curl --max-time 5 -sS http://localhost:8080/api/cleaning/status; echo; "$DIAG/tools/monitor_motion_chain.py" --duration 25 > "$DIAG/final_restart_short_movement_monitor.log" 2>&1 & MON=$!; sleep 2; echo START; curl --max-time 15 -sS -X POST http://localhost:8080/api/cleaning/start-motion; echo; sleep 12; echo STOP; curl --max-time 10 -sS -X POST http://localhost:8080/api/cleaning/stop; echo; wait $MON; echo MONITOR; cat "$DIAG/final_restart_short_movement_monitor.log"; sleep 5; echo FINAL_STATUS; curl --max-time 5 -sS http://localhost:8080/api/cleaning/status; echo; echo PROCESSES; pgrep -af "coverage_task|coverage_.*node|controller_server|amcl|map_server|bt_navigator|planner_server|behavior_server" || true; $DIAG/tools/emergency_stop.sh >/dev/null 2>&1 || true
+===== final_restart_short_coverage_retry_after_amcl_settle =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install/setup.bash; echo PREPARE; curl --max-time 10 -sS -X POST http://localhost:8080/api/cleaning/start -H "Content-Type: application/json" -d "{\"map_id\":\"living_room\",\"cleaning_mode\":\"full-map\"}"; echo; echo WAIT_FOR_AMCL; sleep 15; timeout 5 ros2 topic echo /amcl_pose --once || true; echo POSE; curl --max-time 20 -sS -X POST http://localhost:8080/api/localization/initial-pose -H "Content-Type: application/json" -d "{\"map_id\":\"living_room\",\"x\":-1.43906824,\"y\":-3.71318701,\"yaw\":-1.77878123,\"frame\":\"map\"}"; echo; sleep 8; echo STATUS_POSE; curl --max-time 5 -sS http://localhost:8080/api/cleaning/status; echo; echo VALIDATE; curl --max-time 15 -sS -X POST http://localhost:8080/api/cleaning/validate; echo; sleep 3; "$DIAG/tools/monitor_motion_chain.py" --duration 25 > "$DIAG/final_restart_retry_monitor.log" 2>&1 & MON=$!; sleep 2; echo START; curl --max-time 15 -sS -X POST http://localhost:8080/api/cleaning/start-motion; echo; sleep 10; echo STOP; curl --max-time 10 -sS -X POST http://localhost:8080/api/cleaning/stop; echo; wait $MON; echo MONITOR; cat "$DIAG/final_restart_retry_monitor.log"; sleep 5; echo FINAL_STATUS; curl --max-time 5 -sS http://localhost:8080/api/cleaning/status; echo; $DIAG/tools/emergency_stop.sh >/dev/null 2>&1 || true
+===== final_restart_short_coverage_with_current_amcl_pose =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install/setup.bash; echo PREPARE; curl --max-time 10 -sS -X POST http://localhost:8080/api/cleaning/start -H "Content-Type: application/json" -d "{\"map_id\":\"living_room\",\"cleaning_mode\":\"full-map\"}"; echo; sleep 5; echo POSE_CURRENT; curl --max-time 20 -sS -X POST http://localhost:8080/api/localization/initial-pose -H "Content-Type: application/json" -d "{\"map_id\":\"living_room\",\"x\":-0.98263786,\"y\":-3.20263304,\"yaw\":-2.17431814,\"frame\":\"map\"}"; echo; sleep 8; echo STATUS_POSE; curl --max-time 5 -sS http://localhost:8080/api/cleaning/status; echo; echo VALIDATE; curl --max-time 15 -sS -X POST http://localhost:8080/api/cleaning/validate; echo; sleep 3; "$DIAG/tools/monitor_motion_chain.py" --duration 25 > "$DIAG/final_restart_current_pose_monitor.log" 2>&1 & MON=$!; sleep 2; echo START; curl --max-time 15 -sS -X POST http://localhost:8080/api/cleaning/start-motion; echo; sleep 10; echo STOP; curl --max-time 10 -sS -X POST http://localhost:8080/api/cleaning/stop; echo; wait $MON; echo MONITOR; cat "$DIAG/final_restart_current_pose_monitor.log"; sleep 5; echo FINAL_STATUS; curl --max-time 5 -sS http://localhost:8080/api/cleaning/status; echo; $DIAG/tools/emergency_stop.sh >/dev/null 2>&1 || true
+===== final_collect_summary =====
+$ bash -lc $DIAG/tools/emergency_stop.sh >/dev/null 2>&1 || true; sleep 2; git status --short --branch; git diff --stat; git diff -- src/sweepi_api_bridge/sweepi_api_bridge/map_store.py src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py src/sweepi_api_bridge/sweepi_api_bridge/runtime_state.py; echo FINAL_API; curl --max-time 5 -sS http://localhost:8080/api/system/health; echo; curl --max-time 5 -sS http://localhost:8080/api/cleaning/status; echo; echo PROCESSES; pgrep -af "ros2 launch sweepi_robot_manager master|base_driver_node|sllidar_node|sweepi_robot_manager_node|api_bridge_node|coverage_task|coverage_.*node" || true; echo SERIAL; fuser -v /dev/ttyAMA0 /dev/ttyUSB0 2>/dev/null || true

@@ -1,0 +1,8 @@
+MOTION_CHAIN_MONITOR duration=45.0
+/cmd_vel_nav count=416 nonzero=416 max_lin=0.1000 max_ang=1.2098 first_nonzero=(3.433012809000047, 0.0, -0.1) last=(44.92657280699996, 0.0, 1.2049596128533522)
+/cmd_vel_smoothed count=832 nonzero=832 max_lin=0.1000 max_ang=0.6500 first_nonzero=(3.467656404999616, 0.0, -0.045) last=(45.01807757500001, 0.0, 0.65)
+/cmd_vel count=831 nonzero=831 max_lin=0.1000 max_ang=0.6500 first_nonzero=(3.501524999999674, 0.0, -0.045) last=(44.99993010299977, 0.0, 0.65)
+/wheel/odom first=(2.8482934329999807, 0.0, 0.0, 0.0) last=(45.01729779399966, -4.163888828537639, -0.8209877546395525, 0.0) delta_xy=4.2441
+/hardware/status count=0 faults=[]
+/coverage_execution_status transitions=[(1.088776069999767, 'IDLE'), (1.243039682000017, 'VALIDATING'), (1.4311936269996295, 'SMOOTHING'), (2.866484935999779, 'WAITING_FOR_NAV2'), (3.4057988780000414, 'EXECUTING'), (44.17897200099969, 'SKIPPING_DYNAMIC_OBSTACLE')]
+/follow_path action status transitions=[(3.42516556999999, [2])]

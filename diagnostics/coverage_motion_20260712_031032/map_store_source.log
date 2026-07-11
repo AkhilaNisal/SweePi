@@ -1,0 +1,420 @@
+===== map_store_source =====
+$ bash -lc rg -n "class .*Map|check_pose|occupancy|image|pgm|origin|height|width|resolution" src/sweepi_api_bridge/sweepi_api_bridge -S && sed -n "1,260p" src/sweepi_api_bridge/sweepi_api_bridge/map_store.py 2>/dev/null || true && rg -n "def check_pose|class Map" src/sweepi_api_bridge/sweepi_api_bridge -S
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:1:"""Saved map metadata and occupancy helpers for SweePi maps."""
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:17:class MapStore:
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:24:    def map_image_path(self, map_id, yaml_data=None):
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:25:        if yaml_data and yaml_data.get('image'):
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:26:            image = str(yaml_data['image'])
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:27:            if os.path.isabs(image):
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:28:                return image
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:29:            return os.path.join(self.maps_dir, image)
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:30:        return os.path.join(self.maps_dir, '%s.pgm' % sanitize_map_id(map_id))
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:53:        image = self._read_pgm(self.map_image_path(clean_id, yaml_data))
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:54:        origin = self._origin_to_dict(yaml_data.get('origin', [0.0, 0.0, 0.0]))
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:59:            'resolution': yaml_data.get('resolution'),
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:60:            'origin': origin,
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:61:            'width': image['width'] if image else None,
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:62:            'height': image['height'] if image else None,
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:122:        width = int(processed_map['width'])
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:123:        height = int(processed_map['height'])
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:124:        resolution = float(processed_map['resolution'])
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:125:        origin = processed_map['origin']
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:126:        occupancy = [int(value) for value in processed_map['occupancy']]
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:127:        if width <= 0 or height <= 0 or len(occupancy) != width * height:
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:128:            raise ValueError('processed_map occupancy size does not match width*height')
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:131:        self._write_occupancy_as_map(
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:133:            width,
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:134:            height,
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:135:            resolution,
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:136:            self._origin_to_dict(origin),
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:137:            occupancy,
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:147:        width = int(source['width'])
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:148:        height = int(source['height'])
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:149:        resolution = float(source['resolution'])
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:150:        origin = source['origin']
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:151:        source_occupancy = list(source['occupancy'])
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:153:        for index, cell in enumerate(source_occupancy):
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:154:            x_index = index % width
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:155:            y_index = index // width
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:156:            world_x = origin['x'] + (x_index + 0.5) * resolution
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:157:            world_y = origin['y'] + (y_index + 0.5) * resolution
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:166:        self._write_occupancy_as_map(
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:168:            width,
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:169:            height,
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:170:            resolution,
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:171:            origin,
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:197:        image_path = self.map_image_path(clean_id, yaml_data)
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:198:        image = self._read_pgm(image_path)
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:199:        if image is None:
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:204:                'message': 'Map image could not be read',
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:207:        resolution = float(yaml_data.get('resolution', 0.05))
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:208:        origin = yaml_data.get('origin', [0.0, 0.0, 0.0])
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:212:        occupancy = []
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:213:        for pixel in image['pixels']:
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:217:                occupancy.append(100)
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:219:                occupancy.append(0)
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:221:                occupancy.append(-1)
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:227:            'resolution': resolution,
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:228:            'width': image['width'],
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:229:            'height': image['height'],
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:230:            'origin': self._origin_to_dict(origin),
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:231:            'occupancy': occupancy,
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:234:    def check_pose(self, map_id, x, y, allow_unknown=False, occupied_threshold=50):
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:235:        """Validate a world-frame pose against a saved occupancy map."""
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:246:        width = int(saved_map.get('width') or 0)
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:247:        height = int(saved_map.get('height') or 0)
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:248:        resolution = float(saved_map.get('resolution') or 0.0)
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:249:        occupancy = saved_map.get('occupancy') or []
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:250:        if width <= 0 or height <= 0 or resolution <= 0.0:
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:258:        origin = self._origin_to_dict(saved_map.get('origin'))
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:259:        dx = float(x) - origin['x']
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:260:        dy = float(y) - origin['y']
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:261:        yaw = origin.get('yaw', 0.0)
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:266:        cell_x = int(math.floor(local_x / resolution))
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:267:        cell_y = int(math.floor(local_y / resolution))
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:272:            'width': width,
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:273:            'height': height,
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:274:            'resolution': resolution,
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:276:        if cell_x < 0 or cell_y < 0 or cell_x >= width or cell_y >= height:
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:285:        index = (cell_y * width) + cell_x
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:286:        value = int(occupancy[index]) if 0 <= index < len(occupancy) else 100
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:293:            'occupancy': value,
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:344:    def _read_pgm(self, path):
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:350:                width = int(self._read_token(handle))
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:351:                height = int(self._read_token(handle))
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:353:                if width <= 0 or height <= 0 or max_value <= 0:
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:356:                    raw = handle.read(width * height)
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:361:                        for _ in range(width * height)
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:365:        return {'width': width, 'height': height, 'pixels': pixels}
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:382:    def _origin_to_dict(self, origin):
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:383:        if isinstance(origin, dict):
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:385:                'x': float(origin.get('x', 0.0)),
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:386:                'y': float(origin.get('y', 0.0)),
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:387:                'yaw': float(origin.get('yaw', 0.0)),
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:389:        values = origin if isinstance(origin, (list, tuple)) else []
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:401:            max_x = min_x + float(bounds.get('width', 0.0))
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:402:            max_y = min_y + float(bounds.get('height', 0.0))
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:407:    def _write_occupancy_as_map(
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:410:        width,
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:411:        height,
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:412:        resolution,
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:413:        origin,
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:414:        occupancy,
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:417:        pgm_name = clean_id + '.pgm'
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:419:        pgm_path = os.path.join(self.maps_dir, pgm_name)
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:421:        with open(pgm_path, 'wb') as handle:
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:422:            handle.write(('P5\n%d %d\n255\n' % (width, height)).encode('ascii'))
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:424:            for row in range(height - 1, -1, -1):
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:425:                start = row * width
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:426:                for cell in occupancy[start:start + width]:
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:435:        yaw = float(origin.get('yaw', 0.0))
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:439:            'image: %s\n'
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:441:            'resolution: %.12g\n'
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:442:            'origin: [%.12g, %.12g, %.12g]\n'
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:447:            pgm_name,
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:448:            float(resolution),
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:449:            float(origin.get('x', 0.0)),
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:450:            float(origin.get('y', 0.0)),
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:26:    occupancy_grid_to_json,
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:523:            payload = occupancy_grid_to_json(live_map, include_occupancy=True)
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:1090:            pose_check = self.map_store.check_pose(validation_map_id, x, y)
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:1187:            resolution=payload['resolution'],
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:1188:            origin=payload['origin'],
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:1189:            width=payload['width'],
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:1190:            height=payload['height'],
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:1191:            occupancy=payload['occupancy'],
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:1238:            'resolution': metadata.get('resolution'),
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:1239:            'origin': metadata.get('origin') or {'x': 0.0, 'y': 0.0, 'yaw': 0.0},
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:1240:            'width': metadata.get('width'),
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:1241:            'height': metadata.get('height'),
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:1667:        for field in ('width', 'height', 'resolution', 'origin', 'occupancy'):
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:1676:            width = int(processed_map['width'])
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:1677:            height = int(processed_map['height'])
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:1678:            float(processed_map['resolution'])
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:1681:                'processed_map width, height, and resolution must be numeric.',
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:1686:        occupancy = processed_map.get('occupancy')
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:1687:        if not isinstance(occupancy, list) or len(occupancy) != width * height:
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:1689:                'processed_map occupancy size must match width*height.',
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:1691:                {'field': 'processed_map.occupancy'},
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:1694:        origin = processed_map.get('origin')
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:1695:        if not isinstance(origin, dict):
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:1697:                'processed_map.origin is required.',
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:1699:                {'field': 'processed_map.origin'},
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:1763:                    for field in ('x', 'y', 'width', 'height'):
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:1777:                        if field in ('width', 'height') and value <= 0.0:
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:1974:        payload = occupancy_grid_to_json(coverage_map, include_occupancy=True)
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:2008:        cell_area = float(coverage_map.info.resolution) ** 2
+src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py:2411:        available = bool(msg.info.width and msg.info.height and msg.data)
+src/sweepi_api_bridge/sweepi_api_bridge/json_utils.py:84:def occupancy_grid_to_json(msg, include_occupancy=True):
+src/sweepi_api_bridge/sweepi_api_bridge/json_utils.py:88:        'resolution': float(msg.info.resolution),
+src/sweepi_api_bridge/sweepi_api_bridge/json_utils.py:89:        'width': int(msg.info.width),
+src/sweepi_api_bridge/sweepi_api_bridge/json_utils.py:90:        'height': int(msg.info.height),
+src/sweepi_api_bridge/sweepi_api_bridge/json_utils.py:91:        'origin': {
+src/sweepi_api_bridge/sweepi_api_bridge/json_utils.py:92:            'x': float(msg.info.origin.position.x),
+src/sweepi_api_bridge/sweepi_api_bridge/json_utils.py:93:            'y': float(msg.info.origin.position.y),
+src/sweepi_api_bridge/sweepi_api_bridge/json_utils.py:94:            'yaw': float(quaternion_to_yaw(msg.info.origin.orientation)),
+src/sweepi_api_bridge/sweepi_api_bridge/json_utils.py:97:    if include_occupancy:
+src/sweepi_api_bridge/sweepi_api_bridge/json_utils.py:98:        payload['occupancy'] = list(msg.data)
+"""Saved map metadata and occupancy helpers for SweePi maps."""
+
+from datetime import datetime, timezone
+import json
+import math
+import os
+import re
+
+
+def sanitize_map_id(value, fallback='map'):
+    text = str(value or '').strip().lower()
+    text = re.sub(r'[^a-z0-9_-]+', '_', text)
+    text = re.sub(r'_+', '_', text).strip('_-')
+    return text or fallback
+
+
+class MapStore:
+    def __init__(self, maps_dir=None):
+        self.maps_dir = os.path.expanduser(maps_dir or '~/SweePi/maps')
+
+    def map_yaml_path(self, map_id):
+        return os.path.join(self.maps_dir, '%s.yaml' % sanitize_map_id(map_id))
+
+    def map_image_path(self, map_id, yaml_data=None):
+        if yaml_data and yaml_data.get('image'):
+            image = str(yaml_data['image'])
+            if os.path.isabs(image):
+                return image
+            return os.path.join(self.maps_dir, image)
+        return os.path.join(self.maps_dir, '%s.pgm' % sanitize_map_id(map_id))
+
+    def meta_path(self, map_id):
+        return os.path.join(self.maps_dir, '%s.meta.json' % sanitize_map_id(map_id))
+
+    def exists(self, map_id):
+        return os.path.exists(self.map_yaml_path(map_id))
+
+    def list_maps(self):
+        if not os.path.isdir(self.maps_dir):
+            return []
+        maps = []
+        for name in sorted(os.listdir(self.maps_dir)):
+            if not name.endswith('.yaml'):
+                continue
+            map_id = name[:-5]
+            maps.append(self.metadata(map_id))
+        return maps
+
+    def metadata(self, map_id):
+        clean_id = sanitize_map_id(map_id)
+        yaml_data = self.read_yaml(clean_id)
+        meta = self.read_meta(clean_id)
+        image = self._read_pgm(self.map_image_path(clean_id, yaml_data))
+        origin = self._origin_to_dict(yaml_data.get('origin', [0.0, 0.0, 0.0]))
+        payload = {
+            'map_id': clean_id,
+            'name': meta.get('name') or clean_id,
+            'available': self.exists(clean_id),
+            'resolution': yaml_data.get('resolution'),
+            'origin': origin,
+            'width': image['width'] if image else None,
+            'height': image['height'] if image else None,
+            'sections': meta.get('sections', []),
+            'no_go_zones': meta.get('no_go_zones', []),
+            'created_at': meta.get('created_at'),
+            'updated_at': meta.get('updated_at'),
+        }
+        return payload
+
+    def read_meta(self, map_id):
+        path = self.meta_path(map_id)
+        if not os.path.exists(path):
+            return {}
+        try:
+            with open(path, 'r', encoding='utf-8') as handle:
+                data = json.load(handle)
+        except (OSError, json.JSONDecodeError):
+            return {}
+        return data if isinstance(data, dict) else {}
+
+    def update_metadata(self, map_id, name=None, sections=None, no_go_zones=None):
+        clean_id = sanitize_map_id(map_id)
+        meta = self.read_meta(clean_id)
+        meta['map_id'] = clean_id
+        if name is not None:
+            meta['name'] = str(name).strip() or clean_id
+        else:
+            meta['name'] = meta.get('name') or clean_id
+        if sections is not None:
+            meta['sections'] = sections
+        else:
+            meta.setdefault('sections', [])
+        if no_go_zones is not None:
+            meta['no_go_zones'] = no_go_zones
+        else:
+            meta.setdefault('no_go_zones', [])
+        meta['updated_at'] = self._now_string()
+        if not meta.get('created_at'):
+            meta['created_at'] = meta['updated_at']
+        os.makedirs(self.maps_dir, exist_ok=True)
+        with open(self.meta_path(clean_id), 'w', encoding='utf-8') as handle:
+            json.dump(meta, handle, indent=2, sort_keys=True)
+        return self.metadata(clean_id)
+
+    def write_sections(self, map_id, sections, no_go_zones):
+        clean_id = sanitize_map_id(map_id)
+        meta = self.read_meta(clean_id)
+        meta['map_id'] = clean_id
+        meta['name'] = meta.get('name') or clean_id
+        meta['sections'] = sections
+        meta['no_go_zones'] = no_go_zones
+        meta['updated_at'] = self._now_string()
+        if not meta.get('created_at'):
+            meta['created_at'] = meta['updated_at']
+        os.makedirs(self.maps_dir, exist_ok=True)
+        with open(self.meta_path(clean_id), 'w', encoding='utf-8') as handle:
+            json.dump(meta, handle, indent=2, sort_keys=True)
+        return meta
+
+    def write_processed_map(self, output_map_id, processed_map, meta_extra=None):
+        clean_id = sanitize_map_id(output_map_id)
+        width = int(processed_map['width'])
+        height = int(processed_map['height'])
+        resolution = float(processed_map['resolution'])
+        origin = processed_map['origin']
+        occupancy = [int(value) for value in processed_map['occupancy']]
+        if width <= 0 or height <= 0 or len(occupancy) != width * height:
+            raise ValueError('processed_map occupancy size does not match width*height')
+
+        os.makedirs(self.maps_dir, exist_ok=True)
+        self._write_occupancy_as_map(
+            clean_id,
+            width,
+            height,
+            resolution,
+            self._origin_to_dict(origin),
+            occupancy,
+        )
+        meta = self.ensure_meta(clean_id, meta_extra or {})
+        return {'map_id': clean_id, 'metadata': meta}
+
+    def write_section_map(self, base_map_id, output_map_id, sections, meta_extra=None):
+        source = self.read_map(base_map_id)
+        if not source.get('available'):
+            raise ValueError('base map not found')
+
+        width = int(source['width'])
+        height = int(source['height'])
+        resolution = float(source['resolution'])
+        origin = source['origin']
+        source_occupancy = list(source['occupancy'])
+        masked = []
+        for index, cell in enumerate(source_occupancy):
+            x_index = index % width
+            y_index = index // width
+            world_x = origin['x'] + (x_index + 0.5) * resolution
+            world_y = origin['y'] + (y_index + 0.5) * resolution
+            if cell == 0 and self._point_in_sections(world_x, world_y, sections):
+                masked.append(0)
+            elif cell == -1:
+                masked.append(-1)
+            else:
+                masked.append(100)
+
+        os.makedirs(self.maps_dir, exist_ok=True)
+        self._write_occupancy_as_map(
+            output_map_id,
+            width,
+            height,
+            resolution,
+            origin,
+            masked,
+        )
+        meta = self.ensure_meta(output_map_id, meta_extra or {})
+        return {'map_id': sanitize_map_id(output_map_id), 'metadata': meta}
+
+    def ensure_meta(self, map_id, extra=None):
+        clean_id = sanitize_map_id(map_id)
+        meta = self.read_meta(clean_id)
+        meta.setdefault('map_id', clean_id)
+        meta.setdefault('name', clean_id)
+        meta.setdefault('created_at', self._now_string())
+        meta['updated_at'] = self._now_string()
+        if extra:
+            meta.update(extra)
+        os.makedirs(self.maps_dir, exist_ok=True)
+        with open(self.meta_path(clean_id), 'w', encoding='utf-8') as handle:
+            json.dump(meta, handle, indent=2, sort_keys=True)
+        return meta
+
+    def read_map(self, map_id):
+        clean_id = sanitize_map_id(map_id)
+        yaml_data = self.read_yaml(clean_id)
+        if not yaml_data:
+            return {'available': False, 'map_id': clean_id, 'message': 'Map not found'}
+
+        image_path = self.map_image_path(clean_id, yaml_data)
+        image = self._read_pgm(image_path)
+        if image is None:
+            return {
+                'available': False,
+                'map_id': clean_id,
+                'metadata': self.metadata(clean_id),
+                'message': 'Map image could not be read',
+            }
+
+        resolution = float(yaml_data.get('resolution', 0.05))
+        origin = yaml_data.get('origin', [0.0, 0.0, 0.0])
+        negate = int(yaml_data.get('negate', 0))
+        occupied_thresh = float(yaml_data.get('occupied_thresh', 0.65))
+        free_thresh = float(yaml_data.get('free_thresh', 0.196))
+        occupancy = []
+        for pixel in image['pixels']:
+            value = 255 - pixel if negate else pixel
+            occ = (255 - value) / 255.0
+            if occ > occupied_thresh:
+                occupancy.append(100)
+            elif occ < free_thresh:
+                occupancy.append(0)
+            else:
+                occupancy.append(-1)
+
+        return {
+            'available': True,
+            'map_id': clean_id,
+            'metadata': self.metadata(clean_id),
+            'resolution': resolution,
+            'width': image['width'],
+            'height': image['height'],
+            'origin': self._origin_to_dict(origin),
+            'occupancy': occupancy,
+        }
+
+    def check_pose(self, map_id, x, y, allow_unknown=False, occupied_threshold=50):
+        """Validate a world-frame pose against a saved occupancy map."""
+        clean_id = sanitize_map_id(map_id)
+        saved_map = self.read_map(clean_id)
+        if not saved_map.get('available'):
+            return {
+                'ok': False,
+                'code': 'MAP_NOT_FOUND',
+                'message': saved_map.get('message', 'Map not found'),
+                'map_id': clean_id,
+            }
+
+        width = int(saved_map.get('width') or 0)
+        height = int(saved_map.get('height') or 0)
+        resolution = float(saved_map.get('resolution') or 0.0)
+        occupancy = saved_map.get('occupancy') or []
+        if width <= 0 or height <= 0 or resolution <= 0.0:
+            return {
+                'ok': False,
+                'code': 'MAP_INVALID',
+                'message': 'Map metadata is invalid.',
+                'map_id': clean_id,
+            }
+
+        origin = self._origin_to_dict(saved_map.get('origin'))
+        dx = float(x) - origin['x']
+        dy = float(y) - origin['y']
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:17:class MapStore:
+src/sweepi_api_bridge/sweepi_api_bridge/map_store.py:234:    def check_pose(self, map_id, x, y, allow_unknown=False, occupied_threshold=50):
+exit=0

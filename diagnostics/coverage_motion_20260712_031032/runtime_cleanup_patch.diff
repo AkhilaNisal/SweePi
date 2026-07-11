@@ -1,0 +1,22 @@
+diff --git a/src/sweepi_api_bridge/sweepi_api_bridge/runtime_state.py b/src/sweepi_api_bridge/sweepi_api_bridge/runtime_state.py
+index 9952d67..782ab7a 100644
+--- a/src/sweepi_api_bridge/sweepi_api_bridge/runtime_state.py
++++ b/src/sweepi_api_bridge/sweepi_api_bridge/runtime_state.py
+@@ -83,10 +83,17 @@ class StateStore:
+             if self._state.robot_state in (
+                 'coverage_preparing',
+                 'waiting_for_initial_pose',
++                'initial_pose_failed',
+                 'coverage_ready',
++                'coverage_validated',
++                'coverage_validation_failed',
++                'cleaning_start_failed',
+                 'cleaning',
+                 'paused',
+                 'returning_home',
++                'cleaning_completed',
++                'cleaning_failed',
++                'stopped',
+             ):
+                 self._state.robot_state = 'idle'
+             self._state.last_updated_sec = time.time()

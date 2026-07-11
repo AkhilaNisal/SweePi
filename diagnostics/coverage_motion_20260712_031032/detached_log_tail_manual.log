@@ -1,0 +1,52 @@
+[INFO] [launch]: All log files can be found below /home/sweepi/.ros/log/2026-07-12-03-25-43-566159-sweepi-9786
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [base_driver_node-1]: process started with pid [9808]
+[INFO] [ekf_node-2]: process started with pid [9809]
+[INFO] [sllidar_node-3]: process started with pid [9810]
+[INFO] [robot_state_publisher-4]: process started with pid [9811]
+[INFO] [sweepi_robot_manager_node.py-5]: process started with pid [9812]
+[INFO] [api_bridge_node-6]: process started with pid [9813]
+[sllidar_node-3] [INFO] [1783806944.007877189] [sllidar_node]: SLLidar running on ROS2 package SLLidar.ROS2 SDK Version:1.0.1, SLLIDAR SDK Version:2.1.0
+[robot_state_publisher-4] [INFO] [1783806944.081069348] [robot_state_publisher]: Robot initialized
+[ekf_node-2] [ERROR] [1783806944.081220130] [ekf_filter_node]: Warning: /imu/data is listed as an input topic, but all its update variables are false
+[sllidar_node-3] [INFO] [1783806944.528520043] [sllidar_node]: SLLidar S/N: 6325E0F6C1E092D4A19E9FF9F389461A
+[sllidar_node-3] [INFO] [1783806944.528607193] [sllidar_node]: Firmware Ver: 1.02
+[sllidar_node-3] [INFO] [1783806944.528622323] [sllidar_node]: Hardware Rev: 18
+[sllidar_node-3] [INFO] [1783806944.533723616] [sllidar_node]: SLLidar health status : 0
+[sllidar_node-3] [INFO] [1783806944.533821100] [sllidar_node]: SLLidar health status : OK.
+[sllidar_node-3] [INFO] [1783806944.821018894] [sllidar_node]: current scan mode: Standard, sample rate: 5 Khz, max_distance: 16.0 m, scan frequency:10.0 Hz, 
+[base_driver_node-1] [INFO] [1783806944.921279888] [base_driver_node]: SweePi base driver starting on /dev/ttyAMA0 at 115200 baud
+[base_driver_node-1] [INFO] [1783806944.921955682] [base_driver_node]: Base driver parameters: serial_port=/dev/ttyAMA0, baud_rate=115200, wheel_radius=0.0615, wheel_separation=0.29, ticks_per_revolution=7392.0, left_encoder_sign=1.0, right_encoder_sign=1.0, left_motor_command_sign=1.0, right_motor_command_sign=1.0, command_rate_hz=50.0, feedback_poll_rate_hz=100.0, cmd_vel_timeout=0.5, gyro_units=rad_s, accel_units=m_s2
+[base_driver_node-1] [INFO] [1783806944.923362772] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
+[sweepi_robot_manager_node.py-5] [INFO] [1783806944.946739942] [sweepi_robot_manager]: SweePi robot manager ready for service commands
+[api_bridge_node-6] [INFO] [1783806945.476760024] [sweepi_api_bridge]: SweePi API bridge listening on http://0.0.0.0:8080/api
+PROCESSES
+9784 bash -lc cd /home/sweepi/SweePi && setsid bash -lc "source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install/setup.bash && ros2 launch sweepi_robot_manager master.launch.py use_sim_time:=false launch_sim:=false launch_hardware:=true launch_rviz:=false launch_api_bridge:=true use_arm_assist:=false api_host:=0.0.0.0 api_port:=8080 base_serial_port:=/dev/ttyAMA0 base_baud_rate:=115200 lidar_serial_port:=/dev/ttyUSB0 lidar_baud_rate:=460800 lidar_frame_id:=lidar_link" > "$DIAG/full_stack_detached.log" 2>&1 < /dev/null & echo $! > "$DIAG/full_stack_detached.pid"; echo started_pid=$(cat "$DIAG/full_stack_detached.pid")
+9786 /usr/bin/python3 /opt/ros/jazzy/bin/ros2 launch sweepi_robot_manager master.launch.py use_sim_time:=false launch_sim:=false launch_hardware:=true launch_rviz:=false launch_api_bridge:=true use_arm_assist:=false api_host:=0.0.0.0 api_port:=8080 base_serial_port:=/dev/ttyAMA0 base_baud_rate:=115200 lidar_serial_port:=/dev/ttyUSB0 lidar_baud_rate:=460800 lidar_frame_id:=lidar_link
+9808 /usr/bin/python3 /home/sweepi/SweePi/install/sweepi_base_driver/lib/sweepi_base_driver/base_driver_node --ros-args -r __node:=base_driver_node --params-file /home/sweepi/SweePi/install/sweepi_base_driver/share/sweepi_base_driver/config/base_driver_params.yaml --params-file /tmp/launch_params_bflk7hl7
+9810 /home/sweepi/SweePi/install/sllidar_ros2/lib/sllidar_ros2/sllidar_node --ros-args -r __node:=sllidar_node --params-file /tmp/launch_params_88s24ph_
+9812 python3 /home/sweepi/SweePi/install/sweepi_robot_manager/lib/sweepi_robot_manager/sweepi_robot_manager_node.py --ros-args -r __node:=sweepi_robot_manager --params-file /tmp/launch_params_yzcof3n4
+9813 /usr/bin/python3 /home/sweepi/SweePi/install/sweepi_api_bridge/lib/sweepi_api_bridge/api_bridge_node --ros-args -r __node:=sweepi_api_bridge --params-file /tmp/launch_params_6yoxadar
+PORT
+LISTEN 0      5            0.0.0.0:8080       0.0.0.0:*    users:(("api_bridge_node",pid=9813,fd=26))
+CURL
+*   Trying 127.0.0.1:8080...
+* Connected to 127.0.0.1 (127.0.0.1) port 8080
+> GET /api/system/health HTTP/1.1
+> Host: 127.0.0.1:8080
+> User-Agent: curl/8.5.0
+> Accept: */*
+> 
+* HTTP 1.0, assume close after body
+< HTTP/1.0 200 OK
+< Server: BaseHTTP/0.6 Python/3.12.3
+< Date: Sat, 11 Jul 2026 21:57:01 GMT
+< Content-Type: application/json
+< Content-Length: 374
+< Access-Control-Allow-Origin: *
+< Access-Control-Allow-Methods: GET,POST,PUT,OPTIONS
+< Access-Control-Allow-Headers: Content-Type
+< 
+{ [374 bytes data]
+* Closing connection
+{"success":true,"message":"API server is healthy.","error":null,"timestamp":"2026-07-11T21:57:01Z","status":"ok","robot_connected":true,"server":"sweepi_api_bridge","api":{"host":"0.0.0.0","port":8080,"prefix":"/api"},"manager_status":"task=idle map_name=(unset) arm_assist=false latest_coverage_status=(none) latest_exploration_mode=(none)","ros_time_sec":1783807021.69083}

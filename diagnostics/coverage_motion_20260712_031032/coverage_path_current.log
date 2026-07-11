@@ -1,0 +1,182 @@
+===== coverage_path_current =====
+$ bash -lc cd /home/sweepi/SweePi && source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install/setup.bash && curl -sS http://localhost:8080/api/cleaning/path > "$DIAG/path_full.json" && python3 - <<"PY"
+import json
+p=json.load(open("/home/sweepi/SweePi/diagnostics/coverage_motion_latest/path_full.json"))
+print("api_available",p.get("available"),"points",len(p.get("points",[])),"pose_count",p.get("pose_count"),"signature",p.get("path_signature"))
+print("first_points",p.get("points",[])[:5])
+PY
+ros2 topic info /coverage_path -v; timeout 5 ros2 topic echo /coverage_path --once | sed -n "1,120p"
+api_available True points 1895 pose_count 1895 signature [1895, 'map', 1783806536, 761692931, -0.279, -0.65, -0.079, 0.55, 3.921, -0.65]
+first_points [{'x': -0.2790927082423762, 'y': -0.6504112580713652, 'yaw': -1.5707963267948963}, {'x': -0.2790927082423762, 'y': -0.8504112610515975, 'yaw': -1.5707963267948963}, {'x': -0.2790927082423762, 'y': -0.9004112617966555, 'yaw': -1.5707963267948963}, {'x': -0.2790927082423762, 'y': -0.9504112625417136, 'yaw': -1.5707963267948963}, {'x': -0.2790927082423762, 'y': -1.0004112632867717, 'yaw': -1.5707963267948963}]
+Type: nav_msgs/msg/Path
+
+Publisher count: 1
+
+Node name: coverage_planner_node
+Node namespace: /
+Topic type: nav_msgs/msg/Path
+Topic type hash: RIHS01_1957a5bb3cee5da65c4e52e52b65a93df227efce4c20f8458b36e73066ca334b
+Endpoint type: PUBLISHER
+GID: 01.0f.81.bf.12.21.69.2a.00.00.00.00.00.00.18.03
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: TRANSIENT_LOCAL
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Subscription count: 2
+
+Node name: coverage_follow_path_executor_node
+Node namespace: /
+Topic type: nav_msgs/msg/Path
+Topic type hash: RIHS01_1957a5bb3cee5da65c4e52e52b65a93df227efce4c20f8458b36e73066ca334b
+Endpoint type: SUBSCRIPTION
+GID: 01.0f.81.bf.13.21.2b.61.00.00.00.00.00.00.35.04
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: TRANSIENT_LOCAL
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Node name: sweepi_api_bridge
+Node namespace: /
+Topic type: nav_msgs/msg/Path
+Topic type hash: RIHS01_1957a5bb3cee5da65c4e52e52b65a93df227efce4c20f8458b36e73066ca334b
+Endpoint type: SUBSCRIPTION
+GID: 01.0f.81.bf.9e.1f.05.b9.00.00.00.00.00.00.40.04
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: TRANSIENT_LOCAL
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+header:
+  stamp:
+    sec: 1783806539
+    nanosec: 760280314
+  frame_id: map
+poses:
+- header:
+    stamp:
+      sec: 1783806539
+      nanosec: 760280314
+    frame_id: map
+  pose:
+    position:
+      x: -0.2790927082423762
+      y: -0.6504112580713652
+      z: 0.0
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: -0.7071067811865475
+      w: 0.7071067811865476
+- header:
+    stamp:
+      sec: 1783806539
+      nanosec: 760280314
+    frame_id: map
+  pose:
+    position:
+      x: -0.2790927082423762
+      y: -0.8504112610515975
+      z: 0.0
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: -0.7071067811865475
+      w: 0.7071067811865476
+- header:
+    stamp:
+      sec: 1783806539
+      nanosec: 760280314
+    frame_id: map
+  pose:
+    position:
+      x: -0.2790927082423762
+      y: -0.9004112617966555
+      z: 0.0
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: -0.7071067811865475
+      w: 0.7071067811865476
+- header:
+    stamp:
+      sec: 1783806539
+      nanosec: 760280314
+    frame_id: map
+  pose:
+    position:
+      x: -0.2790927082423762
+      y: -0.9504112625417136
+      z: 0.0
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: -0.7071067811865475
+      w: 0.7071067811865476
+- header:
+    stamp:
+      sec: 1783806539
+      nanosec: 760280314
+    frame_id: map
+  pose:
+    position:
+      x: -0.2790927082423762
+      y: -1.0004112632867717
+      z: 0.0
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: -0.7071067811865475
+      w: 0.7071067811865476
+- header:
+    stamp:
+      sec: 1783806539
+      nanosec: 760280314
+    frame_id: map
+  pose:
+    position:
+      x: -0.2790927082423762
+      y: -1.0504112640318297
+      z: 0.0
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: -0.7071067811865475
+      w: 0.7071067811865476
+- header:
+    stamp:
+      sec: 1783806539
+      nanosec: 760280314
+    frame_id: map
+  pose:
+    position:
+      x: -0.2790927082423762
+      y: -1.1004112647768878
+      z: 0.0
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: -0.7071067811865475
+      w: 0.7071067811865476
+- header:
+    stamp:
+      sec: 1783806539
+      nanosec: 760280314
+    frame_id: map
+  pose:
+    position:
+      x: -0.2790927082423762
+      y: -1.1504112655219458
+exit=0
