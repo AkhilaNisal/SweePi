@@ -1,0 +1,10 @@
+---
+- name: Reload udev rules
+  ansible.builtin.command:
+    argv: [udevadm, control, --reload-rules]
+  changed_when: true
+
+- name: Trigger udev rules
+  ansible.builtin.command:
+    argv: [udevadm, trigger]
+  changed_when: true

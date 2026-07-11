@@ -1,29 +1,50 @@
 ---
 # =============================================================================
-# REQUIRED VALUES — edit these before the first deployment
+# SweePi Raspberry Pi deployment defaults
+# =============================================================================
+
+# Robot identity and target host defaults.
+sweepi_user: sweepi
+sweepi_hostname: sweepi
+sweepi_timezone: Asia/Colombo
+sweepi_locale: en_US.UTF-8
+
+sweepi_manage_etc_hosts: true
+sweepi_disable_cloud_init_hosts_management: true
+sweepi_enable_mdns: true
+
+sweepi_perform_full_upgrade: true
+sweepi_apt_autoremove: false
+
+# =============================================================================
+# Required robot hardware values
 # =============================================================================
 
 # BCM GPIO numbering. Do not enter physical header pin numbers.
 sweepi_button_gpio: 17
 sweepi_switch_bulb_gpio: 27
 
-# Copy these UUIDs from the Flutter BLE constants so the app and Pi match.
+# BLE UUIDs copied from origin/app-rpi-integration:
+# src/app/lib/core/provisioning/ble_uuid_constants.dart
 sweepi_ble_service_uuid: "7a0b0001-4f2a-4f7a-9b7d-9c7b6f000001"
-sweepi_ble_wifi_config_uuid: "7a0b0001-4f2a-4f7a-9b7d-9c7b6f000001"
-sweepi_ble_wifi_scan_uuid: "7a0b0001-4f2a-4f7a-9b7d-9c7b6f000001"
-sweepi_ble_wifi_status_uuid: "7a0b0001-4f2a-4f7a-9b7d-9c7b6f000001"
+sweepi_ble_robot_info_uuid: "7a0b0002-4f2a-4f7a-9b7d-9c7b6f000001"
+sweepi_ble_wifi_scan_uuid: "7a0b0003-4f2a-4f7a-9b7d-9c7b6f000001"
+sweepi_ble_wifi_config_uuid: "7a0b0004-4f2a-4f7a-9b7d-9c7b6f000001"
+sweepi_ble_wifi_status_uuid: "7a0b0005-4f2a-4f7a-9b7d-9c7b6f000001"
+sweepi_ble_setup_command_uuid: "7a0b0006-4f2a-4f7a-9b7d-9c7b6f000001"
 
 # =============================================================================
-# Core host identity
+# Repository and workspace
 # =============================================================================
 
-sweepi_user: sweepi
-sweepi_hostname: sweepi
-sweepi_timezone: Asia/Colombo
-
+sweepi_repo_auth_method: https
 sweepi_repo_url: https://github.com/AkhilaNisal/SweePi.git
 sweepi_repo_version: main
 sweepi_workspace: /home/sweepi/SweePi
+
+sweepi_git_deploy_key_enabled: false
+sweepi_git_deploy_key_private: ""
+sweepi_git_deploy_key_filename: id_ed25519_sweepi
 
 sweepi_install_root: /opt/sweepi
 sweepi_config_root: /etc/sweepi
@@ -35,17 +56,29 @@ sweepi_log_root: /var/log/sweepi
 # =============================================================================
 
 sweepi_enable_bluetooth_provisioning: true
+sweepi_enable_remote_desktop: true
 sweepi_enable_power_control: true
 sweepi_enable_backup: false
 sweepi_manage_netplan: false
 sweepi_reboot_after_deploy: true
 
+# Keep UFW inactive by default. If enabled, RDP is restricted to this subnet.
+sweepi_manage_ufw: false
+sweepi_rdp_allow_subnet: "192.168.8.0/24"
+
 # =============================================================================
 # Raspberry Pi hardware
 # =============================================================================
 
-sweepi_serial_device: /dev/ttyAMA0
-sweepi_serial_baud: 115200
+sweepi_base_serial_port: /dev/ttyAMA0
+sweepi_base_baud_rate: 115200
+sweepi_serial_device: "{{ sweepi_base_serial_port }}"
+sweepi_serial_baud: "{{ sweepi_base_baud_rate }}"
+
+sweepi_lidar_serial_port: /dev/rplidar
+sweepi_lidar_fallback_serial_port: /dev/ttyUSB0
+sweepi_lidar_baud_rate: 460800
+sweepi_lidar_frame_id: lidar_link
 
 # latching:
 #   input active -> start the configured SweePi service
@@ -59,9 +92,9 @@ sweepi_button_bounce_seconds: 0.08
 sweepi_led_boot_interval_seconds: 1.0
 sweepi_led_starting_interval_seconds: 0.5
 
-# The button controls this unit. Change to sweepi-robot.service when the
-# complete stack should start instead of only the API bridge.
-sweepi_button_start_service: sweepi-api-bridge.service
+# The top button starts the complete robot service. The robot/API services stay
+# disabled at boot; power-control owns the user-triggered start.
+sweepi_button_start_service: sweepi-robot.service
 sweepi_api_health_url: http://127.0.0.1:8080/api/system/health
 sweepi_api_health_timeout_seconds: 120
 
@@ -76,13 +109,57 @@ sweepi_ble_netplan_path: /etc/netplan/99-sweepi-provisioned.yaml
 sweepi_ble_connect_timeout_seconds: 60
 
 # =============================================================================
+# Base package sets
+# =============================================================================
+
+sweepi_base_packages:
+  - ca-certificates
+  - curl
+  - git
+  - gh
+  - gnupg
+  - jq
+  - locales
+  - openssh-server
+  - python3
+  - python3-apt
+  - python3-pip
+  - python3-venv
+  - rsync
+  - software-properties-common
+  - avahi-daemon
+  - etckeeper
+  - build-essential
+  - cmake
+  - pkg-config
+  - python3-setuptools
+
+sweepi_hardware_groups:
+  - dialout
+  - gpio
+  - i2c
+  - spi
+  - video
+  - render
+  - plugdev
+
+sweepi_desktop_remote_packages:
+  - xfce4
+  - xfce4-goodies
+  - xorg
+  - dbus-x11
+  - x11-xserver-utils
+  - xrdp
+  - xorgxrdp
+
+# =============================================================================
 # ROS 2 and workspace
 # =============================================================================
 
 sweepi_ros_distro: jazzy
 sweepi_ros_domain_id: 0
 sweepi_ros_localhost_only: 0
-sweepi_colcon_parallel_workers: 2
+sweepi_install_simulation: false
 
 sweepi_ros_packages:
   - ros-jazzy-ros-base
@@ -95,7 +172,34 @@ sweepi_ros_packages:
   - ros-jazzy-robot-localization
   - ros-jazzy-xacro
   - ros-jazzy-joint-state-publisher
+  - ros-jazzy-robot-state-publisher
   - ros-jazzy-tf-transformations
+  - ros-jazzy-ros2-control
+  - ros-jazzy-ros2-controllers
+  - ros-jazzy-diff-drive-controller
+  - ros-jazzy-rviz2
+
+sweepi_system_python_packages:
+  - python3-numpy
+  - python3-yaml
+  - python3-serial
+  - i2c-tools
+  - python3-smbus
+  - python3-libgpiod
+
+sweepi_rosdep_skip_keys:
+  - gazebo
+  - gazebo_ros
+  - gazebo_ros2_control
+  - gz_ros2_control
+  - ros_gz
+  - ros_gz_sim
+  - ros_gz_bridge
+
+sweepi_colcon_executor: sequential
+sweepi_colcon_parallel_workers: 2
+sweepi_force_workspace_rebuild: false
+sweepi_clean_workspace_before_build: false
 
 sweepi_api_bridge_enable_at_boot: false
 sweepi_robot_enable_at_boot: false
@@ -103,11 +207,24 @@ sweepi_robot_enable_at_boot: false
 sweepi_robot_launch_arguments:
   - launch_sim:=false
   - launch_hardware:=true
+  - launch_temp_hardware:=false
   - launch_base:=true
   - launch_ekf:=true
   - launch_robot_description:=true
   - launch_lidar:=true
+  - launch_rviz:=false
   - launch_api_bridge:=true
+  - use_arm_assist:=false
+  - api_host:=0.0.0.0
+  - api_port:=8080
+  - base_serial_port:={{ sweepi_base_serial_port }}
+  - base_baud_rate:={{ sweepi_base_baud_rate }}
+  - lidar_serial_port:={{ sweepi_lidar_serial_port }}
+  - lidar_baud_rate:={{ sweepi_lidar_baud_rate }}
+  - lidar_frame_id:={{ sweepi_lidar_frame_id }}
+
+# Verification never starts motors/hardware unless explicitly requested.
+sweepi_verify_start_robot_temporarily: false
 
 # =============================================================================
 # Optional initial Wi-Fi managed directly by Ansible
@@ -125,7 +242,7 @@ sweepi_netplan_renderer: networkd
 #   sftp:backupuser@192.168.8.100:/backups/sweepi
 #   /mnt/external-ssd/restic/sweepi
 sweepi_restic_repository: "CHANGE_ME"
-sweepi_restic_password: "CHANGE_ME_USE_ANSIBLE_VAULT"
+sweepi_restic_password: "CHANGE_ME"
 
 sweepi_backup_calendar: "*-*-* 02:00:00"
 sweepi_backup_paths:

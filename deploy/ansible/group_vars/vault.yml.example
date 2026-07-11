@@ -1,9 +1,22 @@
 ---
 # Rename this file to vault.yml and encrypt it:
-# ansible-vault encrypt group_vars/vault.yml
+#   cp group_vars/vault.yml.example group_vars/vault.yml
+#   ansible-vault encrypt group_vars/vault.yml
 #
-# Then override secrets from all.yml here.
+# This file documents secret variable names only. Do not commit real values.
 
-sweepi_restic_password: "replace-with-a-long-random-password"
+# Optional Wi-Fi bootstrap managed by Ansible when sweepi_manage_netplan=true.
 sweepi_netplan_ssid: "replace-if-Ansible-manages-Wi-Fi"
 sweepi_netplan_password: "replace-if-Ansible-manages-Wi-Fi"
+
+# Optional private GitHub deploy key checkout.
+# Enable in all.yml or vault.yml:
+#   sweepi_repo_auth_method: ssh
+#   sweepi_git_deploy_key_enabled: true
+#
+# Store the full private key PEM/OpenSSH text here after encrypting vault.yml.
+sweepi_git_deploy_key_private: |
+  CHANGE_ME_USE_ANSIBLE_VAULT
+
+# Optional encrypted Restic backups when sweepi_enable_backup=true.
+sweepi_restic_password: "replace-with-a-long-random-password"

@@ -4,10 +4,38 @@
     path: /boot/firmware/config.txt
   register: sweepi_boot_config
 
-- name: Stop when the expected boot configuration is missing
+- name: Confirm Raspberry Pi kernel command line exists
+  ansible.builtin.stat:
+    path: /boot/firmware/cmdline.txt
+  register: sweepi_boot_cmdline
+
+- name: Stop when expected boot files are missing
   ansible.builtin.assert:
-    that: sweepi_boot_config.stat.exists
-    fail_msg: "/boot/firmware/config.txt was not found."
+    that:
+      - sweepi_boot_config.stat.exists
+      - sweepi_boot_cmdline.stat.exists
+    fail_msg: "/boot/firmware/config.txt and /boot/firmware/cmdline.txt are required on Ubuntu Raspberry Pi images."
+
+- name: Create safe boot backup directory
+  ansible.builtin.file:
+    path: /root/sweepi-boot-backup
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Back up original boot files once
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "0600"
+    remote_src: true
+    force: false
+  loop:
+    - { src: /boot/firmware/config.txt, dest: /root/sweepi-boot-backup/config.txt.before-ansible }
+    - { src: /boot/firmware/cmdline.txt, dest: /root/sweepi-boot-backup/cmdline.txt.before-ansible }
 
 - name: Enable the primary UART
   ansible.builtin.lineinfile:
@@ -15,15 +43,13 @@
     regexp: '^enable_uart='
     line: enable_uart=1
     create: false
-    backup: true
   notify: Mark reboot required
 
 - name: Remove serial console arguments
   ansible.builtin.replace:
     path: /boot/firmware/cmdline.txt
-    regexp: '(^|[ \t])console=(serial0|ttyAMA0),[0-9]+'
-    replace: ''
-    backup: true
+    regexp: '(^|[ \t])console=(serial0|ttyAMA0),[^ \t]+'
+    replace: ' '
   notify: Mark reboot required
 
 - name: Normalize cmdline spacing
@@ -33,16 +59,20 @@
     replace: ' '
   notify: Mark reboot required
 
-- name: Disable serial getty on ttyAMA0
-  ansible.builtin.systemd_service:
-    name: serial-getty@ttyAMA0.service
-    enabled: false
-    state: stopped
-  failed_when: false
+- name: Trim cmdline whitespace
+  ansible.builtin.replace:
+    path: /boot/firmware/cmdline.txt
+    regexp: '^\s+|\s+$'
+    replace: ''
+  notify: Mark reboot required
 
-- name: Disable serial getty on serial0
+- name: Stop and mask serial getty services
   ansible.builtin.systemd_service:
-    name: serial-getty@serial0.service
+    name: "{{ item }}"
     enabled: false
     state: stopped
+    masked: true
+  loop:
+    - serial-getty@ttyAMA0.service
+    - serial-getty@serial0.service
   failed_when: false

@@ -60,11 +60,16 @@ while [[ $# -gt 0 ]]; do
       echo "Usage:"
       echo "  bash scripts/deploy.sh"
       echo "  bash scripts/deploy.sh --all"
-      echo "  bash scripts/deploy.sh --only bluetooth,power"
-      echo "  bash scripts/deploy.sh --only base,bluetooth,power"
+      echo "  bash scripts/deploy.sh --only desktop"
+      echo "  bash scripts/deploy.sh --only ros2,workspace,hardware"
       echo "  bash scripts/deploy.sh --skip ros2,workspace"
-      echo "  bash scripts/deploy.sh --only power --no-verify"
-      echo "  bash scripts/deploy.sh --all --verify"
+      echo "  bash scripts/deploy.sh --skip desktop"
+      echo "  bash scripts/deploy.sh --only services,power --verify"
+      echo
+      echo "Common tags:"
+      echo "  preflight base boot uart network netplan bluetooth ble desktop rdp"
+      echo "  ros2 workspace build hardware serial lidar udev services systemd"
+      echo "  power gpio button led backup"
       exit 0
       ;;
 

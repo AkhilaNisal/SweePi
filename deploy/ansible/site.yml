@@ -22,11 +22,18 @@
       when: sweepi_enable_bluetooth_provisioning | bool
       tags: [bluetooth, ble]
 
+    - role: desktop_remote
+      when: sweepi_enable_remote_desktop | bool
+      tags: [desktop, rdp]
+
     - role: ros2
       tags: [ros2]
 
     - role: workspace
       tags: [workspace, build]
+
+    - role: hardware_access
+      tags: [hardware, serial, lidar, udev]
 
     - role: services
       tags: [services, systemd]

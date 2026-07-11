@@ -2,6 +2,7 @@
 Description=SweePi ROS 2 API Bridge
 After=network-online.target
 Wants=network-online.target
+Conflicts=sweepi-robot.service
 
 [Service]
 Type=simple
@@ -9,7 +10,9 @@ User={{ sweepi_user }}
 Group={{ sweepi_user }}
 WorkingDirectory={{ sweepi_workspace }}
 EnvironmentFile={{ sweepi_config_root }}/ros.env
-ExecStart=/bin/bash -lc 'source /opt/ros/{{ sweepi_ros_distro }}/setup.bash && source {{ sweepi_workspace }}/install/setup.bash && exec ros2 launch sweepi_api_bridge api_bridge.launch.py'
+ExecStartPre=/usr/bin/test -f /opt/ros/{{ sweepi_ros_distro }}/setup.bash
+ExecStartPre=/usr/bin/test -f {{ sweepi_workspace }}/install/setup.bash
+ExecStart=/bin/bash -lc 'source /opt/ros/{{ sweepi_ros_distro }}/setup.bash && source {{ sweepi_workspace }}/install/setup.bash && exec ros2 launch sweepi_api_bridge api_bridge.launch.py api_host:=0.0.0.0 api_port:=8080 use_sim_time:=false'
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=30

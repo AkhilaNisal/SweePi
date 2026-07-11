@@ -3,10 +3,11 @@
   ansible.builtin.assert:
     that:
       - ansible_distribution == "Ubuntu"
-      - ansible_distribution_version is version("24.04", ">=")
+      - ansible_distribution_version is version("24.04", "==")
+      - ansible_distribution_release == "noble"
     fail_msg: >-
-      Expected Ubuntu Server 24.04 or newer.
-      Detected {{ ansible_distribution }} {{ ansible_distribution_version }}.
+      Expected Ubuntu Server 24.04 Noble exactly.
+      Detected {{ ansible_distribution }} {{ ansible_distribution_version }} {{ ansible_distribution_release }}.
 
 - name: Confirm 64-bit ARM
   ansible.builtin.assert:
@@ -14,35 +15,123 @@
       - ansible_architecture in ["aarch64", "arm64"]
     fail_msg: "Expected a 64-bit ARM Raspberry Pi; detected {{ ansible_architecture }}."
 
+- name: Confirm ROS distro is Jazzy
+  ansible.builtin.assert:
+    that:
+      - sweepi_ros_distro == "jazzy"
+    fail_msg: "This deployment targets ROS 2 Jazzy."
+
 - name: Confirm the robot user exists
   ansible.builtin.getent:
     database: passwd
     key: "{{ sweepi_user }}"
 
+- name: Validate workspace location
+  ansible.builtin.assert:
+    that:
+      - sweepi_workspace is match('^/home/' ~ sweepi_user ~ '(/|$)')
+    fail_msg: "sweepi_workspace must live under /home/{{ sweepi_user }}."
+
 - name: Validate GPIO configuration
   ansible.builtin.assert:
     that:
       - sweepi_button_gpio | int >= 0
+      - sweepi_button_gpio | int <= 27
       - sweepi_switch_bulb_gpio | int >= 0
+      - sweepi_switch_bulb_gpio | int <= 27
       - sweepi_button_gpio | int != sweepi_switch_bulb_gpio | int
+      - sweepi_button_mode in ["latching", "momentary"]
     fail_msg: >-
-      Set sweepi_button_gpio and sweepi_switch_bulb_gpio in
-      group_vars/all.yml using BCM GPIO numbers.
+      Set sweepi_button_gpio and sweepi_switch_bulb_gpio in group_vars/all.yml
+      using valid distinct BCM GPIO numbers.
   when: sweepi_enable_power_control | bool
 
-- name: Validate Bluetooth UUIDs
+- name: Validate repository authentication method
+  ansible.builtin.assert:
+    that:
+      - sweepi_repo_auth_method in ["https", "ssh"]
+      - sweepi_repo_url is not search('://[^/@]+:[^/@]+@')
+      - sweepi_repo_url is not search('g' ~ 'hp_|github' ~ '_pat_')
+    fail_msg: "Use sweepi_repo_auth_method=https or ssh; never place tokens/passwords directly in sweepi_repo_url."
+
+- name: Validate SSH deploy-key configuration
+  ansible.builtin.assert:
+    that:
+      - sweepi_git_deploy_key_private | length > 0
+      - sweepi_git_deploy_key_private is search('BEGIN (OPENSSH|RSA|EC) PRIVATE KEY')
+    fail_msg: "Set vaulted sweepi_git_deploy_key_private when SSH deploy-key checkout is enabled."
+  no_log: true
+  when: sweepi_git_deploy_key_enabled | bool
+
+- name: Validate simulation skip keys
+  ansible.builtin.assert:
+    that:
+      - item in sweepi_rosdep_skip_keys
+    fail_msg: "Simulation dependency {{ item }} must be skipped when sweepi_install_simulation is false."
+  loop:
+    - gazebo
+    - gazebo_ros
+    - gazebo_ros2_control
+    - gz_ros2_control
+    - ros_gz
+    - ros_gz_sim
+    - ros_gz_bridge
+  when: not sweepi_install_simulation | bool
+
+- name: Validate remote desktop settings
+  ansible.builtin.assert:
+    that:
+      - sweepi_rdp_allow_subnet is match('^[0-9]{1,3}(\\.[0-9]{1,3}){3}/[0-9]{1,2}$')
+    fail_msg: "Set sweepi_rdp_allow_subnet to a CIDR such as 192.168.8.0/24."
+  when:
+    - sweepi_enable_remote_desktop | bool
+    - sweepi_manage_ufw | bool
+
+- name: Validate Bluetooth UUID format
   ansible.builtin.assert:
     that:
       - item != "CHANGE_ME"
       - item is match("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
-    fail_msg: >-
-      Replace all CHANGE_ME BLE UUIDs in group_vars/all.yml with the UUIDs
-      used by the Flutter application.
+    fail_msg: "BLE UUID values must be real UUIDs copied from the Flutter app."
   loop:
     - "{{ sweepi_ble_service_uuid }}"
+    - "{{ sweepi_ble_robot_info_uuid }}"
     - "{{ sweepi_ble_wifi_config_uuid }}"
     - "{{ sweepi_ble_wifi_scan_uuid }}"
     - "{{ sweepi_ble_wifi_status_uuid }}"
+    - "{{ sweepi_ble_setup_command_uuid }}"
+  when: sweepi_enable_bluetooth_provisioning | bool
+
+- name: Validate BLE UUIDs match the Flutter app
+  ansible.builtin.assert:
+    that:
+      - sweepi_ble_service_uuid == "7a0b0001-4f2a-4f7a-9b7d-9c7b6f000001"
+      - sweepi_ble_robot_info_uuid == "7a0b0002-4f2a-4f7a-9b7d-9c7b6f000001"
+      - sweepi_ble_wifi_scan_uuid == "7a0b0003-4f2a-4f7a-9b7d-9c7b6f000001"
+      - sweepi_ble_wifi_config_uuid == "7a0b0004-4f2a-4f7a-9b7d-9c7b6f000001"
+      - sweepi_ble_wifi_status_uuid == "7a0b0005-4f2a-4f7a-9b7d-9c7b6f000001"
+      - sweepi_ble_setup_command_uuid == "7a0b0006-4f2a-4f7a-9b7d-9c7b6f000001"
+    fail_msg: "BLE UUIDs must match src/app/lib/core/provisioning/ble_uuid_constants.dart on the app branch."
+  when: sweepi_enable_bluetooth_provisioning | bool
+
+- name: Validate BLE characteristic UUID uniqueness
+  ansible.builtin.assert:
+    that:
+      - ([
+          sweepi_ble_robot_info_uuid,
+          sweepi_ble_wifi_scan_uuid,
+          sweepi_ble_wifi_config_uuid,
+          sweepi_ble_wifi_status_uuid,
+          sweepi_ble_setup_command_uuid
+        ] | unique | length) == 5
+      - sweepi_ble_service_uuid not in [
+          sweepi_ble_robot_info_uuid,
+          sweepi_ble_wifi_scan_uuid,
+          sweepi_ble_wifi_config_uuid,
+          sweepi_ble_wifi_status_uuid,
+          sweepi_ble_setup_command_uuid
+        ]
+    fail_msg: "The Flutter app expects unique BLE characteristic UUIDs distinct from the service UUID."
   when: sweepi_enable_bluetooth_provisioning | bool
 
 - name: Validate optional netplan credentials
@@ -51,13 +140,15 @@
       - sweepi_netplan_ssid | length > 0
       - sweepi_netplan_password | length > 0
     fail_msg: "Set sweepi_netplan_ssid and sweepi_netplan_password before enabling netplan management."
+  no_log: true
   when: sweepi_manage_netplan | bool
 
 - name: Validate backup configuration
   ansible.builtin.assert:
     that:
       - sweepi_restic_repository != "CHANGE_ME"
-      - sweepi_restic_password != "CHANGE_ME_USE_ANSIBLE_VAULT"
+      - sweepi_restic_password != "CHANGE_ME"
       - sweepi_restic_password | length >= 12
     fail_msg: "Set the Restic repository and an encrypted password before enabling backups."
+  no_log: true
   when: sweepi_enable_backup | bool

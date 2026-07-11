@@ -5,30 +5,74 @@
     cache_valid_time: 3600
     lock_timeout: 120
 
+- name: Perform complete Ubuntu package upgrade
+  ansible.builtin.apt:
+    upgrade: full
+    update_cache: true
+    autoremove: "{{ sweepi_apt_autoremove | bool }}"
+    lock_timeout: 600
+  when: sweepi_perform_full_upgrade | bool
+  register: sweepi_full_upgrade
+  notify: Check reboot requirement
+
 - name: Install base host packages
   ansible.builtin.apt:
-    name:
-      - ca-certificates
-      - curl
-      - git
-      - gnupg
-      - locales
-      - openssh-server
-      - python3
-      - python3-apt
-      - python3-pip
-      - python3-venv
-      - rsync
-      - software-properties-common
-      - avahi-daemon
-      - etckeeper
-      - jq
+    name: "{{ sweepi_base_packages }}"
     state: present
-    lock_timeout: 120
+    lock_timeout: 180
 
 - name: Set hostname
   ansible.builtin.hostname:
     name: "{{ sweepi_hostname }}"
+
+- name: Disable cloud-init /etc/hosts management
+  ansible.builtin.copy:
+    dest: /etc/cloud/cloud.cfg.d/99-sweepi-hosts.cfg
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # Managed by SweePi Ansible. Keep /etc/hosts stable for mDNS/SSH.
+      manage_etc_hosts: false
+  when: sweepi_disable_cloud_init_hosts_management | bool
+
+- name: Ensure IPv4 localhost entry exists
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '^127\.0\.0\.1\s+'
+    line: 127.0.0.1 localhost
+    create: true
+    owner: root
+    group: root
+    mode: "0644"
+  when: sweepi_manage_etc_hosts | bool
+
+- name: Ensure hostname entry exists
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '^127\.0\.1\.1\s+'
+    line: "127.0.1.1 {{ sweepi_hostname }}"
+    create: true
+    owner: root
+    group: root
+    mode: "0644"
+  when: sweepi_manage_etc_hosts | bool
+
+- name: Preserve IPv6 localhost entries
+  ansible.builtin.blockinfile:
+    path: /etc/hosts
+    marker: "# {mark} SWEEPI IPV6 LOCALHOST"
+    block: |
+      ::1     ip6-localhost ip6-loopback
+      fe00::0 ip6-localnet
+      ff00::0 ip6-mcastprefix
+      ff02::1 ip6-allnodes
+      ff02::2 ip6-allrouters
+    create: true
+    owner: root
+    group: root
+    mode: "0644"
+  when: sweepi_manage_etc_hosts | bool
 
 - name: Set timezone
   community.general.timezone:
@@ -36,8 +80,18 @@
 
 - name: Ensure UTF-8 locale exists
   community.general.locale_gen:
-    name: en_US.UTF-8
+    name: "{{ sweepi_locale }}"
     state: present
+
+- name: Configure system locale defaults
+  ansible.builtin.copy:
+    dest: /etc/default/locale
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      LANG={{ sweepi_locale }}
+      LC_ALL={{ sweepi_locale }}
 
 - name: Enable SSH
   ansible.builtin.systemd_service:
@@ -50,6 +104,7 @@
     name: avahi-daemon.service
     enabled: true
     state: started
+  when: sweepi_enable_mdns | bool
 
 - name: Load available groups
   ansible.builtin.getent:
@@ -60,14 +115,7 @@
     name: "{{ sweepi_user }}"
     groups: "{{ item }}"
     append: true
-  loop:
-    - dialout
-    - gpio
-    - i2c
-    - spi
-    - video
-    - render
-    - plugdev
+  loop: "{{ sweepi_hardware_groups }}"
   when: item in ansible_facts.getent_group
 
 - name: Create SweePi directories

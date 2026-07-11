@@ -1,69 +1,418 @@
 ---
 - name: Verify the SweePi Raspberry Pi deployment
   hosts: sweepi
-  gather_facts: false
+  gather_facts: true
   become: true
 
   tasks:
-    - name: Read enabled service states
-      ansible.builtin.command:
-        argv:
-          - systemctl
-          - is-enabled
-          - "{{ item }}"
-      loop:
-        - ssh.service
-        - bluetooth.service
-        - avahi-daemon.service
-        - sweepi-power-control.service
-      register: enabled_services
-      changed_when: false
-      failed_when: false
+    - name: Gather installed package facts
+      ansible.builtin.package_facts:
+        manager: auto
 
-    - name: Display enabled service states
-      ansible.builtin.debug:
-        msg: "{{ item.item }} => {{ item.stdout | default(item.stderr) }}"
-      loop: "{{ enabled_services.results }}"
+    - name: Gather service facts
+      ansible.builtin.service_facts:
 
-    - name: Check installed SweePi units
+    - name: Verify hostname
       ansible.builtin.command:
-        argv: [systemctl, list-unit-files, "sweepi-*", --no-pager]
-      register: sweepi_units
+        argv: [hostname]
+      register: sweepi_verify_hostname
       changed_when: false
 
-    - name: Display SweePi units
-      ansible.builtin.debug:
-        var: sweepi_units.stdout_lines
-
-    - name: Check workspace install
-      ansible.builtin.stat:
-        path: "{{ sweepi_workspace }}/install/setup.bash"
-      register: workspace_install
-
-    - name: Assert workspace was built
+    - name: Assert hostname
       ansible.builtin.assert:
-        that: workspace_install.stat.exists
-        fail_msg: "The ROS workspace install/setup.bash file is missing."
+        that:
+          - sweepi_verify_hostname.stdout == sweepi_hostname
+        fail_msg: "Hostname is {{ sweepi_verify_hostname.stdout }}, expected {{ sweepi_hostname }}."
 
-    - name: Check UART
+    - name: Read /etc/hosts
+      ansible.builtin.slurp:
+        src: /etc/hosts
+      register: sweepi_verify_hosts
+
+    - name: Assert /etc/hosts hostname entry
+      ansible.builtin.assert:
+        that:
+          - (sweepi_verify_hosts.content | b64decode) is search('(?m)^127\\.0\\.1\\.1\\s+' ~ sweepi_hostname ~ '(\\s|$)')
+        fail_msg: "/etc/hosts is missing 127.0.1.1 {{ sweepi_hostname }}."
+
+    - name: Verify timezone
+      ansible.builtin.command:
+        argv: [timedatectl, show, --property=Timezone, --value]
+      register: sweepi_verify_timezone
+      changed_when: false
+
+    - name: Assert timezone
+      ansible.builtin.assert:
+        that:
+          - sweepi_verify_timezone.stdout == sweepi_timezone
+
+    - name: Verify locale
+      ansible.builtin.command:
+        argv: [locale, -a]
+      register: sweepi_verify_locales
+      changed_when: false
+
+    - name: Assert UTF-8 locale exists
+      ansible.builtin.assert:
+        that:
+          - sweepi_locale | lower | replace('-', '') in sweepi_verify_locales.stdout | lower | replace('-', '')
+
+    - name: Verify required services are enabled and active
+      ansible.builtin.command:
+        argv: [systemctl, "{{ item.check }}", "{{ item.unit }}"]
+      loop:
+        - { unit: ssh.service, check: is-enabled }
+        - { unit: ssh.service, check: is-active }
+        - { unit: avahi-daemon.service, check: is-enabled }
+        - { unit: avahi-daemon.service, check: is-active }
+      register: sweepi_verify_required_services
+      changed_when: false
+
+    - name: Load available groups
+      ansible.builtin.getent:
+        database: group
+
+    - name: Read robot user groups
+      ansible.builtin.command:
+        argv: [id, -nG, "{{ sweepi_user }}"]
+      register: sweepi_verify_user_groups
+      changed_when: false
+
+    - name: Assert robot user belongs to existing hardware groups
+      ansible.builtin.assert:
+        that:
+          - item in sweepi_verify_user_groups.stdout.split()
+        fail_msg: "{{ sweepi_user }} is not in expected group {{ item }}."
+      loop: "{{ sweepi_hardware_groups }}"
+      when: item in ansible_facts.getent_group
+
+    - name: Verify XRDP packages
+      ansible.builtin.assert:
+        that:
+          - "'xrdp' in ansible_facts.packages"
+          - "'xorgxrdp' in ansible_facts.packages"
+      when: sweepi_enable_remote_desktop | bool
+
+    - name: Verify XRDP services are enabled and active
+      ansible.builtin.command:
+        argv: [systemctl, "{{ item.check }}", "{{ item.unit }}"]
+      loop:
+        - { unit: xrdp.service, check: is-enabled }
+        - { unit: xrdp.service, check: is-active }
+        - { unit: xrdp-sesman.service, check: is-enabled }
+        - { unit: xrdp-sesman.service, check: is-active }
+      register: sweepi_verify_xrdp_services
+      changed_when: false
+      when: sweepi_enable_remote_desktop | bool
+
+    - name: Verify xrdp group membership
+      ansible.builtin.command:
+        argv: [id, -nG, xrdp]
+      register: sweepi_verify_xrdp_groups
+      changed_when: false
+      when: sweepi_enable_remote_desktop | bool
+
+    - name: Assert xrdp belongs to ssl-cert
+      ansible.builtin.assert:
+        that:
+          - "'ssl-cert' in sweepi_verify_xrdp_groups.stdout.split()"
+      when: sweepi_enable_remote_desktop | bool
+
+    - name: Read XRDP session files
+      ansible.builtin.slurp:
+        src: "/home/{{ sweepi_user }}/{{ item }}"
+      loop:
+        - .xsession
+        - .xsessionrc
+      register: sweepi_verify_xsession
+      when: sweepi_enable_remote_desktop | bool
+
+    - name: Assert XRDP session files
+      ansible.builtin.assert:
+        that:
+          - "'xfce4-session' in (sweepi_verify_xsession.results[0].content | b64decode)"
+          - "'XDG_CURRENT_DESKTOP=XFCE' in (sweepi_verify_xsession.results[1].content | b64decode)"
+      when: sweepi_enable_remote_desktop | bool
+
+    - name: Verify RDP port is listening
       ansible.builtin.shell: |
-        set -o pipefail
-        grep -E '^enable_uart=1$' /boot/firmware/config.txt
-        test ! -e /dev/ttyAMA0 || ls -l /dev/ttyAMA0
+        set -euo pipefail
+        ss -ltn '( sport = :3389 )' | grep -q ':3389'
+      args:
+        executable: /bin/bash
+      changed_when: false
+      when: sweepi_enable_remote_desktop | bool
+
+    - name: Verify ROS installation files
+      ansible.builtin.stat:
+        path: "/opt/ros/{{ sweepi_ros_distro }}/setup.bash"
+      register: sweepi_verify_ros_setup
+
+    - name: Assert ROS setup file exists
+      ansible.builtin.assert:
+        that: sweepi_verify_ros_setup.stat.exists
+
+    - name: Verify ROS command environment
+      ansible.builtin.shell: |
+        set -euo pipefail
+        source /opt/ros/{{ sweepi_ros_distro }}/setup.bash
+        command -v ros2
+        test "$ROS_DISTRO" = "{{ sweepi_ros_distro }}"
+        command -v rosdep
+        command -v colcon
       args:
         executable: /bin/bash
       changed_when: false
 
-    - name: Check API health without failing the verification
+    - name: Verify rosdep source list exists
+      ansible.builtin.stat:
+        path: /etc/ros/rosdep/sources.list.d/20-default.list
+      register: sweepi_verify_rosdep_sources
+
+    - name: Assert rosdep source list
+      ansible.builtin.assert:
+        that: sweepi_verify_rosdep_sources.stat.exists
+
+    - name: Verify there is only one ROS apt source definition file
+      ansible.builtin.shell: |
+        set -euo pipefail
+        shopt -s nullglob
+        count=0
+        for file in /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
+          if grep -q "packages.ros.org/ros2/ubuntu" "$file"; then
+            count=$((count + 1))
+            echo "$file"
+          fi
+        done
+        test "$count" -le 1
+      args:
+        executable: /bin/bash
+      changed_when: false
+
+    - name: Verify workspace checkout exists
+      ansible.builtin.stat:
+        path: "{{ sweepi_workspace }}/.git"
+      register: sweepi_verify_workspace_git
+
+    - name: Assert workspace checkout exists
+      ansible.builtin.assert:
+        that: sweepi_verify_workspace_git.stat.exists
+
+    - name: Verify checked out branch or ref
+      ansible.builtin.shell: |
+        set -euo pipefail
+        git rev-parse --abbrev-ref HEAD
+        git rev-parse HEAD
+      args:
+        chdir: "{{ sweepi_workspace }}"
+        executable: /bin/bash
+      become_user: "{{ sweepi_user }}"
+      register: sweepi_verify_git_ref
+      changed_when: false
+
+    - name: Assert expected branch when repo_version names a branch
+      ansible.builtin.assert:
+        that:
+          - sweepi_verify_git_ref.stdout_lines[0] == sweepi_repo_version
+        fail_msg: "Workspace branch is {{ sweepi_verify_git_ref.stdout_lines[0] }}, expected {{ sweepi_repo_version }}."
+      when: sweepi_repo_version is match('^[A-Za-z0-9._/-]+$')
+
+    - name: Verify recursive RPLIDAR submodule files
+      ansible.builtin.stat:
+        path: "{{ sweepi_workspace }}/{{ item }}"
+      loop:
+        - src/sllidar_ros2/package.xml
+        - src/sllidar_ros2/CMakeLists.txt
+      register: sweepi_verify_submodule_files
+
+    - name: Assert recursive submodule files exist
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+        fail_msg: "Missing submodule file {{ item.item }}."
+      loop: "{{ sweepi_verify_submodule_files.results }}"
+
+    - name: Verify workspace install setup
+      ansible.builtin.stat:
+        path: "{{ sweepi_workspace }}/install/setup.bash"
+      register: sweepi_verify_workspace_setup
+
+    - name: Assert workspace was built
+      ansible.builtin.assert:
+        that: sweepi_verify_workspace_setup.stat.exists
+        fail_msg: "The ROS workspace install/setup.bash file is missing."
+
+    - name: Verify required ROS packages resolve
+      ansible.builtin.shell: |
+        set -euo pipefail
+        source /opt/ros/{{ sweepi_ros_distro }}/setup.bash
+        source {{ sweepi_workspace }}/install/setup.bash
+        ros2 pkg prefix {{ item }}
+      args:
+        executable: /bin/bash
+      become_user: "{{ sweepi_user }}"
+      changed_when: false
+      loop:
+        - sweepi_robot_manager
+        - sweepi_api_bridge
+        - sweepi_base_driver
+        - sweepi_real_bringup
+        - sweepi_state_estimation
+        - sweepi_slam
+        - sweepi_exploration
+        - sweepi_coverage
+        - sllidar_ros2
+
+    - name: Verify rosdep check succeeds
+      ansible.builtin.shell: |
+        set -euo pipefail
+        source /opt/ros/{{ sweepi_ros_distro }}/setup.bash
+        rosdep check \
+          --from-paths src \
+          --ignore-src \
+          --rosdistro {{ sweepi_ros_distro }} \
+          --skip-keys "{{ sweepi_rosdep_skip_keys | join(' ') }}"
+      args:
+        chdir: "{{ sweepi_workspace }}"
+        executable: /bin/bash
+      become_user: "{{ sweepi_user }}"
+      changed_when: false
+
+    - name: Verify UART boot configuration
+      ansible.builtin.shell: |
+        set -euo pipefail
+        grep -Eq '^enable_uart=1$' /boot/firmware/config.txt
+        ! grep -Eq '(^|[[:space:]])console=(serial0|ttyAMA0),' /boot/firmware/cmdline.txt
+      args:
+        executable: /bin/bash
+      changed_when: false
+
+    - name: Verify serial getty services are masked
+      ansible.builtin.command:
+        argv: [systemctl, is-enabled, "{{ item }}"]
+      loop:
+        - serial-getty@ttyAMA0.service
+        - serial-getty@serial0.service
+      register: sweepi_verify_serial_getty
+      changed_when: false
+      failed_when: false
+
+    - name: Assert serial getty services are masked
+      ansible.builtin.assert:
+        that:
+          - item.stdout == "masked"
+        fail_msg: "{{ item.item }} is {{ item.stdout | default(item.stderr) }}, expected masked."
+      loop: "{{ sweepi_verify_serial_getty.results }}"
+
+    - name: Report UART device state
+      ansible.builtin.stat:
+        path: "{{ sweepi_base_serial_port }}"
+      register: sweepi_verify_uart_device
+
+    - name: Display UART device state
+      ansible.builtin.debug:
+        msg: "{{ sweepi_base_serial_port }} exists={{ sweepi_verify_uart_device.stat.exists }}. Missing can be normal on unsupported Pi models before reboot."
+
+    - name: Verify RPLIDAR udev rule
+      ansible.builtin.stat:
+        path: /etc/udev/rules.d/60-rplidar.rules
+      register: sweepi_verify_lidar_rule
+
+    - name: Assert RPLIDAR udev rule exists
+      ansible.builtin.assert:
+        that: sweepi_verify_lidar_rule.stat.exists
+        fail_msg: "/etc/udev/rules.d/60-rplidar.rules is missing."
+
+    - name: Report LiDAR device state
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ sweepi_lidar_serial_port }}"
+        - "{{ sweepi_lidar_fallback_serial_port }}"
+      register: sweepi_verify_lidar_devices
+
+    - name: Display LiDAR device state
+      ansible.builtin.debug:
+        msg: "{{ item.item }} exists={{ item.stat.exists }}. If false, hardware is probably unplugged; udev rule presence is verified separately."
+      loop: "{{ sweepi_verify_lidar_devices.results }}"
+
+    - name: Read SweePi unit files
+      ansible.builtin.slurp:
+        src: "/etc/systemd/system/{{ item }}"
+      loop:
+        - sweepi-robot.service
+        - sweepi-api-bridge.service
+        - sweepi-power-control.service
+      register: sweepi_verify_units
+
+    - name: Assert robot unit is headless and hardware-configured
+      ansible.builtin.assert:
+        that:
+          - "'launch_rviz:=false' in robot_unit"
+          - "'launch_api_bridge:=true' in robot_unit"
+          - sweepi_base_serial_port in robot_unit
+          - sweepi_lidar_serial_port in robot_unit
+          - "'Conflicts=sweepi-api-bridge.service' in robot_unit"
+          - "'DISPLAY=' not in robot_unit"
+        fail_msg: "sweepi-robot.service does not match the expected headless production configuration."
+      vars:
+        robot_unit: "{{ sweepi_verify_units.results[0].content | b64decode }}"
+
+    - name: Assert standalone API conflicts with robot service
+      ansible.builtin.assert:
+        that:
+          - "'Conflicts=sweepi-robot.service' in api_unit"
+      vars:
+        api_unit: "{{ sweepi_verify_units.results[1].content | b64decode }}"
+
+    - name: Verify boot enable states for SweePi services
+      ansible.builtin.command:
+        argv: [systemctl, is-enabled, "{{ item.unit }}"]
+      loop:
+        - { unit: sweepi-power-control.service, expected: "{{ 'enabled' if sweepi_enable_power_control else 'disabled' }}" }
+        - { unit: sweepi-robot.service, expected: "{{ 'enabled' if sweepi_robot_enable_at_boot else 'disabled' }}" }
+        - { unit: sweepi-api-bridge.service, expected: "{{ 'enabled' if sweepi_api_bridge_enable_at_boot else 'disabled' }}" }
+      register: sweepi_verify_enable_states
+      changed_when: false
+      failed_when: false
+
+    - name: Assert SweePi service enable states
+      ansible.builtin.assert:
+        that:
+          - item.stdout == item.item.expected
+        fail_msg: "{{ item.item.unit }} is {{ item.stdout | default(item.stderr) }}, expected {{ item.item.expected }}."
+      loop: "{{ sweepi_verify_enable_states.results }}"
+
+    - name: Check robot/API active state
+      ansible.builtin.command:
+        argv: [systemctl, is-active, "{{ item }}"]
+      loop:
+        - sweepi-robot.service
+        - sweepi-api-bridge.service
+      register: sweepi_verify_active_services
+      changed_when: false
+      failed_when: false
+
+    - name: Assert robot and standalone API are not both active
+      ansible.builtin.assert:
+        that:
+          - not (sweepi_verify_active_services.results[0].stdout == "active" and sweepi_verify_active_services.results[1].stdout == "active")
+        fail_msg: "sweepi-robot.service and sweepi-api-bridge.service are both active; only one API bridge may bind port 8080."
+
+    - name: Verify API health when configured services are running
       ansible.builtin.uri:
         url: "{{ sweepi_api_health_url }}"
         return_content: true
-        timeout: 3
-      register: api_health
-      failed_when: false
+        timeout: 5
+      register: sweepi_verify_api_health
+      when: >-
+        sweepi_verify_active_services.results[0].stdout == "active"
+        or sweepi_verify_active_services.results[1].stdout == "active"
 
-    - name: Display API health
+    - name: Report API health skipped by configuration
       ansible.builtin.debug:
-        msg: >-
-          status={{ api_health.status | default('unavailable') }}
-          body={{ api_health.content | default('') }}
+        msg: "API health check not required: robot/API bridge services are not configured as running during standard verification."
+      when:
+        - sweepi_verify_active_services.results[0].stdout != "active"
+        - sweepi_verify_active_services.results[1].stdout != "active"
+        - not sweepi_verify_start_robot_temporarily | bool

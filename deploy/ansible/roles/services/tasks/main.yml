@@ -1,4 +1,10 @@
 ---
+- name: Prevent enabling both API bridge and robot services at boot
+  ansible.builtin.assert:
+    that:
+      - not (sweepi_api_bridge_enable_at_boot | bool and sweepi_robot_enable_at_boot | bool)
+    fail_msg: "Do not enable both sweepi-api-bridge.service and sweepi-robot.service at boot; both bind or include API port 8080."
+
 - name: Install ROS environment file
   ansible.builtin.template:
     src: sweepi-ros.env.j2

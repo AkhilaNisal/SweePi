@@ -1,38 +1,168 @@
 ---
-- name: Clone or update the SweePi repository
+- name: Create robot user SSH directory when deploy key is enabled
+  ansible.builtin.file:
+    path: "/home/{{ sweepi_user }}/.ssh"
+    state: directory
+    owner: "{{ sweepi_user }}"
+    group: "{{ sweepi_user }}"
+    mode: "0700"
+  when: sweepi_git_deploy_key_enabled | bool
+
+- name: Install Git deploy key
+  ansible.builtin.copy:
+    dest: "/home/{{ sweepi_user }}/.ssh/{{ sweepi_git_deploy_key_filename }}"
+    owner: "{{ sweepi_user }}"
+    group: "{{ sweepi_user }}"
+    mode: "0600"
+    content: "{{ sweepi_git_deploy_key_private }}"
+  no_log: true
+  when: sweepi_git_deploy_key_enabled | bool
+
+- name: Read GitHub SSH host keys
+  ansible.builtin.command:
+    argv: [ssh-keyscan, -t, rsa,ecdsa,ed25519, github.com]
+  register: sweepi_github_host_keys
+  changed_when: false
+  when: sweepi_git_deploy_key_enabled | bool
+
+- name: Trust GitHub SSH host keys for robot user
+  ansible.builtin.known_hosts:
+    path: "/home/{{ sweepi_user }}/.ssh/known_hosts"
+    name: github.com
+    key: "{{ item }}"
+    state: present
+  loop: "{{ sweepi_github_host_keys.stdout_lines | default([]) }}"
+  when:
+    - sweepi_git_deploy_key_enabled | bool
+    - item is search('github.com')
+
+- name: Ensure known_hosts ownership
+  ansible.builtin.file:
+    path: "/home/{{ sweepi_user }}/.ssh/known_hosts"
+    owner: "{{ sweepi_user }}"
+    group: "{{ sweepi_user }}"
+    mode: "0644"
+  when: sweepi_git_deploy_key_enabled | bool
+
+- name: Select effective repository URL
+  ansible.builtin.set_fact:
+    sweepi_effective_repo_url: >-
+      {{
+        'git@github.com:AkhilaNisal/SweePi.git'
+        if sweepi_repo_auth_method == 'ssh'
+        else sweepi_repo_url
+      }}
+
+- name: Clone or update the SweePi repository with recursive submodules
   ansible.builtin.git:
-    repo: "{{ sweepi_repo_url }}"
+    repo: "{{ sweepi_effective_repo_url }}"
     dest: "{{ sweepi_workspace }}"
     version: "{{ sweepi_repo_version }}"
     update: true
     force: false
+    recursive: true
+    track_submodules: true
+    accept_hostkey: false
   become_user: "{{ sweepi_user }}"
-  register: sweepi_repo_checkout
+  environment:
+    GIT_SSH_COMMAND: >-
+      ssh -i /home/{{ sweepi_user }}/.ssh/{{ sweepi_git_deploy_key_filename }}
+      -o IdentitiesOnly=yes
+  when: sweepi_git_deploy_key_enabled | bool
+  register: sweepi_repo_checkout_ssh
+
+- name: Clone or update the SweePi repository with recursive submodules over HTTPS
+  ansible.builtin.git:
+    repo: "{{ sweepi_effective_repo_url }}"
+    dest: "{{ sweepi_workspace }}"
+    version: "{{ sweepi_repo_version }}"
+    update: true
+    force: false
+    recursive: true
+    track_submodules: true
+  become_user: "{{ sweepi_user }}"
+  when: not sweepi_git_deploy_key_enabled | bool
+  register: sweepi_repo_checkout_https
+
+- name: Record repository checkout result
+  ansible.builtin.set_fact:
+    sweepi_repo_checkout_changed: >-
+      {{
+        (sweepi_repo_checkout_ssh.changed | default(false))
+        or (sweepi_repo_checkout_https.changed | default(false))
+      }}
+
+- name: Create directories Git may not preserve
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ sweepi_user }}"
+    group: "{{ sweepi_user }}"
+    mode: "0755"
+  loop:
+    - "{{ sweepi_workspace }}/src/sweepi_slam/maps"
+    - "{{ sweepi_workspace }}/maps"
 
 - name: Install ROS package dependencies
   ansible.builtin.shell: |
     set -euo pipefail
     source /opt/ros/{{ sweepi_ros_distro }}/setup.bash
-    rosdep install --from-paths src --ignore-src -r -y
+    rosdep install \
+      --from-paths src \
+      --ignore-src \
+      --rosdistro {{ sweepi_ros_distro }} \
+      --skip-keys "{{ sweepi_rosdep_skip_keys | join(' ') }}" \
+      -r -y
   args:
     chdir: "{{ sweepi_workspace }}"
     executable: /bin/bash
   become_user: "{{ sweepi_user }}"
-  changed_when: false
+  register: sweepi_rosdep_install
+  changed_when: "'#All required rosdeps installed successfully' not in sweepi_rosdep_install.stdout"
+
+- name: Check workspace setup file
+  ansible.builtin.stat:
+    path: "{{ sweepi_workspace }}/install/setup.bash"
+  register: sweepi_workspace_setup_before_build
+
+- name: Decide whether the workspace build is required
+  ansible.builtin.set_fact:
+    sweepi_workspace_build_required: >-
+      {{
+        sweepi_force_workspace_rebuild | bool
+        or sweepi_repo_checkout_changed | bool
+        or not sweepi_workspace_setup_before_build.stat.exists
+      }}
+
+- name: Clean workspace build artifacts when explicitly requested
+  ansible.builtin.file:
+    path: "{{ sweepi_workspace }}/{{ item }}"
+    state: absent
+  loop:
+    - build
+    - install
+    - log
+  become_user: "{{ sweepi_user }}"
+  when:
+    - sweepi_clean_workspace_before_build | bool
+    - sweepi_workspace_build_required | bool
 
 - name: Build the SweePi ROS workspace
   ansible.builtin.shell: |
     set -euo pipefail
     source /opt/ros/{{ sweepi_ros_distro }}/setup.bash
-    colcon build --symlink-install --parallel-workers {{ sweepi_colcon_parallel_workers }}
+    colcon build \
+      --symlink-install \
+      --executor {{ sweepi_colcon_executor }}
   args:
     chdir: "{{ sweepi_workspace }}"
     executable: /bin/bash
   environment:
-    MAKEFLAGS: "-j{{ sweepi_colcon_parallel_workers }}"
+    MAKEFLAGS: "-j1"
   become_user: "{{ sweepi_user }}"
   register: sweepi_colcon_build
-  changed_when: true
+  changed_when: sweepi_workspace_build_required | bool
+  when: sweepi_workspace_build_required | bool
 
 - name: Confirm the workspace setup file exists
   ansible.builtin.stat:

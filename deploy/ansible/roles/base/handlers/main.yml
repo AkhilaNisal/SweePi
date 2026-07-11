@@ -1,0 +1,6 @@
+---
+- name: Check reboot requirement
+  ansible.builtin.stat:
+    path: /var/run/reboot-required
+  register: sweepi_base_reboot_marker
+  changed_when: sweepi_base_reboot_marker.stat.exists

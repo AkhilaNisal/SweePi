@@ -46,9 +46,11 @@ LOG = logging.getLogger("sweepi_ble")
 BLE_NAME = os.environ["SWEEPI_BLE_NAME"]
 ROBOT_ID = os.environ["SWEEPI_ROBOT_ID"]
 SERVICE_UUID = os.environ["SWEEPI_BLE_SERVICE_UUID"]
+ROBOT_INFO_UUID = os.environ["SWEEPI_BLE_ROBOT_INFO_UUID"]
 WIFI_CONFIG_UUID = os.environ["SWEEPI_BLE_WIFI_CONFIG_UUID"]
 WIFI_SCAN_UUID = os.environ["SWEEPI_BLE_WIFI_SCAN_UUID"]
 WIFI_STATUS_UUID = os.environ["SWEEPI_BLE_WIFI_STATUS_UUID"]
+SETUP_COMMAND_UUID = os.environ["SWEEPI_BLE_SETUP_COMMAND_UUID"]
 WIFI_INTERFACE = os.environ.get("SWEEPI_WIFI_INTERFACE", "wlan0")
 NETPLAN_PATH = pathlib.Path(os.environ.get(
     "SWEEPI_NETPLAN_PATH", "/etc/netplan/99-sweepi-provisioned.yaml"
@@ -81,13 +83,17 @@ def current_ssid() -> str:
 def wifi_status() -> dict[str, Any]:
     ip = current_ip()
     ssid = current_ssid()
+    connected = bool(ip and ssid)
     return {
+        "state": "connected" if connected else "idle",
         "robot_id": ROBOT_ID,
+        "hostname": "{{ sweepi_hostname }}.local",
         "ble_name": BLE_NAME,
         "interface": WIFI_INTERFACE,
-        "connected": bool(ip and ssid),
+        "connected": connected,
         "ssid": ssid,
         "ip": ip,
+        "message": "Wi-Fi connected" if connected else "Waiting for Wi-Fi credentials",
         "netplan_wifi": NETPLAN_PATH.exists(),
     }
 
@@ -216,9 +222,11 @@ class Application(dbus.service.Object):
         self.services: list[Service] = []
         super().__init__(bus, self.path)
         service = Service(bus, 0, SERVICE_UUID, True)
-        service.add_characteristic(WifiConfigCharacteristic(bus, 0, service))
+        service.add_characteristic(RobotInfoCharacteristic(bus, 0, service))
         service.add_characteristic(WifiScanCharacteristic(bus, 1, service))
-        service.add_characteristic(WifiStatusCharacteristic(bus, 2, service))
+        service.add_characteristic(WifiConfigCharacteristic(bus, 2, service))
+        service.add_characteristic(WifiStatusCharacteristic(bus, 3, service))
+        service.add_characteristic(SetupCommandCharacteristic(bus, 4, service))
         self.services.append(service)
 
     @dbus.service.method(DBUS_OM, out_signature="a{oa{sa{sv}}}")
@@ -340,6 +348,21 @@ class WifiConfigCharacteristic(Characteristic):
             raise InvalidArgs(str(exc))
 
 
+class RobotInfoCharacteristic(Characteristic):
+    def __init__(self, bus: dbus.SystemBus, index: int, service: Service):
+        super().__init__(bus, index, ROBOT_INFO_UUID, ["read"], service)
+
+    @dbus.service.method(GATT_CHARACTERISTIC, in_signature="a{sv}", out_signature="ay")
+    def ReadValue(self, options: dict[str, Any]) -> dbus.Array:
+        payload = {
+            "robot_id": ROBOT_ID,
+            "name": BLE_NAME,
+            "model": "sweepi",
+            "status": "setup mode",
+        }
+        return self.bytes_for_read(payload, options)
+
+
 class WifiScanCharacteristic(Characteristic):
     def __init__(self, bus: dbus.SystemBus, index: int, service: Service):
         super().__init__(bus, index, WIFI_SCAN_UUID, ["read"], service)
@@ -356,6 +379,25 @@ class WifiStatusCharacteristic(Characteristic):
     @dbus.service.method(GATT_CHARACTERISTIC, in_signature="a{sv}", out_signature="ay")
     def ReadValue(self, options: dict[str, Any]) -> dbus.Array:
         return self.bytes_for_read(wifi_status(), options)
+
+
+class SetupCommandCharacteristic(Characteristic):
+    def __init__(self, bus: dbus.SystemBus, index: int, service: Service):
+        super().__init__(bus, index, SETUP_COMMAND_UUID, ["write", "write-without-response"], service)
+
+    @dbus.service.method(GATT_CHARACTERISTIC, in_signature="aya{sv}")
+    def WriteValue(self, value: list[int], options: dict[str, Any]) -> None:
+        del options
+        try:
+            payload = json.loads(bytes(value).decode("utf-8"))
+        except json.JSONDecodeError as exc:
+            raise InvalidArgs("Invalid setup command JSON") from exc
+
+        command = str(payload.get("command", "")).strip()
+        if command in ("", "scan_wifi"):
+            LOG.info("Received setup command: %s", command or "noop")
+            return
+        raise NotSupported(f"Unsupported setup command: {command}")
 
 
 class Advertisement(dbus.service.Object):

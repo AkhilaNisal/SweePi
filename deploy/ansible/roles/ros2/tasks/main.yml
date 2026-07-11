@@ -1,44 +1,127 @@
 ---
-- name: Enable Ubuntu universe repository
-  ansible.builtin.apt_repository:
-    repo: "deb http://ports.ubuntu.com/ubuntu-ports {{ ansible_distribution_release }} universe"
-    state: present
-    filename: ubuntu-universe
-  when: ansible_architecture in ["aarch64", "arm64"]
+- name: Confirm Ubuntu Noble for ROS 2 Jazzy
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution_release == "noble"
+      - sweepi_ros_distro == "jazzy"
+    fail_msg: "ROS 2 Jazzy deployment expects Ubuntu 24.04 Noble."
 
-- name: Install ROS repository signing key
+- name: Ensure Ubuntu deb822 sources include universe
+  ansible.builtin.shell: |
+    set -euo pipefail
+    source_file=/etc/apt/sources.list.d/ubuntu.sources
+    if [[ ! -f "$source_file" ]]; then
+      echo "Missing $source_file" >&2
+      exit 1
+    fi
+    tmp="$(mktemp)"
+    awk '
+      /^Suites:/ { suites=$0 }
+      /^Components:/ && suites ~ /(^|[[:space:]])noble([[:space:]-]|$)/ {
+        if ($0 !~ /(^|[[:space:]])universe([[:space:]]|$)/) {
+          print $0 " universe"
+          next
+        }
+      }
+      { print }
+      /^$/ { suites="" }
+    ' "$source_file" > "$tmp"
+    if ! cmp -s "$source_file" "$tmp"; then
+      install -o root -g root -m 0644 "$tmp" "$source_file"
+      echo changed
+    fi
+    rm -f "$tmp"
+  args:
+    executable: /bin/bash
+  register: sweepi_ubuntu_sources
+  changed_when: "'changed' in sweepi_ubuntu_sources.stdout"
+
+- name: Remove legacy Ansible-managed ROS 2 source list
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/ros2.list
+    state: absent
+
+- name: Detect conflicting ROS 2 apt source entries
+  ansible.builtin.shell: |
+    set -euo pipefail
+    shopt -s nullglob
+    mapfile -t managed_files < <(dpkg-query -L ros2-apt-source 2>/dev/null | grep -E '/etc/apt/sources.list.d/.*\.(list|sources)$' || true)
+    for file in /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
+      [[ "$file" == "/etc/apt/sources.list.d/ros2.list" ]] && continue
+      skip=false
+      for managed_file in "${managed_files[@]}"; do
+        if [[ "$file" == "$managed_file" ]]; then
+          skip=true
+          break
+        fi
+      done
+      [[ "$skip" == "true" ]] && continue
+      grep -H "packages.ros.org/ros2/ubuntu" "$file" || true
+    done
+  args:
+    executable: /bin/bash
+  register: sweepi_ros_source_conflicts
+  changed_when: false
+  failed_when: sweepi_ros_source_conflicts.stdout | length > 0
+
+- name: Read latest ros-apt-source release metadata
+  ansible.builtin.uri:
+    url: https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest
+    return_content: true
+  register: sweepi_ros_apt_source_release
+
+- name: Select Noble ros2-apt-source package asset
+  ansible.builtin.set_fact:
+    sweepi_ros_apt_source_asset: >-
+      {{
+        (
+          sweepi_ros_apt_source_release.json.assets
+          | selectattr('name', 'match', '^ros2-apt-source_.*noble.*_all\\.deb$')
+          | list
+          | first
+        )
+      }}
+
+- name: Fail when ros2-apt-source Noble package cannot be found
+  ansible.builtin.assert:
+    that:
+      - sweepi_ros_apt_source_asset is mapping
+      - sweepi_ros_apt_source_asset.browser_download_url is defined
+    fail_msg: "Could not locate the latest official ros2-apt-source Noble .deb release asset."
+
+- name: Download latest official ros2-apt-source package
   ansible.builtin.get_url:
-    url: https://raw.githubusercontent.com/ros/rosdistro/master/ros.key
-    dest: /usr/share/keyrings/ros-archive-keyring.gpg
+    url: "{{ sweepi_ros_apt_source_asset.browser_download_url }}"
+    dest: "/tmp/{{ sweepi_ros_apt_source_asset.name }}"
     owner: root
     group: root
     mode: "0644"
 
-- name: Configure ROS 2 APT repository
-  ansible.builtin.apt_repository:
-    repo: >-
-      deb [arch={{ 'arm64' if ansible_architecture in ['aarch64', 'arm64'] else ansible_architecture }}
-      signed-by=/usr/share/keyrings/ros-archive-keyring.gpg]
-      http://packages.ros.org/ros2/ubuntu
-      {{ ansible_distribution_release }} main
-    filename: ros2
-    state: present
-    update_cache: true
-
-- name: Install ROS 2 Jazzy and SweePi dependencies
+- name: Install official ros2-apt-source package
   ansible.builtin.apt:
-    name: "{{ sweepi_ros_packages }}"
-    state: present
+    deb: "/tmp/{{ sweepi_ros_apt_source_asset.name }}"
+    lock_timeout: 180
+
+- name: Update APT cache after ROS repository setup
+  ansible.builtin.apt:
     update_cache: true
     lock_timeout: 180
 
+- name: Install ROS 2 Jazzy and SweePi system dependencies
+  ansible.builtin.apt:
+    name: "{{ sweepi_ros_packages + sweepi_system_python_packages }}"
+    state: present
+    lock_timeout: 300
+
 - name: Initialize rosdep
-  ansible.builtin.command: rosdep init
+  ansible.builtin.command:
+    argv: [rosdep, init]
   args:
     creates: /etc/ros/rosdep/sources.list.d/20-default.list
 
 - name: Update rosdep as robot user
-  ansible.builtin.command: rosdep update
+  ansible.builtin.command:
+    argv: [rosdep, update]
   become_user: "{{ sweepi_user }}"
   changed_when: false
 

@@ -1,0 +1,59 @@
+---
+- name: Install XFCE and XRDP packages
+  ansible.builtin.apt:
+    name: "{{ sweepi_desktop_remote_packages }}"
+    state: present
+    lock_timeout: 180
+
+- name: Add xrdp service user to ssl-cert
+  ansible.builtin.user:
+    name: xrdp
+    groups: ssl-cert
+    append: true
+  notify: Restart XRDP
+
+- name: Configure XRDP session for robot user
+  ansible.builtin.copy:
+    dest: "/home/{{ sweepi_user }}/.xsession"
+    owner: "{{ sweepi_user }}"
+    group: "{{ sweepi_user }}"
+    mode: "0644"
+    content: |
+      xfce4-session
+  notify: Restart XRDP
+
+- name: Configure XRDP session environment for robot user
+  ansible.builtin.copy:
+    dest: "/home/{{ sweepi_user }}/.xsessionrc"
+    owner: "{{ sweepi_user }}"
+    group: "{{ sweepi_user }}"
+    mode: "0644"
+    content: |
+      export XDG_CURRENT_DESKTOP=XFCE
+      export XDG_SESSION_DESKTOP=xfce
+      export DESKTOP_SESSION=xfce
+  notify: Restart XRDP
+
+- name: Enable XRDP services
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - xrdp.service
+    - xrdp-sesman.service
+
+- name: Install UFW when firewall management is enabled
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+    lock_timeout: 120
+  when: sweepi_manage_ufw | bool
+
+- name: Restrict RDP to configured LAN subnet when UFW is managed
+  community.general.ufw:
+    rule: allow
+    from_ip: "{{ sweepi_rdp_allow_subnet }}"
+    port: "3389"
+    proto: tcp
+  when: sweepi_manage_ufw | bool

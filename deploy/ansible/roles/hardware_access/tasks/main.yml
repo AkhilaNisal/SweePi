@@ -1,0 +1,43 @@
+---
+- name: Check RPLIDAR udev rule from workspace
+  ansible.builtin.stat:
+    path: "{{ sweepi_workspace }}/src/sllidar_ros2/scripts/rplidar.rules"
+  register: sweepi_rplidar_rule_source
+
+- name: Stop when RPLIDAR submodule udev rule is missing
+  ansible.builtin.assert:
+    that: sweepi_rplidar_rule_source.stat.exists
+    fail_msg: >-
+      {{ sweepi_workspace }}/src/sllidar_ros2/scripts/rplidar.rules is missing.
+      Ensure the SweePi repository was checked out with recursive submodules.
+
+- name: Install RPLIDAR udev rule
+  ansible.builtin.copy:
+    src: "{{ sweepi_workspace }}/src/sllidar_ros2/scripts/rplidar.rules"
+    dest: /etc/udev/rules.d/60-rplidar.rules
+    owner: root
+    group: root
+    mode: "0644"
+    remote_src: true
+  notify:
+    - Reload udev rules
+    - Trigger udev rules
+
+- name: Check preferred LiDAR device path
+  ansible.builtin.stat:
+    path: "{{ sweepi_lidar_serial_port }}"
+  register: sweepi_lidar_preferred_device
+
+- name: Check fallback LiDAR device path
+  ansible.builtin.stat:
+    path: "{{ sweepi_lidar_fallback_serial_port }}"
+  register: sweepi_lidar_fallback_device
+
+- name: Report LiDAR connection state
+  ansible.builtin.debug:
+    msg: >-
+      RPLIDAR udev rule installed. preferred={{ sweepi_lidar_serial_port }}
+      exists={{ sweepi_lidar_preferred_device.stat.exists }};
+      fallback={{ sweepi_lidar_fallback_serial_port }}
+      exists={{ sweepi_lidar_fallback_device.stat.exists }}.
+      If both are false, the LiDAR is probably not connected during provisioning.

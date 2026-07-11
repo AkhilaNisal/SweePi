@@ -1,5 +1,5 @@
 [sweepi]
-sweepi_robot ansible_host=REPLACE_WITH_RPI_IP ansible_user=thunderbot
+sweepi_robot ansible_host=sweepi.local ansible_user=sweepi
 
 [sweepi:vars]
 ansible_python_interpreter=/usr/bin/python3
