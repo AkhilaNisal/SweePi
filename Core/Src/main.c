@@ -29,6 +29,7 @@
 /* USER CODE BEGIN Includes */
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 
 /* USER CODE END Includes */
 
@@ -40,7 +41,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define PI 3.14159265f
-#define WHEEL_RADIUS_M 0.0615f // assume 6.15cm radius wheels, adjust as necessary
+#define WHEEL_RADIUS_M 0.03075f // assume 3.075cm radius wheels, adjust as necessary
 #define WHEEL_BASE_M 0.29f // assume 29cm distance between wheels, adjust as necessary
 #define MOTOR_TEST_ENABLE 0
 #define MOTOR_TEST_LEFT_RPM 15.0f
@@ -53,6 +54,17 @@
 #define CONTROL_LOOP_SEC ((float)CONTROL_LOOP_MS / 1000.0f)
 #define COMMAND_TIMEOUT_MS 500U
 #define GYRO_DPS_TO_RAD_PER_SEC (PI / 180.0f)
+#define MPU6050_REG_SMPLRT_DIV 0x19U
+#define MPU6050_REG_CONFIG 0x1AU
+#define MPU6050_REG_GYRO_CONFIG 0x1BU
+#define MPU6050_REG_ACCEL_CONFIG 0x1CU
+#define MPU6050_REG_INT_ENABLE 0x38U
+#define MPU6050_REG_PWR_MGMT_1 0x6BU
+#define IMU_CALIBRATION_SAMPLES 1000U
+#define IMU_STATIONARY_GYRO_RAD_S 0.035f
+#define IMU_STATIONARY_ACCEL_MIN 8.8f
+#define IMU_STATIONARY_ACCEL_MAX 10.8f
+#define IMU_Z_BIAS_ADAPT_ALPHA 0.001f
 #define LEFT_SERVO_CHANNEL TIM_CHANNEL_1
 #define RIGHT_SERVO_CHANNEL TIM_CHANNEL_3
 #define SERVO_NEUTRAL_US 1500U
@@ -81,7 +93,8 @@ int16_t raw_acc_x = 0, raw_acc_y = 0, raw_acc_z = 0;
 int16_t raw_gyro_x = 0, raw_gyro_y = 0, raw_gyro_z = 0;
 
 // --- IMU CALIBRATION VARIABLES (Gyros Only!) ---
-int32_t gyro_x_offset = 0, gyro_y_offset = 0, gyro_z_offset = 0;
+float gyro_x_offset = 0.0f, gyro_y_offset = 0.0f, gyro_z_offset = 0.0f;
+float gyro_z_runtime_bias = 0.0f;
 
 // --- ASCII COMMUNICATION PROTOCOL ---
 char rx_line_buffer[128]; // Holds the incoming string
@@ -230,9 +243,6 @@ int main(void)
   // Standalone power-up marker for serial/debug checks.
   HAL_UART_Transmit(&huart2, (uint8_t *)"BOOT\r\n", 6, 100);
 
-  // --- Give the MPU6050 time to wake up! ---
-  HAL_Delay(800); 
-  
   // --- Step 1: I2C Sanity Check Scanner ---
   HAL_StatusTypeDef result;
   
@@ -250,26 +260,48 @@ int main(void)
       }
   }
 
-  // --- Step 2: Wake up the MPU6050 ---
-  // The MPU6050 boots in Sleep Mode. Write 0x00 to register 0x6B to wake it up!
+  // --- Step 2: Wake and configure the MPU6050 ---
   if (mpu6050_address != 0)
   {
-      uint8_t wake_data = 0x00;
-      if (HAL_I2C_Mem_Write(&hi2c3, (uint16_t)(mpu6050_address << 1), 0x6B, 1, &wake_data, 1, 10) == HAL_OK)
+      uint8_t data = 0x00;
+      if (HAL_I2C_Mem_Write(&hi2c3, (uint16_t)(mpu6050_address << 1), MPU6050_REG_PWR_MGMT_1, 1, &data, 1, 10) == HAL_OK)
       {
-          mpu6050_ready = 1;
+          HAL_Delay(100);
+
+          data = 0x07; // 125 Hz sample rate when DLPF is enabled.
+          if (HAL_I2C_Mem_Write(&hi2c3, (uint16_t)(mpu6050_address << 1), MPU6050_REG_SMPLRT_DIV, 1, &data, 1, 10) == HAL_OK)
+          {
+              data = 0x03; // DLPF enabled, about 44 Hz gyro bandwidth.
+              if (HAL_I2C_Mem_Write(&hi2c3, (uint16_t)(mpu6050_address << 1), MPU6050_REG_CONFIG, 1, &data, 1, 10) == HAL_OK)
+              {
+                  data = 0x00; // Gyro +/-250 deg/s -> 131 LSB/(deg/s).
+                  if (HAL_I2C_Mem_Write(&hi2c3, (uint16_t)(mpu6050_address << 1), MPU6050_REG_GYRO_CONFIG, 1, &data, 1, 10) == HAL_OK)
+                  {
+                      data = 0x00; // Accel +/-2 g -> 16384 LSB/g.
+                      if (HAL_I2C_Mem_Write(&hi2c3, (uint16_t)(mpu6050_address << 1), MPU6050_REG_ACCEL_CONFIG, 1, &data, 1, 10) == HAL_OK)
+                      {
+                          data = 0x00; // Interrupt output disabled; STM32 polls over I2C.
+                          if (HAL_I2C_Mem_Write(&hi2c3, (uint16_t)(mpu6050_address << 1), MPU6050_REG_INT_ENABLE, 1, &data, 1, 10) == HAL_OK)
+                          {
+                              mpu6050_ready = 1;
+                          }
+                      }
+                  }
+              }
+          }
       }
   }
 
-  // --- Step 3: Calibrate MPU6050 Gyroscopes ---
-  // DO NOT MOVE THE ROBOT DURING THIS 1 SECOND WINDOW!
+  // --- Step 3: Let the configured MPU settle, then calibrate gyroscopes ---
+  // DO NOT MOVE THE ROBOT DURING THIS WINDOW.
   if (mpu6050_ready == 1)
   {
-      int32_t sum_gx = 0, sum_gy = 0, sum_gz = 0;
+      int64_t sum_gx = 0, sum_gy = 0, sum_gz = 0;
       uint8_t calib_buf[6]; 
-      const uint16_t num_samples = 500;
 
-      for (uint16_t i = 0; i < num_samples; i++)
+      HAL_Delay(500);
+
+      for (uint16_t i = 0; i < IMU_CALIBRATION_SAMPLES; i++)
       {
           // Register 0x43 is where the Gyro data starts
           if (HAL_I2C_Mem_Read(&hi2c3, (uint16_t)(mpu6050_address << 1), 0x43, 1, calib_buf, 6, 10) == HAL_OK)
@@ -282,9 +314,10 @@ int main(void)
       }
       
       // Calculate the average offsets
-      gyro_x_offset = sum_gx / num_samples;
-      gyro_y_offset = sum_gy / num_samples;
-      gyro_z_offset = sum_gz / num_samples;
+      gyro_x_offset = (float)sum_gx / (float)IMU_CALIBRATION_SAMPLES;
+      gyro_y_offset = (float)sum_gy / (float)IMU_CALIBRATION_SAMPLES;
+      gyro_z_offset = (float)sum_gz / (float)IMU_CALIBRATION_SAMPLES;
+      gyro_z_runtime_bias = 0.0f;
   }
 
   // --- Manual motor test mode ---
@@ -464,14 +497,32 @@ int main(void)
     // --- 4. ASCII PROTOCOL FEEDBACK (Pi Telemetry) ---
     
     // Apply gyro offsets and convert to rad/s.
-    float gx = ((float)(raw_gyro_x - gyro_x_offset) / 131.0f) * GYRO_DPS_TO_RAD_PER_SEC;
-    float gy = ((float)(raw_gyro_y - gyro_y_offset) / 131.0f) * GYRO_DPS_TO_RAD_PER_SEC;
-    float gz = ((float)(raw_gyro_z - gyro_z_offset) / 131.0f) * GYRO_DPS_TO_RAD_PER_SEC;
+    float gx = (((float)raw_gyro_x - gyro_x_offset) / 131.0f) * GYRO_DPS_TO_RAD_PER_SEC;
+    float gy = (((float)raw_gyro_y - gyro_y_offset) / 131.0f) * GYRO_DPS_TO_RAD_PER_SEC;
+    float gz = (((float)raw_gyro_z - gyro_z_offset) / 131.0f) * GYRO_DPS_TO_RAD_PER_SEC;
 
     // Convert Accel to m/s^2 (Standard config is +/- 2g -> /16384.0, then * 9.81 gravity)
     float ax = ((float)raw_acc_x / 16384.0f) * 9.81f;
     float ay = ((float)raw_acc_y / 16384.0f) * 9.81f;
     float az = ((float)raw_acc_z / 16384.0f) * 9.81f;
+
+    float accel_mag = sqrtf((ax * ax) + (ay * ay) + (az * az));
+    uint8_t imu_stationary = ((fabsf(gx) < IMU_STATIONARY_GYRO_RAD_S) &&
+                              (fabsf(gy) < IMU_STATIONARY_GYRO_RAD_S) &&
+                              (fabsf(gz) < IMU_STATIONARY_GYRO_RAD_S) &&
+                              (accel_mag > IMU_STATIONARY_ACCEL_MIN) &&
+                              (accel_mag < IMU_STATIONARY_ACCEL_MAX)) ? 1U : 0U;
+
+    if (imu_stationary != 0U)
+    {
+        gyro_z_runtime_bias = ((1.0f - IMU_Z_BIAS_ADAPT_ALPHA) * gyro_z_runtime_bias) +
+                              (IMU_Z_BIAS_ADAPT_ALPHA * gz);
+        gz = 0.0f;
+    }
+    else
+    {
+        gz -= gyro_z_runtime_bias;
+    }
 
     uint32_t fb_seq_out = fb_seq;
     uint64_t stm_time_us = ((uint64_t)HAL_GetTick()) * 1000ULL;
