@@ -1,0 +1,45 @@
+---
+- name: Clone or update the SweePi repository
+  ansible.builtin.git:
+    repo: "{{ sweepi_repo_url }}"
+    dest: "{{ sweepi_workspace }}"
+    version: "{{ sweepi_repo_version }}"
+    update: true
+    force: false
+  become_user: "{{ sweepi_user }}"
+  register: sweepi_repo_checkout
+
+- name: Install ROS package dependencies
+  ansible.builtin.shell: |
+    set -euo pipefail
+    source /opt/ros/{{ sweepi_ros_distro }}/setup.bash
+    rosdep install --from-paths src --ignore-src -r -y
+  args:
+    chdir: "{{ sweepi_workspace }}"
+    executable: /bin/bash
+  become_user: "{{ sweepi_user }}"
+  changed_when: false
+
+- name: Build the SweePi ROS workspace
+  ansible.builtin.shell: |
+    set -euo pipefail
+    source /opt/ros/{{ sweepi_ros_distro }}/setup.bash
+    colcon build --symlink-install --parallel-workers {{ sweepi_colcon_parallel_workers }}
+  args:
+    chdir: "{{ sweepi_workspace }}"
+    executable: /bin/bash
+  environment:
+    MAKEFLAGS: "-j{{ sweepi_colcon_parallel_workers }}"
+  become_user: "{{ sweepi_user }}"
+  register: sweepi_colcon_build
+  changed_when: true
+
+- name: Confirm the workspace setup file exists
+  ansible.builtin.stat:
+    path: "{{ sweepi_workspace }}/install/setup.bash"
+  register: sweepi_workspace_setup
+
+- name: Stop when the workspace did not build
+  ansible.builtin.assert:
+    that: sweepi_workspace_setup.stat.exists
+    fail_msg: "colcon completed without creating install/setup.bash."

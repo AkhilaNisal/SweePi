@@ -1,0 +1,63 @@
+---
+- name: Confirm Ubuntu 24.04
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == "Ubuntu"
+      - ansible_distribution_version is version("24.04", ">=")
+    fail_msg: >-
+      Expected Ubuntu Server 24.04 or newer.
+      Detected {{ ansible_distribution }} {{ ansible_distribution_version }}.
+
+- name: Confirm 64-bit ARM
+  ansible.builtin.assert:
+    that:
+      - ansible_architecture in ["aarch64", "arm64"]
+    fail_msg: "Expected a 64-bit ARM Raspberry Pi; detected {{ ansible_architecture }}."
+
+- name: Confirm the robot user exists
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ sweepi_user }}"
+
+- name: Validate GPIO configuration
+  ansible.builtin.assert:
+    that:
+      - sweepi_button_gpio | int >= 0
+      - sweepi_switch_bulb_gpio | int >= 0
+      - sweepi_button_gpio | int != sweepi_switch_bulb_gpio | int
+    fail_msg: >-
+      Set sweepi_button_gpio and sweepi_switch_bulb_gpio in
+      group_vars/all.yml using BCM GPIO numbers.
+  when: sweepi_enable_power_control | bool
+
+- name: Validate Bluetooth UUIDs
+  ansible.builtin.assert:
+    that:
+      - item != "CHANGE_ME"
+      - item is match("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+    fail_msg: >-
+      Replace all CHANGE_ME BLE UUIDs in group_vars/all.yml with the UUIDs
+      used by the Flutter application.
+  loop:
+    - "{{ sweepi_ble_service_uuid }}"
+    - "{{ sweepi_ble_wifi_config_uuid }}"
+    - "{{ sweepi_ble_wifi_scan_uuid }}"
+    - "{{ sweepi_ble_wifi_status_uuid }}"
+  when: sweepi_enable_bluetooth_provisioning | bool
+
+- name: Validate optional netplan credentials
+  ansible.builtin.assert:
+    that:
+      - sweepi_netplan_ssid | length > 0
+      - sweepi_netplan_password | length > 0
+    fail_msg: "Set sweepi_netplan_ssid and sweepi_netplan_password before enabling netplan management."
+  when: sweepi_manage_netplan | bool
+
+- name: Validate backup configuration
+  ansible.builtin.assert:
+    that:
+      - sweepi_restic_repository != "CHANGE_ME"
+      - sweepi_restic_password != "CHANGE_ME_USE_ANSIBLE_VAULT"
+      - sweepi_restic_password | length >= 12
+    fail_msg: "Set the Restic repository and an encrypted password before enabling backups."
+  when: sweepi_enable_backup | bool

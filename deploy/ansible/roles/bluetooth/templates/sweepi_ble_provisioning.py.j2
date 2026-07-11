@@ -1,0 +1,448 @@
+#!/usr/bin/env python3
+"""SweePi BLE Wi-Fi provisioning service.
+
+Protocol:
+- Wi-Fi config characteristic: write UTF-8 JSON
+  {"ssid": "...", "password": "..."}
+- Wi-Fi scan characteristic: read UTF-8 JSON array
+- Wi-Fi status characteristic: read UTF-8 JSON object
+
+The UUID values are supplied through /etc/sweepi/ble.env and must match the app.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import os
+import pathlib
+import re
+import shutil
+import subprocess
+import tempfile
+import time
+from typing import Any
+
+import dbus
+import dbus.exceptions
+import dbus.mainloop.glib
+import dbus.service
+from gi.repository import GLib
+
+BLUEZ = "org.bluez"
+DBUS_OM = "org.freedesktop.DBus.ObjectManager"
+DBUS_PROP = "org.freedesktop.DBus.Properties"
+GATT_MANAGER = "org.bluez.GattManager1"
+GATT_SERVICE = "org.bluez.GattService1"
+GATT_CHARACTERISTIC = "org.bluez.GattCharacteristic1"
+LE_ADV_MANAGER = "org.bluez.LEAdvertisingManager1"
+LE_ADVERTISEMENT = "org.bluez.LEAdvertisement1"
+
+APP_PATH = "/com/nexora/sweepi"
+SERVICE_PATH = APP_PATH + "/service"
+
+LOG = logging.getLogger("sweepi_ble")
+
+BLE_NAME = os.environ["SWEEPI_BLE_NAME"]
+ROBOT_ID = os.environ["SWEEPI_ROBOT_ID"]
+SERVICE_UUID = os.environ["SWEEPI_BLE_SERVICE_UUID"]
+WIFI_CONFIG_UUID = os.environ["SWEEPI_BLE_WIFI_CONFIG_UUID"]
+WIFI_SCAN_UUID = os.environ["SWEEPI_BLE_WIFI_SCAN_UUID"]
+WIFI_STATUS_UUID = os.environ["SWEEPI_BLE_WIFI_STATUS_UUID"]
+WIFI_INTERFACE = os.environ.get("SWEEPI_WIFI_INTERFACE", "wlan0")
+NETPLAN_PATH = pathlib.Path(os.environ.get(
+    "SWEEPI_NETPLAN_PATH", "/etc/netplan/99-sweepi-provisioned.yaml"
+))
+CONNECT_TIMEOUT = int(os.environ.get("SWEEPI_CONNECT_TIMEOUT", "60"))
+
+
+def run(command: list[str], timeout: int = 30, check: bool = True) -> subprocess.CompletedProcess[str]:
+    LOG.debug("Running: %s", command)
+    return subprocess.run(
+        command,
+        text=True,
+        capture_output=True,
+        timeout=timeout,
+        check=check,
+    )
+
+
+def current_ip() -> str | None:
+    result = run(["ip", "-4", "-o", "addr", "show", "dev", WIFI_INTERFACE], check=False)
+    match = re.search(r"\binet\s+([0-9.]+)/", result.stdout)
+    return match.group(1) if match else None
+
+
+def current_ssid() -> str:
+    result = run(["iwgetid", WIFI_INTERFACE, "--raw"], check=False)
+    return result.stdout.strip()
+
+
+def wifi_status() -> dict[str, Any]:
+    ip = current_ip()
+    ssid = current_ssid()
+    return {
+        "robot_id": ROBOT_ID,
+        "ble_name": BLE_NAME,
+        "interface": WIFI_INTERFACE,
+        "connected": bool(ip and ssid),
+        "ssid": ssid,
+        "ip": ip,
+        "netplan_wifi": NETPLAN_PATH.exists(),
+    }
+
+
+def wifi_scan() -> list[dict[str, Any]]:
+    result = run(["iw", "dev", WIFI_INTERFACE, "scan"], timeout=30, check=False)
+    networks: dict[str, dict[str, Any]] = {}
+    current: dict[str, Any] = {}
+
+    for raw_line in result.stdout.splitlines():
+        line = raw_line.strip()
+        if line.startswith("BSS "):
+            if current.get("ssid"):
+                old = networks.get(current["ssid"])
+                if old is None or current.get("signal", -999) > old.get("signal", -999):
+                    networks[current["ssid"]] = current
+            current = {"open": True}
+        elif line.startswith("SSID:"):
+            current["ssid"] = line.partition(":")[2].strip()
+        elif line.startswith("signal:"):
+            try:
+                current["signal"] = float(line.split()[1])
+            except (ValueError, IndexError):
+                pass
+        elif line.startswith(("RSN:", "WPA:")):
+            current["open"] = False
+
+    if current.get("ssid"):
+        old = networks.get(current["ssid"])
+        if old is None or current.get("signal", -999) > old.get("signal", -999):
+            networks[current["ssid"]] = current
+
+    return sorted(
+        networks.values(),
+        key=lambda item: item.get("signal", -999),
+        reverse=True,
+    )[:12]
+
+
+def yaml_string(value: str) -> str:
+    # JSON quoted strings are valid YAML quoted scalars.
+    return json.dumps(value, ensure_ascii=False)
+
+
+def provision_wifi(ssid: str, password: str) -> dict[str, Any]:
+    ssid = ssid.strip()
+    if not ssid:
+        raise ValueError("SSID is required")
+    if len(ssid.encode("utf-8")) > 32:
+        raise ValueError("SSID is too long")
+    if password and not (8 <= len(password) <= 63):
+        raise ValueError("Password must contain 8-63 characters, or be empty for an open network")
+
+    backup_dir = pathlib.Path(tempfile.mkdtemp(prefix="sweepi-netplan-backup-"))
+    backup_file = backup_dir / NETPLAN_PATH.name
+    had_existing = NETPLAN_PATH.exists()
+
+    if had_existing:
+        shutil.copy2(NETPLAN_PATH, backup_file)
+
+    if password:
+        access_point = (
+            f"        {yaml_string(ssid)}:\n"
+            f"          password: {yaml_string(password)}\n"
+        )
+    else:
+        access_point = f"        {yaml_string(ssid)}: " + "{}\n"
+
+    content = (
+        "network:\n"
+        "  version: 2\n"
+        "  renderer: networkd\n"
+        "  wifis:\n"
+        f"    {WIFI_INTERFACE}:\n"
+        "      dhcp4: true\n"
+        "      optional: true\n"
+        "      access-points:\n"
+        + access_point
+    )
+
+    NETPLAN_PATH.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = NETPLAN_PATH.with_suffix(".yaml.tmp")
+    temp_path.write_text(content, encoding="utf-8")
+    os.chmod(temp_path, 0o600)
+
+    try:
+        run(["netplan", "generate"], timeout=30)
+        os.replace(temp_path, NETPLAN_PATH)
+        run(["netplan", "generate"], timeout=30)
+        run(["netplan", "apply"], timeout=45)
+
+        deadline = time.monotonic() + CONNECT_TIMEOUT
+        while time.monotonic() < deadline:
+            status = wifi_status()
+            if status["connected"] and status["ssid"] == ssid:
+                shutil.rmtree(backup_dir, ignore_errors=True)
+                return {"success": True, "message": "Wi-Fi connected", **status}
+            time.sleep(2)
+
+        raise RuntimeError("Timed out waiting for the Wi-Fi connection")
+    except Exception:
+        LOG.exception("Provisioning failed; restoring previous netplan")
+        temp_path.unlink(missing_ok=True)
+        if had_existing:
+            shutil.copy2(backup_file, NETPLAN_PATH)
+        else:
+            NETPLAN_PATH.unlink(missing_ok=True)
+        run(["netplan", "generate"], timeout=30, check=False)
+        run(["netplan", "apply"], timeout=45, check=False)
+        raise
+    finally:
+        shutil.rmtree(backup_dir, ignore_errors=True)
+
+
+class InvalidArgs(dbus.exceptions.DBusException):
+    _dbus_error_name = "org.freedesktop.DBus.Error.InvalidArgs"
+
+
+class NotSupported(dbus.exceptions.DBusException):
+    _dbus_error_name = "org.bluez.Error.NotSupported"
+
+
+class Application(dbus.service.Object):
+    def __init__(self, bus: dbus.SystemBus):
+        self.path = APP_PATH
+        self.services: list[Service] = []
+        super().__init__(bus, self.path)
+        service = Service(bus, 0, SERVICE_UUID, True)
+        service.add_characteristic(WifiConfigCharacteristic(bus, 0, service))
+        service.add_characteristic(WifiScanCharacteristic(bus, 1, service))
+        service.add_characteristic(WifiStatusCharacteristic(bus, 2, service))
+        self.services.append(service)
+
+    @dbus.service.method(DBUS_OM, out_signature="a{oa{sa{sv}}}")
+    def GetManagedObjects(self) -> dict[dbus.ObjectPath, dict[str, dict[str, Any]]]:
+        response: dict[dbus.ObjectPath, dict[str, dict[str, Any]]] = {}
+        for service in self.services:
+            response[service.get_path()] = service.get_properties()
+            for characteristic in service.characteristics:
+                response[characteristic.get_path()] = characteristic.get_properties()
+        return response
+
+
+class Service(dbus.service.Object):
+    PATH_BASE = SERVICE_PATH
+
+    def __init__(self, bus: dbus.SystemBus, index: int, uuid: str, primary: bool):
+        self.path = f"{self.PATH_BASE}{index}"
+        self.bus = bus
+        self.uuid = uuid
+        self.primary = primary
+        self.characteristics: list[Characteristic] = []
+        super().__init__(bus, self.path)
+
+    def add_characteristic(self, characteristic: "Characteristic") -> None:
+        self.characteristics.append(characteristic)
+
+    def get_properties(self) -> dict[str, dict[str, Any]]:
+        return {
+            GATT_SERVICE: {
+                "UUID": self.uuid,
+                "Primary": self.primary,
+                "Characteristics": dbus.Array(
+                    [item.get_path() for item in self.characteristics],
+                    signature="o",
+                ),
+            }
+        }
+
+    def get_path(self) -> dbus.ObjectPath:
+        return dbus.ObjectPath(self.path)
+
+    @dbus.service.method(DBUS_PROP, in_signature="s", out_signature="a{sv}")
+    def GetAll(self, interface: str) -> dict[str, Any]:
+        if interface != GATT_SERVICE:
+            raise InvalidArgs()
+        return self.get_properties()[GATT_SERVICE]
+
+
+class Characteristic(dbus.service.Object):
+    def __init__(
+        self,
+        bus: dbus.SystemBus,
+        index: int,
+        uuid: str,
+        flags: list[str],
+        service: Service,
+    ):
+        self.path = f"{service.path}/char{index}"
+        self.bus = bus
+        self.uuid = uuid
+        self.flags = flags
+        self.service = service
+        super().__init__(bus, self.path)
+
+    def get_properties(self) -> dict[str, dict[str, Any]]:
+        return {
+            GATT_CHARACTERISTIC: {
+                "Service": self.service.get_path(),
+                "UUID": self.uuid,
+                "Flags": dbus.Array(self.flags, signature="s"),
+            }
+        }
+
+    def get_path(self) -> dbus.ObjectPath:
+        return dbus.ObjectPath(self.path)
+
+    @dbus.service.method(DBUS_PROP, in_signature="s", out_signature="a{sv}")
+    def GetAll(self, interface: str) -> dict[str, Any]:
+        if interface != GATT_CHARACTERISTIC:
+            raise InvalidArgs()
+        return self.get_properties()[GATT_CHARACTERISTIC]
+
+    @staticmethod
+    def bytes_for_read(payload: Any, options: dict[str, Any]) -> dbus.Array:
+        raw = json.dumps(payload, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+        offset = int(options.get("offset", 0))
+        return dbus.Array(raw[offset:], signature="y")
+
+
+class WifiConfigCharacteristic(Characteristic):
+    def __init__(self, bus: dbus.SystemBus, index: int, service: Service):
+        super().__init__(bus, index, WIFI_CONFIG_UUID, ["write", "write-without-response"], service)
+        self.buffer = bytearray()
+
+    @dbus.service.method(GATT_CHARACTERISTIC, in_signature="aya{sv}")
+    def WriteValue(self, value: list[int], options: dict[str, Any]) -> None:
+        offset = int(options.get("offset", 0))
+        incoming = bytes(value)
+        if offset == 0:
+            self.buffer = bytearray(incoming)
+        else:
+            if offset > len(self.buffer):
+                raise InvalidArgs("Invalid write offset")
+            self.buffer[offset:offset + len(incoming)] = incoming
+
+        try:
+            payload = json.loads(self.buffer.decode("utf-8"))
+            result = provision_wifi(str(payload.get("ssid", "")), str(payload.get("password", "")))
+            LOG.info("Provisioning result: %s", result)
+            self.buffer.clear()
+        except json.JSONDecodeError:
+            # Long writes may arrive in multiple fragments.
+            if len(self.buffer) > 4096:
+                self.buffer.clear()
+                raise InvalidArgs("JSON payload is too large")
+        except Exception as exc:
+            self.buffer.clear()
+            LOG.exception("Wi-Fi provisioning failed")
+            raise InvalidArgs(str(exc))
+
+
+class WifiScanCharacteristic(Characteristic):
+    def __init__(self, bus: dbus.SystemBus, index: int, service: Service):
+        super().__init__(bus, index, WIFI_SCAN_UUID, ["read"], service)
+
+    @dbus.service.method(GATT_CHARACTERISTIC, in_signature="a{sv}", out_signature="ay")
+    def ReadValue(self, options: dict[str, Any]) -> dbus.Array:
+        return self.bytes_for_read(wifi_scan(), options)
+
+
+class WifiStatusCharacteristic(Characteristic):
+    def __init__(self, bus: dbus.SystemBus, index: int, service: Service):
+        super().__init__(bus, index, WIFI_STATUS_UUID, ["read"], service)
+
+    @dbus.service.method(GATT_CHARACTERISTIC, in_signature="a{sv}", out_signature="ay")
+    def ReadValue(self, options: dict[str, Any]) -> dbus.Array:
+        return self.bytes_for_read(wifi_status(), options)
+
+
+class Advertisement(dbus.service.Object):
+    PATH_BASE = APP_PATH + "/advertisement"
+
+    def __init__(self, bus: dbus.SystemBus, index: int):
+        self.path = f"{self.PATH_BASE}{index}"
+        self.bus = bus
+        super().__init__(bus, self.path)
+
+    def get_properties(self) -> dict[str, dict[str, Any]]:
+        return {
+            LE_ADVERTISEMENT: {
+                "Type": "peripheral",
+                "ServiceUUIDs": dbus.Array([SERVICE_UUID], signature="s"),
+                "LocalName": dbus.String(BLE_NAME),
+                "IncludeTxPower": dbus.Boolean(True),
+            }
+        }
+
+    def get_path(self) -> dbus.ObjectPath:
+        return dbus.ObjectPath(self.path)
+
+    @dbus.service.method(DBUS_PROP, in_signature="s", out_signature="a{sv}")
+    def GetAll(self, interface: str) -> dict[str, Any]:
+        if interface != LE_ADVERTISEMENT:
+            raise InvalidArgs()
+        return self.get_properties()[LE_ADVERTISEMENT]
+
+    @dbus.service.method(LE_ADVERTISEMENT, in_signature="", out_signature="")
+    def Release(self) -> None:
+        LOG.info("Advertisement released")
+
+
+def find_adapter(bus: dbus.SystemBus) -> str:
+    manager = dbus.Interface(bus.get_object(BLUEZ, "/"), DBUS_OM)
+    objects = manager.GetManagedObjects()
+    for path, interfaces in objects.items():
+        if GATT_MANAGER in interfaces and LE_ADV_MANAGER in interfaces:
+            return str(path)
+    raise RuntimeError("No Bluetooth adapter with GATT and advertising support was found")
+
+
+def main() -> int:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+    dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+    bus = dbus.SystemBus()
+    adapter_path = find_adapter(bus)
+
+    adapter_props = dbus.Interface(bus.get_object(BLUEZ, adapter_path), DBUS_PROP)
+    adapter_props.Set("org.bluez.Adapter1", "Powered", dbus.Boolean(True))
+    adapter_props.Set("org.bluez.Adapter1", "Discoverable", dbus.Boolean(True))
+    adapter_props.Set("org.bluez.Adapter1", "Pairable", dbus.Boolean(True))
+    adapter_props.Set("org.bluez.Adapter1", "Alias", dbus.String(BLE_NAME))
+
+    app = Application(bus)
+    advertisement = Advertisement(bus, 0)
+
+    gatt_manager = dbus.Interface(bus.get_object(BLUEZ, adapter_path), GATT_MANAGER)
+    adv_manager = dbus.Interface(bus.get_object(BLUEZ, adapter_path), LE_ADV_MANAGER)
+
+    loop = GLib.MainLoop()
+
+    def registration_failed(error: Exception) -> None:
+        LOG.error("Registration failed: %s", error)
+        loop.quit()
+
+    gatt_manager.RegisterApplication(
+        app.path,
+        {},
+        reply_handler=lambda: LOG.info("GATT application registered"),
+        error_handler=registration_failed,
+    )
+    adv_manager.RegisterAdvertisement(
+        advertisement.get_path(),
+        {},
+        reply_handler=lambda: LOG.info("BLE advertisement registered as %s", BLE_NAME),
+        error_handler=registration_failed,
+    )
+
+    LOG.info("SweePi BLE provisioning service is ready")
+    loop.run()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,13 @@
+[Unit]
+Description=Encrypted SweePi host backup
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart={{ sweepi_install_root }}/backup/sweepi_backup.sh
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

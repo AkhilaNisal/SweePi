@@ -1,0 +1,141 @@
+---
+# =============================================================================
+# REQUIRED VALUES — edit these before the first deployment
+# =============================================================================
+
+# BCM GPIO numbering. Do not enter physical header pin numbers.
+sweepi_button_gpio: -1
+sweepi_switch_bulb_gpio: -1
+
+# Copy these UUIDs from the Flutter BLE constants so the app and Pi match.
+sweepi_ble_service_uuid: "CHANGE_ME"
+sweepi_ble_wifi_config_uuid: "CHANGE_ME"
+sweepi_ble_wifi_scan_uuid: "CHANGE_ME"
+sweepi_ble_wifi_status_uuid: "CHANGE_ME"
+
+# =============================================================================
+# Core host identity
+# =============================================================================
+
+sweepi_user: thunderbot
+sweepi_hostname: thunderbots
+sweepi_timezone: Asia/Colombo
+
+sweepi_repo_url: https://github.com/AkhilaNisal/SweePi.git
+sweepi_repo_version: main
+sweepi_workspace: /home/thunderbot/SweePi
+
+sweepi_install_root: /opt/sweepi
+sweepi_config_root: /etc/sweepi
+sweepi_data_root: /var/lib/sweepi
+sweepi_log_root: /var/log/sweepi
+
+# =============================================================================
+# Deployment switches
+# =============================================================================
+
+sweepi_enable_bluetooth_provisioning: true
+sweepi_enable_power_control: true
+sweepi_enable_backup: false
+sweepi_manage_netplan: false
+sweepi_reboot_after_deploy: true
+
+# =============================================================================
+# Raspberry Pi hardware
+# =============================================================================
+
+sweepi_serial_device: /dev/ttyAMA0
+sweepi_serial_baud: 115200
+
+# latching:
+#   input active -> start the configured SweePi service
+#   input inactive after activation -> graceful poweroff
+# momentary:
+#   first press -> start; next press -> graceful poweroff
+sweepi_button_mode: latching
+sweepi_button_active_low: true
+sweepi_button_bounce_seconds: 0.08
+
+sweepi_led_boot_interval_seconds: 1.0
+sweepi_led_starting_interval_seconds: 0.5
+
+# The button controls this unit. Change to sweepi-robot.service when the
+# complete stack should start instead of only the API bridge.
+sweepi_button_start_service: sweepi-api-bridge.service
+sweepi_api_health_url: http://127.0.0.1:8080/api/system/health
+sweepi_api_health_timeout_seconds: 120
+
+# =============================================================================
+# Bluetooth provisioning
+# =============================================================================
+
+sweepi_ble_name: SweePi-Dev-001
+sweepi_ble_robot_id: sweepi-dev-001
+sweepi_wifi_interface: wlan0
+sweepi_ble_netplan_path: /etc/netplan/99-sweepi-provisioned.yaml
+sweepi_ble_connect_timeout_seconds: 60
+
+# =============================================================================
+# ROS 2 and workspace
+# =============================================================================
+
+sweepi_ros_distro: jazzy
+sweepi_ros_domain_id: 0
+sweepi_ros_localhost_only: 0
+sweepi_colcon_parallel_workers: 2
+
+sweepi_ros_packages:
+  - ros-jazzy-ros-base
+  - ros-dev-tools
+  - python3-colcon-common-extensions
+  - python3-rosdep
+  - ros-jazzy-navigation2
+  - ros-jazzy-nav2-bringup
+  - ros-jazzy-slam-toolbox
+  - ros-jazzy-robot-localization
+  - ros-jazzy-xacro
+  - ros-jazzy-joint-state-publisher
+  - ros-jazzy-tf-transformations
+
+sweepi_api_bridge_enable_at_boot: false
+sweepi_robot_enable_at_boot: false
+
+sweepi_robot_launch_arguments:
+  - launch_sim:=false
+  - launch_hardware:=true
+  - launch_base:=true
+  - launch_ekf:=true
+  - launch_robot_description:=true
+  - launch_lidar:=true
+  - launch_api_bridge:=true
+
+# =============================================================================
+# Optional initial Wi-Fi managed directly by Ansible
+# =============================================================================
+
+sweepi_netplan_ssid: ""
+sweepi_netplan_password: ""
+sweepi_netplan_renderer: networkd
+
+# =============================================================================
+# Backup (enable only after setting a repository and vault password)
+# =============================================================================
+
+# Examples:
+#   sftp:backupuser@192.168.8.100:/backups/sweepi
+#   /mnt/external-ssd/restic/sweepi
+sweepi_restic_repository: "CHANGE_ME"
+sweepi_restic_password: "CHANGE_ME_USE_ANSIBLE_VAULT"
+
+sweepi_backup_calendar: "*-*-* 02:00:00"
+sweepi_backup_paths:
+  - /etc
+  - /opt/sweepi
+  - /var/lib/sweepi
+  - /boot/firmware
+  - /home/thunderbot/SweePi
+sweepi_backup_excludes:
+  - /home/thunderbot/SweePi/build
+  - /home/thunderbot/SweePi/install
+  - /home/thunderbot/SweePi/log
+  - /home/thunderbot/.ros/log

@@ -1,0 +1,58 @@
+---
+- name: Enable Ubuntu universe repository
+  ansible.builtin.apt_repository:
+    repo: "deb http://ports.ubuntu.com/ubuntu-ports {{ ansible_distribution_release }} universe"
+    state: present
+    filename: ubuntu-universe
+  when: ansible_architecture in ["aarch64", "arm64"]
+
+- name: Install ROS repository signing key
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/ros/rosdistro/master/ros.key
+    dest: /usr/share/keyrings/ros-archive-keyring.gpg
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Configure ROS 2 APT repository
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [arch={{ 'arm64' if ansible_architecture in ['aarch64', 'arm64'] else ansible_architecture }}
+      signed-by=/usr/share/keyrings/ros-archive-keyring.gpg]
+      http://packages.ros.org/ros2/ubuntu
+      {{ ansible_distribution_release }} main
+    filename: ros2
+    state: present
+    update_cache: true
+
+- name: Install ROS 2 Jazzy and SweePi dependencies
+  ansible.builtin.apt:
+    name: "{{ sweepi_ros_packages }}"
+    state: present
+    update_cache: true
+    lock_timeout: 180
+
+- name: Initialize rosdep
+  ansible.builtin.command: rosdep init
+  args:
+    creates: /etc/ros/rosdep/sources.list.d/20-default.list
+
+- name: Update rosdep as robot user
+  ansible.builtin.command: rosdep update
+  become_user: "{{ sweepi_user }}"
+  changed_when: false
+
+- name: Source ROS automatically for the robot user
+  ansible.builtin.blockinfile:
+    path: "/home/{{ sweepi_user }}/.bashrc"
+    marker: "# {mark} SWEEPI ROS ENVIRONMENT"
+    block: |
+      source /opt/ros/{{ sweepi_ros_distro }}/setup.bash
+      if [ -f {{ sweepi_workspace }}/install/setup.bash ]; then
+        source {{ sweepi_workspace }}/install/setup.bash
+      fi
+      export ROS_DOMAIN_ID={{ sweepi_ros_domain_id }}
+      export ROS_LOCALHOST_ONLY={{ sweepi_ros_localhost_only }}
+    owner: "{{ sweepi_user }}"
+    group: "{{ sweepi_user }}"
+    mode: "0644"

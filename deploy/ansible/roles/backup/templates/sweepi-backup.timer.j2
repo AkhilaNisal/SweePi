@@ -1,0 +1,11 @@
+[Unit]
+Description=Run SweePi encrypted backup
+
+[Timer]
+OnCalendar={{ sweepi_backup_calendar }}
+Persistent=true
+RandomizedDelaySec=300
+Unit=sweepi-backup.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,18 @@
+---
+- name: Install managed bootstrap netplan
+  ansible.builtin.template:
+    src: 99-sweepi-bootstrap.yaml.j2
+    dest: /etc/netplan/99-sweepi-bootstrap.yaml
+    owner: root
+    group: root
+    mode: "0600"
+    backup: true
+  register: sweepi_netplan_changed
+
+- name: Generate netplan configuration
+  ansible.builtin.command: netplan generate
+  changed_when: false
+
+- name: Apply managed netplan
+  ansible.builtin.command: netplan apply
+  when: sweepi_netplan_changed.changed

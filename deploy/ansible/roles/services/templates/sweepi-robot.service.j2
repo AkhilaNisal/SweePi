@@ -1,0 +1,20 @@
+[Unit]
+Description=SweePi Complete ROS 2 Robot Stack
+After=network-online.target
+Wants=network-online.target
+Conflicts=sweepi-api-bridge.service
+
+[Service]
+Type=simple
+User={{ sweepi_user }}
+Group={{ sweepi_user }}
+WorkingDirectory={{ sweepi_workspace }}
+EnvironmentFile={{ sweepi_config_root }}/ros.env
+ExecStart=/bin/bash -lc 'source /opt/ros/{{ sweepi_ros_distro }}/setup.bash && source {{ sweepi_workspace }}/install/setup.bash && exec ros2 launch sweepi_robot_manager master.launch.py{% for arg in sweepi_robot_launch_arguments %} {{ arg }}{% endfor %}'
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=45
+KillSignal=SIGINT
+
+[Install]
+WantedBy=multi-user.target

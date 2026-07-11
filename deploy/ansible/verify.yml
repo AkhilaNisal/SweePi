@@ -1,0 +1,69 @@
+---
+- name: Verify the SweePi Raspberry Pi deployment
+  hosts: sweepi
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: Read enabled service states
+      ansible.builtin.command:
+        argv:
+          - systemctl
+          - is-enabled
+          - "{{ item }}"
+      loop:
+        - ssh.service
+        - bluetooth.service
+        - avahi-daemon.service
+        - sweepi-power-control.service
+      register: enabled_services
+      changed_when: false
+      failed_when: false
+
+    - name: Display enabled service states
+      ansible.builtin.debug:
+        msg: "{{ item.item }} => {{ item.stdout | default(item.stderr) }}"
+      loop: "{{ enabled_services.results }}"
+
+    - name: Check installed SweePi units
+      ansible.builtin.command:
+        argv: [systemctl, list-unit-files, "sweepi-*", --no-pager]
+      register: sweepi_units
+      changed_when: false
+
+    - name: Display SweePi units
+      ansible.builtin.debug:
+        var: sweepi_units.stdout_lines
+
+    - name: Check workspace install
+      ansible.builtin.stat:
+        path: "{{ sweepi_workspace }}/install/setup.bash"
+      register: workspace_install
+
+    - name: Assert workspace was built
+      ansible.builtin.assert:
+        that: workspace_install.stat.exists
+        fail_msg: "The ROS workspace install/setup.bash file is missing."
+
+    - name: Check UART
+      ansible.builtin.shell: |
+        set -o pipefail
+        grep -E '^enable_uart=1$' /boot/firmware/config.txt
+        test ! -e /dev/ttyAMA0 || ls -l /dev/ttyAMA0
+      args:
+        executable: /bin/bash
+      changed_when: false
+
+    - name: Check API health without failing the verification
+      ansible.builtin.uri:
+        url: "{{ sweepi_api_health_url }}"
+        return_content: true
+        timeout: 3
+      register: api_health
+      failed_when: false
+
+    - name: Display API health
+      ansible.builtin.debug:
+        msg: >-
+          status={{ api_health.status | default('unavailable') }}
+          body={{ api_health.content | default('') }}

@@ -1,0 +1,56 @@
+---
+- name: Rebuild the complete SweePi Raspberry Pi host
+  hosts: sweepi
+  gather_facts: true
+  become: true
+
+  roles:
+    - role: preflight
+      tags: [always, preflight]
+
+    - role: base
+      tags: [base]
+
+    - role: boot_config
+      tags: [boot, uart]
+
+    - role: netplan
+      when: sweepi_manage_netplan | bool
+      tags: [network, netplan]
+
+    - role: bluetooth
+      when: sweepi_enable_bluetooth_provisioning | bool
+      tags: [bluetooth, ble]
+
+    - role: ros2
+      tags: [ros2]
+
+    - role: workspace
+      tags: [workspace, build]
+
+    - role: services
+      tags: [services, systemd]
+
+    - role: power_control
+      when: sweepi_enable_power_control | bool
+      tags: [power, gpio, button, led]
+
+    - role: backup
+      when: sweepi_enable_backup | bool
+      tags: [backup]
+
+  post_tasks:
+    - name: Check whether a reboot is required
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: sweepi_reboot_required
+      tags: [always]
+
+    - name: Reboot after deployment when required
+      ansible.builtin.reboot:
+        msg: Rebooting after SweePi Ansible deployment
+        reboot_timeout: 300
+      when:
+        - sweepi_reboot_after_deploy | bool
+        - sweepi_reboot_required.stat.exists
+      tags: [always]

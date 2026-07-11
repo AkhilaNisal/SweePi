@@ -1,0 +1,99 @@
+---
+- name: Update APT cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+    lock_timeout: 120
+
+- name: Install base host packages
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - git
+      - gnupg
+      - locales
+      - openssh-server
+      - python3
+      - python3-apt
+      - python3-pip
+      - python3-venv
+      - rsync
+      - software-properties-common
+      - avahi-daemon
+      - etckeeper
+      - jq
+    state: present
+    lock_timeout: 120
+
+- name: Set hostname
+  ansible.builtin.hostname:
+    name: "{{ sweepi_hostname }}"
+
+- name: Set timezone
+  community.general.timezone:
+    name: "{{ sweepi_timezone }}"
+
+- name: Ensure UTF-8 locale exists
+  community.general.locale_gen:
+    name: en_US.UTF-8
+    state: present
+
+- name: Enable SSH
+  ansible.builtin.systemd_service:
+    name: ssh.service
+    enabled: true
+    state: started
+
+- name: Enable mDNS
+  ansible.builtin.systemd_service:
+    name: avahi-daemon.service
+    enabled: true
+    state: started
+
+- name: Load available groups
+  ansible.builtin.getent:
+    database: group
+
+- name: Add robot user to available hardware groups
+  ansible.builtin.user:
+    name: "{{ sweepi_user }}"
+    groups: "{{ item }}"
+    append: true
+  loop:
+    - dialout
+    - gpio
+    - i2c
+    - spi
+    - video
+    - render
+    - plugdev
+  when: item in ansible_facts.getent_group
+
+- name: Create SweePi directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "{{ sweepi_install_root }}", owner: root, group: root, mode: "0755" }
+    - { path: "{{ sweepi_install_root }}/ble", owner: root, group: root, mode: "0755" }
+    - { path: "{{ sweepi_install_root }}/power", owner: root, group: root, mode: "0755" }
+    - { path: "{{ sweepi_install_root }}/backup", owner: root, group: root, mode: "0755" }
+    - { path: "{{ sweepi_config_root }}", owner: root, group: root, mode: "0755" }
+    - { path: "{{ sweepi_data_root }}", owner: "{{ sweepi_user }}", group: "{{ sweepi_user }}", mode: "0755" }
+    - { path: "{{ sweepi_data_root }}/maps", owner: "{{ sweepi_user }}", group: "{{ sweepi_user }}", mode: "0755" }
+    - { path: "{{ sweepi_data_root }}/calibration", owner: "{{ sweepi_user }}", group: "{{ sweepi_user }}", mode: "0755" }
+    - { path: "{{ sweepi_log_root }}", owner: "{{ sweepi_user }}", group: "{{ sweepi_user }}", mode: "0755" }
+
+- name: Mark host as Ansible managed
+  ansible.builtin.copy:
+    dest: "{{ sweepi_config_root }}/ansible-managed"
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      This SweePi Raspberry Pi is managed by deploy/ansible.
+      Put permanent host changes in Git and rerun site.yml.

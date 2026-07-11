@@ -1,0 +1,15 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+
+- name: Restart Bluetooth
+  ansible.builtin.systemd_service:
+    name: bluetooth.service
+    state: restarted
+
+- name: Restart SweePi BLE
+  ansible.builtin.systemd_service:
+    name: sweepi-ble-provisioning.service
+    state: restarted
+  failed_when: false

@@ -1,0 +1,67 @@
+---
+- name: Install Bluetooth provisioning packages
+  ansible.builtin.apt:
+    name:
+      - bluez
+      - bluez-tools
+      - dbus
+      - iw
+      - netplan.io
+      - python3-dbus
+      - python3-gi
+      - wireless-tools
+      - wpasupplicant
+    state: present
+    lock_timeout: 120
+
+- name: Install BlueZ configuration
+  ansible.builtin.template:
+    src: main.conf.j2
+    dest: /etc/bluetooth/main.conf
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+  notify: Restart Bluetooth
+
+- name: Install BLE environment
+  ansible.builtin.template:
+    src: sweepi-ble.env.j2
+    dest: "{{ sweepi_config_root }}/ble.env"
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Restart SweePi BLE
+
+- name: Install BLE provisioning program
+  ansible.builtin.template:
+    src: sweepi_ble_provisioning.py.j2
+    dest: "{{ sweepi_install_root }}/ble/sweepi_ble_provisioning.py"
+    owner: root
+    group: root
+    mode: "0755"
+  notify: Restart SweePi BLE
+
+- name: Install BLE systemd service
+  ansible.builtin.template:
+    src: sweepi-ble-provisioning.service.j2
+    dest: /etc/systemd/system/sweepi-ble-provisioning.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart SweePi BLE
+
+- name: Enable Bluetooth
+  ansible.builtin.systemd_service:
+    name: bluetooth.service
+    enabled: true
+    state: started
+
+- name: Enable BLE provisioning
+  ansible.builtin.systemd_service:
+    name: sweepi-ble-provisioning.service
+    enabled: true
+    state: started
+    daemon_reload: true

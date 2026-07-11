@@ -1,0 +1,17 @@
+[Unit]
+Description=SweePi BLE Wi-Fi Provisioning
+After=bluetooth.service dbus.service
+Requires=bluetooth.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+EnvironmentFile={{ sweepi_config_root }}/ble.env
+ExecStart=/usr/bin/python3 {{ sweepi_install_root }}/ble/sweepi_ble_provisioning.py
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target

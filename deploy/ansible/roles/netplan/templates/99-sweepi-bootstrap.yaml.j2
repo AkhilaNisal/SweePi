@@ -1,0 +1,10 @@
+network:
+  version: 2
+  renderer: {{ sweepi_netplan_renderer }}
+  wifis:
+    {{ sweepi_wifi_interface }}:
+      dhcp4: true
+      optional: true
+      access-points:
+        {{ sweepi_netplan_ssid | to_json }}:
+          password: {{ sweepi_netplan_password | to_json }}

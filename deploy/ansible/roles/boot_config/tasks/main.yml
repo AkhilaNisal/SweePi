@@ -1,0 +1,48 @@
+---
+- name: Confirm Raspberry Pi boot configuration exists
+  ansible.builtin.stat:
+    path: /boot/firmware/config.txt
+  register: sweepi_boot_config
+
+- name: Stop when the expected boot configuration is missing
+  ansible.builtin.assert:
+    that: sweepi_boot_config.stat.exists
+    fail_msg: "/boot/firmware/config.txt was not found."
+
+- name: Enable the primary UART
+  ansible.builtin.lineinfile:
+    path: /boot/firmware/config.txt
+    regexp: '^enable_uart='
+    line: enable_uart=1
+    create: false
+    backup: true
+  notify: Mark reboot required
+
+- name: Remove serial console arguments
+  ansible.builtin.replace:
+    path: /boot/firmware/cmdline.txt
+    regexp: '(^|[ \t])console=(serial0|ttyAMA0),[0-9]+'
+    replace: ''
+    backup: true
+  notify: Mark reboot required
+
+- name: Normalize cmdline spacing
+  ansible.builtin.replace:
+    path: /boot/firmware/cmdline.txt
+    regexp: '[ \t]+'
+    replace: ' '
+  notify: Mark reboot required
+
+- name: Disable serial getty on ttyAMA0
+  ansible.builtin.systemd_service:
+    name: serial-getty@ttyAMA0.service
+    enabled: false
+    state: stopped
+  failed_when: false
+
+- name: Disable serial getty on serial0
+  ansible.builtin.systemd_service:
+    name: serial-getty@serial0.service
+    enabled: false
+    state: stopped
+  failed_when: false

@@ -1,0 +1,18 @@
+[Unit]
+Description=SweePi Top Button and switch_bulb Controller
+After=network.target
+Before=shutdown.target
+Conflicts=shutdown.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+EnvironmentFile={{ sweepi_config_root }}/power.env
+ExecStart=/usr/bin/python3 {{ sweepi_install_root }}/power/sweepi_power_control.py
+Restart=always
+RestartSec=2
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target

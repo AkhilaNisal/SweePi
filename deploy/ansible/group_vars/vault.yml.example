@@ -1,0 +1,9 @@
+---
+# Rename this file to vault.yml and encrypt it:
+# ansible-vault encrypt group_vars/vault.yml
+#
+# Then override secrets from all.yml here.
+
+sweepi_restic_password: "replace-with-a-long-random-password"
+sweepi_netplan_ssid: "replace-if-Ansible-manages-Wi-Fi"
+sweepi_netplan_password: "replace-if-Ansible-manages-Wi-Fi"

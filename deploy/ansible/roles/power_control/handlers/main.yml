@@ -1,0 +1,10 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+
+- name: Restart SweePi power control
+  ansible.builtin.systemd_service:
+    name: sweepi-power-control.service
+    state: restarted
+  failed_when: false

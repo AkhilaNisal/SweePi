@@ -1,0 +1,45 @@
+---
+- name: Install ROS environment file
+  ansible.builtin.template:
+    src: sweepi-ros.env.j2
+    dest: "{{ sweepi_config_root }}/ros.env"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart enabled SweePi services
+
+- name: Install API bridge service
+  ansible.builtin.template:
+    src: sweepi-api-bridge.service.j2
+    dest: /etc/systemd/system/sweepi-api-bridge.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart enabled SweePi services
+
+- name: Install complete robot service
+  ansible.builtin.template:
+    src: sweepi-robot.service.j2
+    dest: /etc/systemd/system/sweepi-robot.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart enabled SweePi services
+
+- name: Configure API bridge boot state
+  ansible.builtin.systemd_service:
+    name: sweepi-api-bridge.service
+    enabled: "{{ sweepi_api_bridge_enable_at_boot }}"
+    state: "{{ 'started' if sweepi_api_bridge_enable_at_boot else 'stopped' }}"
+    daemon_reload: true
+
+- name: Configure complete robot boot state
+  ansible.builtin.systemd_service:
+    name: sweepi-robot.service
+    enabled: "{{ sweepi_robot_enable_at_boot }}"
+    state: "{{ 'started' if sweepi_robot_enable_at_boot else 'stopped' }}"
+    daemon_reload: true

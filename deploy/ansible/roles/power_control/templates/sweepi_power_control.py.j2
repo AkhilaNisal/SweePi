@@ -1,0 +1,205 @@
+#!/usr/bin/env python3
+"""Controls the SweePi top switch and switch_bulb indicator."""
+
+from __future__ import annotations
+
+import logging
+import os
+import signal
+import subprocess
+import threading
+import time
+import urllib.request
+
+from gpiozero import Button, LED
+from gpiozero.pins.lgpio import LGPIOFactory
+
+LOG = logging.getLogger("sweepi_power")
+
+BUTTON_GPIO = int(os.environ["SWEEPI_BUTTON_GPIO"])
+LED_GPIO = int(os.environ["SWEEPI_LED_GPIO"])
+BUTTON_MODE = os.environ.get("SWEEPI_BUTTON_MODE", "latching").lower()
+ACTIVE_LOW = os.environ.get("SWEEPI_BUTTON_ACTIVE_LOW", "1") == "1"
+BOUNCE = float(os.environ.get("SWEEPI_BUTTON_BOUNCE", "0.08"))
+BOOT_BLINK = float(os.environ.get("SWEEPI_BOOT_BLINK", "1.0"))
+STARTING_BLINK = float(os.environ.get("SWEEPI_STARTING_BLINK", "0.5"))
+START_SERVICE = os.environ.get("SWEEPI_START_SERVICE", "sweepi-api-bridge.service")
+HEALTH_URL = os.environ.get("SWEEPI_HEALTH_URL", "")
+HEALTH_TIMEOUT = int(os.environ.get("SWEEPI_HEALTH_TIMEOUT", "120"))
+
+STOP = threading.Event()
+
+
+class Indicator:
+    def __init__(self, led: LED):
+        self.led = led
+        self._lock = threading.Lock()
+        self._mode = "off"
+        self._interval = 1.0
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+
+    def set_off(self) -> None:
+        with self._lock:
+            self._mode = "off"
+
+    def set_on(self) -> None:
+        with self._lock:
+            self._mode = "on"
+
+    def set_blink(self, interval: float) -> None:
+        with self._lock:
+            self._mode = "blink"
+            self._interval = max(0.05, interval)
+
+    def _run(self) -> None:
+        next_toggle = time.monotonic()
+        state = False
+        while not STOP.is_set():
+            with self._lock:
+                mode = self._mode
+                interval = self._interval
+
+            if mode == "off":
+                self.led.off()
+                state = False
+                STOP.wait(0.05)
+            elif mode == "on":
+                self.led.on()
+                state = True
+                STOP.wait(0.05)
+            else:
+                now = time.monotonic()
+                if now >= next_toggle:
+                    state = not state
+                    self.led.value = state
+                    next_toggle = now + interval
+                STOP.wait(0.02)
+
+
+def systemctl(*args: str, check: bool = False) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["systemctl", *args],
+        text=True,
+        capture_output=True,
+        check=check,
+    )
+
+
+def service_active() -> bool:
+    return systemctl("is-active", "--quiet", START_SERVICE).returncode == 0
+
+
+def health_ready() -> bool:
+    if not service_active():
+        return False
+    if not HEALTH_URL:
+        return True
+    try:
+        with urllib.request.urlopen(HEALTH_URL, timeout=2) as response:
+            return 200 <= response.status < 300
+    except Exception:
+        return False
+
+
+def wait_until_ready(indicator: Indicator) -> None:
+    deadline = time.monotonic() + HEALTH_TIMEOUT
+    while not STOP.is_set() and time.monotonic() < deadline:
+        if health_ready():
+            indicator.set_on()
+            LOG.info("%s is healthy; switch_bulb is steady", START_SERVICE)
+            return
+        STOP.wait(1.0)
+    LOG.error("%s did not become healthy before timeout", START_SERVICE)
+
+
+def start_robot(indicator: Indicator) -> None:
+    LOG.info("Starting %s", START_SERVICE)
+    indicator.set_blink(STARTING_BLINK)
+    result = systemctl("start", START_SERVICE)
+    if result.returncode != 0:
+        LOG.error("Failed to start %s: %s", START_SERVICE, result.stderr.strip())
+        return
+    wait_until_ready(indicator)
+
+
+def graceful_shutdown(indicator: Indicator) -> None:
+    LOG.warning("Shutdown requested by SweePi top button")
+    systemctl("stop", START_SERVICE)
+    indicator.set_off()
+    time.sleep(0.5)
+    systemctl("poweroff")
+
+
+def main() -> int:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+
+    factory = LGPIOFactory()
+    led = LED(LED_GPIO, pin_factory=factory, initial_value=False)
+    button = Button(
+        BUTTON_GPIO,
+        pull_up=ACTIVE_LOW,
+        bounce_time=BOUNCE,
+        pin_factory=factory,
+    )
+    indicator = Indicator(led)
+    indicator.set_blink(BOOT_BLINK)
+
+    def stop_handler(_signum: int, _frame: object) -> None:
+        STOP.set()
+        indicator.set_off()
+
+    signal.signal(signal.SIGTERM, stop_handler)
+    signal.signal(signal.SIGINT, stop_handler)
+
+    running = service_active()
+    activated_once = False
+
+    if running:
+        indicator.set_on()
+
+    if BUTTON_MODE == "latching":
+        if button.is_pressed and not running:
+            activated_once = True
+            start_robot(indicator)
+            running = service_active()
+        elif button.is_pressed:
+            activated_once = True
+
+        while not STOP.is_set():
+            if button.is_pressed and not running:
+                activated_once = True
+                start_robot(indicator)
+                running = service_active()
+            elif not button.is_pressed and activated_once:
+                graceful_shutdown(indicator)
+                return 0
+            STOP.wait(0.1)
+
+    elif BUTTON_MODE == "momentary":
+        previous = button.is_pressed
+        while not STOP.is_set():
+            current = button.is_pressed
+            if current and not previous:
+                if running:
+                    graceful_shutdown(indicator)
+                    return 0
+                start_robot(indicator)
+                running = service_active()
+            previous = current
+            STOP.wait(0.05)
+    else:
+        raise ValueError(f"Unsupported SWEEPI_BUTTON_MODE: {BUTTON_MODE}")
+
+    indicator.set_off()
+    led.close()
+    button.close()
+    factory.close()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

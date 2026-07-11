@@ -1,0 +1,8 @@
+---
+- name: Mark reboot required
+  ansible.builtin.file:
+    path: /var/run/reboot-required
+    state: touch
+    owner: root
+    group: root
+    mode: "0644"

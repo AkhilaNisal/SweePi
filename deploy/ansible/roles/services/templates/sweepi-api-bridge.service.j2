@@ -1,0 +1,19 @@
+[Unit]
+Description=SweePi ROS 2 API Bridge
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ sweepi_user }}
+Group={{ sweepi_user }}
+WorkingDirectory={{ sweepi_workspace }}
+EnvironmentFile={{ sweepi_config_root }}/ros.env
+ExecStart=/bin/bash -lc 'source /opt/ros/{{ sweepi_ros_distro }}/setup.bash && source {{ sweepi_workspace }}/install/setup.bash && exec ros2 launch sweepi_api_bridge api_bridge.launch.py'
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+KillSignal=SIGINT
+
+[Install]
+WantedBy=multi-user.target
