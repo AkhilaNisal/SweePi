@@ -1,0 +1,80 @@
+1783776896.6034203 [INFO] [launch]: All log files can be found below /home/sweepi/.ros/log/2026-07-11-19-04-56-601972-sweepi-3084
+1783776896.6036165 [INFO] [launch]: Default logging verbosity is set to INFO
+1783776896.9827790 [INFO] [launch.user]: 🚀 STARTING SWEEPI AUTONOMOUS EXPLORATION
+1783776896.9830782 [INFO] [launch.user]: 💾 Map name: ${map_name}
+1783776896.9832373 [INFO] [launch.user]: 📏 Proximity-based blocking: ${unreachable_region_radius}m
+1783776896.9833918 [INFO] [launch.user]: 🔁 Completion retry sweeps: ${completion_retry_cycles}
+1783776896.9835176 [INFO] [launch.user]: 🎮 Exploration mode: ${start_mode}
+1783776897.4096928 [ERROR] [launch]: Caught exception in launch (see debug for traceback): executable 'wavefront_explorer.py' not found on the libexec directory '/home/sweepi/SweePi/install/sweepi_exploration/lib/sweepi_exploration' 
+1783776898.3625724 [INFO] [controller_server-1]: process started with pid [3113]
+1783776898.3628736 [INFO] [smoother_server-2]: process started with pid [3114]
+1783776898.3633008 [INFO] [planner_server-3]: process started with pid [3115]
+1783776898.3634470 [INFO] [route_server-4]: process started with pid [3116]
+1783776898.3635683 [INFO] [behavior_server-5]: process started with pid [3117]
+1783776898.3636706 [INFO] [bt_navigator-6]: process started with pid [3119]
+1783776898.3637598 [INFO] [waypoint_follower-7]: process started with pid [3120]
+1783776898.3638430 [INFO] [velocity_smoother-8]: process started with pid [3121]
+1783776898.3639505 [INFO] [collision_monitor-9]: process started with pid [3122]
+1783776898.3640518 [INFO] [opennav_docking-10]: process started with pid [3123]
+1783776898.3641467 [INFO] [lifecycle_manager-11]: process started with pid [3124]
+1783776898.3642247 [INFO] [async_slam_toolbox_node-12]: process started with pid [3125]
+1783776898.3765645 [INFO] [controller_server-1]: sending signal 'SIGINT' to process[controller_server-1]
+1783776898.3782895 [INFO] [smoother_server-2]: sending signal 'SIGINT' to process[smoother_server-2]
+1783776898.3801427 [INFO] [planner_server-3]: sending signal 'SIGINT' to process[planner_server-3]
+1783776898.3817837 [INFO] [route_server-4]: sending signal 'SIGINT' to process[route_server-4]
+1783776898.3837292 [INFO] [behavior_server-5]: sending signal 'SIGINT' to process[behavior_server-5]
+1783776898.3861353 [INFO] [bt_navigator-6]: sending signal 'SIGINT' to process[bt_navigator-6]
+1783776898.3894341 [INFO] [waypoint_follower-7]: sending signal 'SIGINT' to process[waypoint_follower-7]
+1783776898.3935075 [INFO] [velocity_smoother-8]: sending signal 'SIGINT' to process[velocity_smoother-8]
+1783776898.3970397 [INFO] [collision_monitor-9]: sending signal 'SIGINT' to process[collision_monitor-9]
+1783776898.3992779 [INFO] [opennav_docking-10]: sending signal 'SIGINT' to process[opennav_docking-10]
+1783776898.4016786 [INFO] [lifecycle_manager-11]: sending signal 'SIGINT' to process[lifecycle_manager-11]
+1783776898.4045742 [INFO] [async_slam_toolbox_node-12]: sending signal 'SIGINT' to process[async_slam_toolbox_node-12]
+1783776898.4217641 [ERROR] [launch]: Caught exception in launch (see debug for traceback): cannot use Destroyable because destruction was requested
+1783776901.1497681 [INFO] [velocity_smoother-8]: process has finished cleanly [pid 3121]
+1783776901.2819531 [INFO] [route_server-4]: process has finished cleanly [pid 3116]
+1783776901.5274975 [INFO] [behavior_server-5]: process has finished cleanly [pid 3117]
+1783776903.3747230 [ERROR] [controller_server-1]: process[controller_server-1] failed to terminate '5' seconds after receiving 'SIGINT', escalating to 'SIGTERM'
+1783776903.3789403 [ERROR] [smoother_server-2]: process[smoother_server-2] failed to terminate '5' seconds after receiving 'SIGINT', escalating to 'SIGTERM'
+1783776903.3812780 [ERROR] [planner_server-3]: process[planner_server-3] failed to terminate '5' seconds after receiving 'SIGINT', escalating to 'SIGTERM'
+1783776903.3833578 [ERROR] [bt_navigator-6]: process[bt_navigator-6] failed to terminate '5' seconds after receiving 'SIGINT', escalating to 'SIGTERM'
+1783776903.3852792 [ERROR] [waypoint_follower-7]: process[waypoint_follower-7] failed to terminate '5' seconds after receiving 'SIGINT', escalating to 'SIGTERM'
+1783776903.3870721 [ERROR] [collision_monitor-9]: process[collision_monitor-9] failed to terminate '5' seconds after receiving 'SIGINT', escalating to 'SIGTERM'
+1783776903.3911591 [ERROR] [opennav_docking-10]: process[opennav_docking-10] failed to terminate '5' seconds after receiving 'SIGINT', escalating to 'SIGTERM'
+1783776903.4008508 [INFO] [controller_server-1]: sending signal 'SIGTERM' to process[controller_server-1]
+1783776903.4105585 [ERROR] [lifecycle_manager-11]: process[lifecycle_manager-11] failed to terminate '5' seconds after receiving 'SIGINT', escalating to 'SIGTERM'
+1783776903.4130280 [ERROR] [async_slam_toolbox_node-12]: process[async_slam_toolbox_node-12] failed to terminate '5' seconds after receiving 'SIGINT', escalating to 'SIGTERM'
+1783776903.4196377 [INFO] [smoother_server-2]: sending signal 'SIGTERM' to process[smoother_server-2]
+1783776903.4265168 [INFO] [planner_server-3]: sending signal 'SIGTERM' to process[planner_server-3]
+1783776903.4333911 [INFO] [bt_navigator-6]: sending signal 'SIGTERM' to process[bt_navigator-6]
+1783776903.4412117 [INFO] [waypoint_follower-7]: sending signal 'SIGTERM' to process[waypoint_follower-7]
+1783776903.4449813 [INFO] [collision_monitor-9]: sending signal 'SIGTERM' to process[collision_monitor-9]
+1783776903.4555740 [INFO] [opennav_docking-10]: sending signal 'SIGTERM' to process[opennav_docking-10]
+1783776903.4585361 [INFO] [lifecycle_manager-11]: sending signal 'SIGTERM' to process[lifecycle_manager-11]
+1783776903.4639382 [INFO] [async_slam_toolbox_node-12]: sending signal 'SIGTERM' to process[async_slam_toolbox_node-12]
+1783776908.3802009 [ERROR] [controller_server-1]: process[controller_server-1] failed to terminate '10.0' seconds after receiving 'SIGTERM', escalating to 'SIGKILL'
+1783776908.3929622 [ERROR] [smoother_server-2]: process[smoother_server-2] failed to terminate '10.0' seconds after receiving 'SIGTERM', escalating to 'SIGKILL'
+1783776908.4024682 [ERROR] [planner_server-3]: process[planner_server-3] failed to terminate '10.0' seconds after receiving 'SIGTERM', escalating to 'SIGKILL'
+1783776908.4162393 [ERROR] [bt_navigator-6]: process[bt_navigator-6] failed to terminate '10.0' seconds after receiving 'SIGTERM', escalating to 'SIGKILL'
+1783776908.4306645 [ERROR] [waypoint_follower-7]: process[waypoint_follower-7] failed to terminate '10.0' seconds after receiving 'SIGTERM', escalating to 'SIGKILL'
+1783776908.4419394 [ERROR] [collision_monitor-9]: process[collision_monitor-9] failed to terminate '10.0' seconds after receiving 'SIGTERM', escalating to 'SIGKILL'
+1783776908.4523609 [ERROR] [opennav_docking-10]: process[opennav_docking-10] failed to terminate '10.0' seconds after receiving 'SIGTERM', escalating to 'SIGKILL'
+1783776908.4651701 [ERROR] [lifecycle_manager-11]: process[lifecycle_manager-11] failed to terminate '10.0' seconds after receiving 'SIGTERM', escalating to 'SIGKILL'
+1783776908.4735675 [ERROR] [async_slam_toolbox_node-12]: process[async_slam_toolbox_node-12] failed to terminate '10.0' seconds after receiving 'SIGTERM', escalating to 'SIGKILL'
+1783776908.4835823 [INFO] [controller_server-1]: sending signal 'SIGKILL' to process[controller_server-1]
+1783776908.4938633 [INFO] [smoother_server-2]: sending signal 'SIGKILL' to process[smoother_server-2]
+1783776908.5063007 [INFO] [planner_server-3]: sending signal 'SIGKILL' to process[planner_server-3]
+1783776908.5505924 [INFO] [bt_navigator-6]: sending signal 'SIGKILL' to process[bt_navigator-6]
+1783776908.5912046 [ERROR] [smoother_server-2]: process has died [pid 3114, exit code -9, cmd '/opt/ros/jazzy/lib/nav2_smoother/smoother_server --ros-args --log-level info --ros-args -r __node:=smoother_server -p use_sim_time:=False --params-file /tmp/launch_params_ggrajrwc -r /tf:=tf -r /tf_static:=tf_static'].
+1783776908.6084921 [INFO] [waypoint_follower-7]: sending signal 'SIGKILL' to process[waypoint_follower-7]
+1783776908.6237698 [ERROR] [controller_server-1]: process has died [pid 3113, exit code -9, cmd '/opt/ros/jazzy/lib/nav2_controller/controller_server --ros-args --log-level info --ros-args -p use_sim_time:=False --params-file /tmp/launch_params_ggrajrwc -r /tf:=tf -r /tf_static:=tf_static -r cmd_vel:=cmd_vel_nav'].
+1783776908.6253402 [ERROR] [planner_server-3]: process has died [pid 3115, exit code -9, cmd '/opt/ros/jazzy/lib/nav2_planner/planner_server --ros-args --log-level info --ros-args -r __node:=planner_server -p use_sim_time:=False --params-file /tmp/launch_params_ggrajrwc -r /tf:=tf -r /tf_static:=tf_static'].
+1783776908.6258574 [ERROR] [bt_navigator-6]: process has died [pid 3119, exit code -9, cmd '/opt/ros/jazzy/lib/nav2_bt_navigator/bt_navigator --ros-args --log-level info --ros-args -r __node:=bt_navigator -p use_sim_time:=False --params-file /tmp/launch_params_ggrajrwc -r /tf:=tf -r /tf_static:=tf_static'].
+1783776908.6284854 [INFO] [collision_monitor-9]: sending signal 'SIGKILL' to process[collision_monitor-9]
+1783776908.6386013 [INFO] [opennav_docking-10]: sending signal 'SIGKILL' to process[opennav_docking-10]
+1783776908.6637425 [INFO] [lifecycle_manager-11]: sending signal 'SIGKILL' to process[lifecycle_manager-11]
+1783776908.7010872 [ERROR] [waypoint_follower-7]: process has died [pid 3120, exit code -9, cmd '/opt/ros/jazzy/lib/nav2_waypoint_follower/waypoint_follower --ros-args --log-level info --ros-args -r __node:=waypoint_follower -p use_sim_time:=False --params-file /tmp/launch_params_ggrajrwc -r /tf:=tf -r /tf_static:=tf_static'].
+1783776908.7136986 [INFO] [async_slam_toolbox_node-12]: sending signal 'SIGKILL' to process[async_slam_toolbox_node-12]
+1783776908.7368472 [ERROR] [opennav_docking-10]: process has died [pid 3123, exit code -9, cmd '/opt/ros/jazzy/lib/opennav_docking/opennav_docking --ros-args --log-level info --ros-args -r __node:=docking_server -p use_sim_time:=False --params-file /tmp/launch_params_ggrajrwc -r /tf:=tf -r /tf_static:=tf_static'].
+1783776908.7386396 [ERROR] [collision_monitor-9]: process has died [pid 3122, exit code -9, cmd '/opt/ros/jazzy/lib/nav2_collision_monitor/collision_monitor --ros-args --log-level info --ros-args -r __node:=collision_monitor -p use_sim_time:=False --params-file /tmp/launch_params_ggrajrwc -r /tf:=tf -r /tf_static:=tf_static'].
+1783776908.7419326 [ERROR] [lifecycle_manager-11]: process has died [pid 3124, exit code -9, cmd '/opt/ros/jazzy/lib/nav2_lifecycle_manager/lifecycle_manager --ros-args --log-level info --ros-args -r __node:=lifecycle_manager_navigation -p use_sim_time:=False --params-file /tmp/launch_params_8qy8id42 --params-file /tmp/launch_params_dk3c9n70'].

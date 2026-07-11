@@ -1,0 +1,131 @@
+average rate: 10.012
+	min: 0.098s max: 0.101s std dev: 0.00114s window: 12
+average rate: 10.012
+	min: 0.098s max: 0.101s std dev: 0.00114s window: 23
+average rate: 10.007
+	min: 0.098s max: 0.101s std dev: 0.00110s window: 33
+average rate: 10.005
+	min: 0.098s max: 0.101s std dev: 0.00107s window: 43
+average rate: 10.011
+	min: 0.098s max: 0.101s std dev: 0.00111s window: 54
+average rate: 10.005
+	min: 0.098s max: 0.101s std dev: 0.00108s window: 64
+average rate: 47.559
+	min: 0.020s max: 0.030s std dev: 0.00305s window: 49
+average rate: 47.541
+	min: 0.020s max: 0.030s std dev: 0.00308s window: 97
+average rate: 47.706
+	min: 0.020s max: 0.030s std dev: 0.00298s window: 146
+average rate: 47.661
+	min: 0.020s max: 0.030s std dev: 0.00300s window: 194
+average rate: 47.637
+	min: 0.020s max: 0.030s std dev: 0.00302s window: 242
+average rate: 47.696
+	min: 0.020s max: 0.030s std dev: 0.00298s window: 290
+average rate: 47.610
+	min: 0.020s max: 0.030s std dev: 0.00301s window: 50
+average rate: 47.821
+	min: 0.020s max: 0.030s std dev: 0.00290s window: 99
+average rate: 47.730
+	min: 0.020s max: 0.030s std dev: 0.00296s window: 147
+average rate: 47.675
+	min: 0.020s max: 0.030s std dev: 0.00299s window: 195
+average rate: 47.749
+	min: 0.020s max: 0.030s std dev: 0.00294s window: 244
+average rate: 47.713
+	min: 0.020s max: 0.030s std dev: 0.00296s window: 292
+average rate: 40.010
+	min: 0.025s max: 0.025s std dev: 0.00010s window: 41
+average rate: 40.004
+	min: 0.025s max: 0.025s std dev: 0.00011s window: 82
+average rate: 40.003
+	min: 0.024s max: 0.025s std dev: 0.00011s window: 123
+average rate: 39.758
+	min: 0.024s max: 0.050s std dev: 0.00196s window: 163
+average rate: 39.612
+	min: 0.024s max: 0.050s std dev: 0.00248s window: 203
+average rate: 39.677
+	min: 0.024s max: 0.050s std dev: 0.00226s window: 244
+[INFO] [1783800339.812418473] [tf2_echo]: Waiting for transform odom ->  base_footprint: Invalid frame ID "odom" passed to canTransform argument target_frame - frame does not exist
+At time 1783800340.747097671
+- Translation: [0.000, 0.000, 0.000]
+- Rotation: in Quaternion (xyzw) [0.000, 0.000, 0.000, 1.000]
+- Rotation: in RPY (radian) [0.000, -0.000, 0.000]
+- Rotation: in RPY (degree) [0.000, -0.000, 0.000]
+- Matrix:
+  1.000  0.000  0.000  0.000
+  0.000  1.000  0.000  0.000
+  0.000  0.000  1.000  0.000
+  0.000  0.000  0.000  1.000
+At time 1783800341.737036913
+- Translation: [0.000, 0.000, 0.000]
+- Rotation: in Quaternion (xyzw) [0.000, 0.000, 0.000, 1.000]
+- Rotation: in RPY (radian) [0.000, -0.000, 0.000]
+- Rotation: in RPY (degree) [0.000, -0.000, 0.000]
+- Matrix:
+  1.000  0.000  0.000  0.000
+  0.000  1.000  0.000  0.000
+  0.000  0.000  1.000  0.000
+  0.000  0.000  0.000  1.000
+At time 1783800342.746967158
+- Translation: [0.000, 0.000, 0.000]
+- Rotation: in Quaternion (xyzw) [0.000, 0.000, 0.000, 1.000]
+- Rotation: in RPY (radian) [0.000, -0.000, 0.000]
+- Rotation: in RPY (degree) [0.000, -0.000, 0.000]
+- Matrix:
+  1.000  0.000  0.000  0.000
+  0.000  1.000  0.000  0.000
+  0.000  0.000  1.000  0.000
+  0.000  0.000  0.000  1.000
+At time 1783800343.747057794
+- Translation: [0.000, 0.000, 0.000]
+- Rotation: in Quaternion (xyzw) [0.000, 0.000, 0.000, 1.000]
+- Rotation: in RPY (radian) [0.000, -0.000, 0.000]
+- Rotation: in RPY (degree) [0.000, -0.000, 0.000]
+- Matrix:
+  1.000  0.000  0.000  0.000
+  0.000  1.000  0.000  0.000
+  0.000  0.000  1.000  0.000
+  0.000  0.000  0.000  1.000
+[INFO] [1783800344.421014833] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[INFO] [1783800344.825399890] [tf2_echo]: Waiting for transform base_footprint ->  lidar_link: Invalid frame ID "base_footprint" passed to canTransform argument target_frame - frame does not exist
+At time 0.0
+- Translation: [0.100, 0.000, 0.141]
+- Rotation: in Quaternion (xyzw) [0.000, 0.000, 0.000, 1.000]
+- Rotation: in RPY (radian) [0.000, -0.000, 0.000]
+- Rotation: in RPY (degree) [0.000, -0.000, 0.000]
+- Matrix:
+  1.000  0.000  0.000  0.100
+  0.000  1.000  0.000  0.000
+  0.000  0.000  1.000  0.141
+  0.000  0.000  0.000  1.000
+At time 0.0
+- Translation: [0.100, 0.000, 0.141]
+- Rotation: in Quaternion (xyzw) [0.000, 0.000, 0.000, 1.000]
+- Rotation: in RPY (radian) [0.000, -0.000, 0.000]
+- Rotation: in RPY (degree) [0.000, -0.000, 0.000]
+- Matrix:
+  1.000  0.000  0.000  0.100
+  0.000  1.000  0.000  0.000
+  0.000  0.000  1.000  0.141
+  0.000  0.000  0.000  1.000
+At time 0.0
+- Translation: [0.100, 0.000, 0.141]
+- Rotation: in Quaternion (xyzw) [0.000, 0.000, 0.000, 1.000]
+- Rotation: in RPY (radian) [0.000, -0.000, 0.000]
+- Rotation: in RPY (degree) [0.000, -0.000, 0.000]
+- Matrix:
+  1.000  0.000  0.000  0.100
+  0.000  1.000  0.000  0.000
+  0.000  0.000  1.000  0.141
+  0.000  0.000  0.000  1.000
+At time 0.0
+- Translation: [0.100, 0.000, 0.141]
+- Rotation: in Quaternion (xyzw) [0.000, 0.000, 0.000, 1.000]
+- Rotation: in RPY (radian) [0.000, -0.000, 0.000]
+- Rotation: in RPY (degree) [0.000, -0.000, 0.000]
+- Matrix:
+  1.000  0.000  0.000  0.100
+  0.000  1.000  0.000  0.000
+  0.000  0.000  1.000  0.141
+  0.000  0.000  0.000  1.000

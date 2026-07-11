@@ -1,0 +1,12 @@
+[INFO] [1783783316.414210006] [rviz2]: Stereo is NOT SUPPORTED
+[INFO] [1783783316.414528659] [rviz2]: OpenGl version: 3.1 (GLSL 1.4)
+[INFO] [1783783316.461318257] [rviz2]: Stereo is NOT SUPPORTED
+[INFO] [1783783319.702902063] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783783318.688 for reason 'discarding message because the queue is full'
+[INFO] [1783783322.326638505] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783783321.207 for reason 'discarding message because the queue is full'
+[INFO] [1783783324.918882099] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783783323.805 for reason 'discarding message because the queue is full'
+[INFO] [1783783327.510466322] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783783326.401 for reason 'discarding message because the queue is full'
+[INFO] [1783783330.102911042] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783783329.006 for reason 'discarding message because the queue is full'
+[INFO] [1783783332.630641013] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783783331.499 for reason 'discarding message because the queue is full'
+[INFO] [1783783335.222354985] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783783334.102 for reason 'discarding message because the queue is full'
+[INFO] [1783783337.815645666] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783783336.702 for reason 'discarding message because the queue is full'
+[INFO] [1783783339.756384473] [rclcpp]: signal_handler(SIGINT/SIGTERM)

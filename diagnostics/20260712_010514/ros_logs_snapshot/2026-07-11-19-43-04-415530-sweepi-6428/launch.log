@@ -1,0 +1,15 @@
+1783779184.4169343 [INFO] [launch]: All log files can be found below /home/sweepi/.ros/log/2026-07-11-19-43-04-415530-sweepi-6428
+1783779184.4171331 [INFO] [launch]: Default logging verbosity is set to INFO
+1783779184.7277005 [INFO] [base_driver_node-1]: process started with pid [6432]
+1783779184.7300279 [INFO] [ekf_node-2]: process started with pid [6433]
+1783779184.7319734 [INFO] [sllidar_node-3]: process started with pid [6434]
+1783779184.7322247 [INFO] [robot_state_publisher-4]: process started with pid [6435]
+1783779184.7330945 [INFO] [rviz2-5]: process started with pid [6436]
+1783779184.7332442 [INFO] [sweepi_robot_manager_node.py-6]: process started with pid [6437]
+1783779298.9571965 [WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+1783779299.2875850 [INFO] [robot_state_publisher-4]: process has finished cleanly [pid 6435]
+1783779299.5466502 [INFO] [ekf_node-2]: process has finished cleanly [pid 6433]
+1783779299.5690501 [INFO] [sllidar_node-3]: process has finished cleanly [pid 6434]
+1783779299.7662818 [INFO] [rviz2-5]: process has finished cleanly [pid 6436]
+1783779299.7721090 [ERROR] [base_driver_node-1]: process has died [pid 6432, exit code 1, cmd '/home/sweepi/SweePi/install/sweepi_base_driver/lib/sweepi_base_driver/base_driver_node --ros-args -r __node:=base_driver_node --params-file /home/sweepi/SweePi/install/sweepi_base_driver/share/sweepi_base_driver/config/base_driver_params.yaml --params-file /tmp/launch_params_gzb54tck'].
+1783779299.8303277 [INFO] [sweepi_robot_manager_node.py-6]: process has finished cleanly [pid 6437]

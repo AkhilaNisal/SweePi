@@ -1,0 +1,685 @@
+
+===== baseline_pwd =====
+$ pwd
+exit=0
+
+===== baseline_whoami =====
+$ whoami
+exit=0
+
+===== baseline_date =====
+$ date --iso-8601=seconds
+exit=0
+
+===== baseline_uname =====
+$ uname -a
+exit=0
+
+===== baseline_os_release =====
+$ cat /etc/os-release
+exit=0
+
+===== baseline_hostnamectl =====
+$ hostnamectl
+exit=0
+
+===== baseline_timedatectl =====
+$ timedatectl
+exit=0
+
+===== baseline_uptime =====
+$ uptime
+exit=0
+
+===== baseline_free =====
+$ free -h
+exit=0
+
+===== baseline_df_h =====
+$ df -h
+exit=0
+
+===== baseline_df_i =====
+$ df -i
+exit=0
+
+===== baseline_mount =====
+$ mount
+exit=0
+
+===== baseline_groups =====
+$ groups
+exit=0
+
+===== baseline_ulimit =====
+$ bash -lc ulimit -a
+exit=0
+
+===== kernel_dmesg_current =====
+$ dmesg -T
+exit=1
+
+===== journal_kernel_current =====
+$ journalctl -k -b --no-pager
+exit=0
+
+===== journal_kernel_previous =====
+$ journalctl -k -b -1 --no-pager
+exit=0
+
+===== journal_warnings_current =====
+$ journalctl -b -p warning --no-pager
+exit=0
+
+===== journal_warnings_previous =====
+$ journalctl -b -1 -p warning --no-pager
+exit=0
+
+===== kernel_signal_grep =====
+$ bash -lc grep -Eina 'mmc|ext4|I/O error|USB disconnect|ttyUSB|ttyAMA|under-voltage|voltage|throttled|oom|killed process|segfault|reset|xhci|serial|buffer overflow' '/home/sweepi/SweePi/diagnostics/20260712_010514'/kernel_dmesg_current.log '/home/sweepi/SweePi/diagnostics/20260712_010514'/journal_kernel_current.log '/home/sweepi/SweePi/diagnostics/20260712_010514'/journal_kernel_previous.log '/home/sweepi/SweePi/diagnostics/20260712_010514'/journal_warnings_current.log '/home/sweepi/SweePi/diagnostics/20260712_010514'/journal_warnings_previous.log || true
+exit=0
+
+===== vcgencmd_throttled =====
+$ bash -lc command -v vcgencmd && vcgencmd get_throttled || true
+exit=0
+
+===== thermal_zones =====
+$ bash -lc for f in /sys/class/thermal/thermal_zone*/temp; do printf "%s " "$f"; cat "$f"; done
+exit=0
+
+===== process_ps =====
+$ ps auxww
+exit=0
+
+===== process_pstree =====
+$ pstree -ap
+exit=0
+
+===== systemctl_failed =====
+$ systemctl --failed --no-pager
+exit=0
+
+===== systemctl_relevant_units =====
+$ bash -lc systemctl list-units --type=service --all --no-pager | grep -Ei 'sweepi|ros|robot|lidar|slam|nav|api' || true
+exit=0
+
+===== systemctl_relevant_unit_files =====
+$ bash -lc systemctl list-unit-files --no-pager | grep -Ei 'sweepi|ros|robot' || true
+exit=0
+
+===== process_relevant_pgrep =====
+$ pgrep -af ros2|launch|sweepi|slam|nav2|lidar|rviz|uvicorn|python
+exit=0
+
+===== ports_ss =====
+$ ss -ltnup
+exit=0
+
+===== api_health_local =====
+$ curl -sv http://127.0.0.1:8080/api/system/health
+exit=0
+
+===== api_robot_status =====
+$ curl -sv http://127.0.0.1:8080/api/robot/status
+exit=0
+
+===== api_exploration_status =====
+$ curl -sv http://127.0.0.1:8080/api/exploration/status
+exit=0
+
+===== ros_node_list =====
+$ timeout 15 ros2 node list
+exit=0
+
+===== ros_topic_list =====
+$ timeout 15 ros2 topic list -t
+exit=0
+
+===== ros_service_list =====
+$ timeout 15 ros2 service list -t
+exit=0
+
+===== ros_action_list =====
+$ timeout 15 ros2 action list -t
+exit=0
+
+===== ros_node_list_all =====
+$ timeout 15 ros2 node list --all
+exit=0
+
+===== topic_info_scan =====
+$ timeout 15 ros2 topic info -v /scan
+exit=0
+
+===== topic_info_odom =====
+$ timeout 15 ros2 topic info -v /odom
+exit=0
+
+===== topic_info_wheel_odom =====
+$ timeout 15 ros2 topic info -v /wheel/odom
+exit=0
+
+===== topic_info_imu =====
+$ timeout 15 ros2 topic info -v /imu/data
+exit=0
+
+===== topic_info_map =====
+$ timeout 15 ros2 topic info -v /map
+exit=0
+
+===== topic_info_slam_map =====
+$ timeout 15 ros2 topic info -v /slam_map
+exit=0
+
+===== topic_info_map_updates =====
+$ timeout 15 ros2 topic info -v /map_updates
+exit=0
+
+===== topic_info_cmd_vel =====
+$ timeout 15 ros2 topic info -v /cmd_vel
+exit=0
+
+===== topic_info_cmd_vel_nav =====
+$ timeout 15 ros2 topic info -v /cmd_vel_nav
+exit=0
+
+===== topic_info_hardware =====
+$ timeout 15 ros2 topic info -v /hardware/status
+exit=0
+
+===== topic_info_coverage_path =====
+$ timeout 15 ros2 topic info -v /coverage_path
+exit=0
+
+===== hz_scan =====
+$ bash -lc timeout 8 ros2 topic hz /scan || true
+exit=0
+
+===== hz_wheel_odom =====
+$ bash -lc timeout 8 ros2 topic hz /wheel/odom || true
+exit=0
+
+===== hz_imu =====
+$ bash -lc timeout 8 ros2 topic hz /imu/data || true
+exit=0
+
+===== hz_odom =====
+$ bash -lc timeout 8 ros2 topic hz /odom || true
+exit=0
+
+===== hz_slam_map =====
+$ bash -lc timeout 12 ros2 topic hz /slam_map || true
+exit=0
+
+===== hz_map =====
+$ bash -lc timeout 6 ros2 topic hz /map || true
+exit=0
+
+===== echo_scan_once =====
+$ timeout 10 ros2 topic echo --once /scan
+exit=0
+
+===== echo_hardware_once =====
+$ timeout 10 ros2 topic echo --once /hardware/status
+exit=0
+
+===== live_map_stats =====
+$ bash -lc python3 - <<"PY"
+import hashlib, time
+import rclpy
+from nav_msgs.msg import OccupancyGrid
+
+samples = {"/map": [], "/slam_map": []}
+
+def summarize(topic, msg):
+    data = bytes((v & 0xff for v in msg.data))
+    unknown = sum(1 for v in msg.data if v < 0)
+    free = sum(1 for v in msg.data if v == 0)
+    occupied = sum(1 for v in msg.data if v > 0)
+    stamp = msg.header.stamp.sec + msg.header.stamp.nanosec / 1e9
+    digest = hashlib.sha256(data).hexdigest()[:16]
+    print(f"{time.time():.3f} {topic} stamp={stamp:.3f} frame={msg.header.frame_id} size={msg.info.width}x{msg.info.height} res={msg.info.resolution} unknown={unknown} free={free} occupied={occupied} sha16={digest}", flush=True)
+    samples[topic].append(digest)
+
+rclpy.init()
+node = rclpy.create_node("diagnostic_map_stats")
+for topic in samples:
+    node.create_subscription(OccupancyGrid, topic, lambda msg, t=topic: summarize(t, msg), 10)
+end = time.time() + 10
+while time.time() < end and rclpy.ok():
+    rclpy.spin_once(node, timeout_sec=0.2)
+for topic, vals in samples.items():
+    print(f"SUMMARY {topic}: messages={len(vals)} unique_hashes={len(set(vals))}", flush=True)
+node.destroy_node()
+rclpy.shutdown()
+PY
+exit=0
+
+===== tf_echo_map_odom =====
+$ bash -lc timeout 6 ros2 run tf2_ros tf2_echo map odom || true
+exit=0
+
+===== tf_echo_odom_base =====
+$ bash -lc timeout 6 ros2 run tf2_ros tf2_echo odom base_footprint || true
+exit=0
+
+===== tf_echo_base_lidar =====
+$ bash -lc timeout 6 ros2 run tf2_ros tf2_echo base_link lidar_link || true
+exit=0
+
+===== tf_monitor =====
+$ bash -lc timeout 10 ros2 run tf2_ros tf2_monitor || true
+exit=0
+
+===== lifecycle_slam =====
+$ timeout 10 ros2 lifecycle get /slam_toolbox
+exit=0
+
+===== lifecycle_controller =====
+$ timeout 10 ros2 lifecycle get /controller_server
+exit=0
+
+===== lifecycle_bt =====
+$ timeout 10 ros2 lifecycle get /bt_navigator
+exit=0
+
+===== lifecycle_local_costmap =====
+$ timeout 10 ros2 lifecycle get /local_costmap/local_costmap
+exit=0
+
+===== lifecycle_global_costmap =====
+$ timeout 10 ros2 lifecycle get /global_costmap/global_costmap
+exit=0
+
+===== action_info_nav_to_pose =====
+$ timeout 10 ros2 action info /navigate_to_pose
+exit=0
+
+===== action_info_follow_path =====
+$ timeout 10 ros2 action info /follow_path
+exit=0
+
+===== echo_cmd_vel =====
+$ bash -lc timeout 6 ros2 topic echo /cmd_vel || true
+exit=0
+
+===== echo_cmd_vel_nav =====
+$ bash -lc timeout 6 ros2 topic echo /cmd_vel_nav || true
+exit=143
+
+===== command_topic_counts =====
+$ bash -lc python3 - <<"PY"
+import time
+import rclpy
+from geometry_msgs.msg import Twist
+from std_msgs.msg import String
+counts={"/cmd_vel":0,"/cmd_vel_nav":0,"/sweepi_robot_manager/status":0}
+last={}
+def cb(topic, msg):
+    counts[topic]+=1
+    last[topic]=str(msg)[:300].replace("\n"," ")
+    if topic.startswith("/cmd_vel"):
+        print(f"{time.time():.3f} {topic} linear.x={msg.linear.x:.4f} angular.z={msg.angular.z:.4f}", flush=True)
+    else:
+        print(f"{time.time():.3f} {topic} {last[topic]}", flush=True)
+rclpy.init()
+node=rclpy.create_node("diagnostic_command_counts")
+node.create_subscription(Twist,"/cmd_vel",lambda m: cb("/cmd_vel",m),10)
+node.create_subscription(Twist,"/cmd_vel_nav",lambda m: cb("/cmd_vel_nav",m),10)
+node.create_subscription(String,"/sweepi_robot_manager/status",lambda m: cb("/sweepi_robot_manager/status",m),10)
+end=time.time()+6
+while time.time()<end and rclpy.ok():
+    rclpy.spin_once(node,timeout_sec=0.2)
+print("SUMMARY "+" ".join(f"{k}={v}" for k,v in counts.items()), flush=True)
+for k,v in last.items(): print(f"LAST {k}: {v}", flush=True)
+node.destroy_node(); rclpy.shutdown()
+PY
+exit=0
+
+===== params_use_sim_time =====
+$ bash -lc for n in $(ros2 node list --all); do printf "%s " "$n"; timeout 5 ros2 param get "$n" use_sim_time 2>&1 || true; done
+exit=0
+
+===== recent_ros_logs_index =====
+$ bash -lc find ~/.ros/log -maxdepth 2 -type f -mmin -180 -printf "%TY-%Tm-%Td %TH:%TM %p\n" | sort
+exit=0
+
+===== rosout_recent =====
+$ bash -lc find ~/.ros/log -maxdepth 2 -type f -mmin -180 -name "*.log" -print0 | xargs -0 grep -Eina "error|warn|exception|failed|timeout|slam|scan|tf|coverage|path|api|serial|lidar|cmd_vel" || true
+exit=0
+
+===== copy_ros_logs =====
+$ bash -lc mkdir -p "$DIAG/ros_logs_snapshot" && cp -a ~/.ros/log/. "$DIAG/ros_logs_snapshot/"
+exit=0
+
+===== current_master_launch_log =====
+$ sed -n 1,220p /home/sweepi/.ros/log/2026-07-12-00-44-07-578533-sweepi-4423/launch.log
+exit=0
+
+===== current_exploration_launch_log =====
+$ sed -n 1,220p /home/sweepi/.ros/log/2026-07-12-00-44-26-314920-sweepi-4580/launch.log
+exit=0
+
+===== current_manager_log =====
+$ sed -n 1,260p /home/sweepi/.ros/log/python3_4432_1783797250845.log
+exit=0
+
+===== current_api_log =====
+$ sed -n 1,260p /home/sweepi/.ros/log/python3_4433_1783797251993.log
+exit=0
+
+===== current_wavefront_log =====
+$ bash -lc for f in /home/sweepi/.ros/log/python3_4611_1783797270354.log /home/sweepi/.ros/log/python3_4580_1783797266740.log; do echo ==== $f ====; sed -n "1,240p" "$f"; done
+exit=0
+
+===== dev_serial_ls =====
+$ bash -lc ls -l /dev/ttyAMA0 /dev/serial* /dev/ttyUSB* /dev/ttyACM* 2>/dev/null || true
+exit=0
+
+===== dev_serial_by_id =====
+$ bash -lc ls -l /dev/serial/by-id /dev/serial/by-path 2>/dev/null || true
+exit=0
+
+===== udev_ttyAMA0 =====
+$ udevadm info --query=all --name=/dev/ttyAMA0
+exit=0
+
+===== udev_ttyUSB0 =====
+$ udevadm info --query=all --name=/dev/ttyUSB0
+exit=0
+
+===== getfacl_serial =====
+$ bash -lc getfacl /dev/ttyAMA0 /dev/ttyUSB0 2>/dev/null || true
+exit=0
+
+===== fuser_serial =====
+$ bash -lc fuser -v /dev/ttyAMA0 /dev/ttyUSB0 2>&1 || true
+exit=0
+
+===== lsof_serial =====
+$ bash -lc lsof /dev/ttyAMA0 /dev/ttyUSB0 2>&1 || true
+exit=0
+
+===== serial_getty_status =====
+$ systemctl status serial-getty@ttyAMA0.service --no-pager
+exit=3
+
+===== getty_ttyAMA0_status =====
+$ systemctl status getty@ttyAMA0.service --no-pager
+exit=3
+
+===== proc_cmdline =====
+$ cat /proc/cmdline
+exit=0
+
+===== boot_uart_grep =====
+$ bash -lc grep -RniE 'enable_uart|dtoverlay|console=.*tty|bluetooth|miniuart' /boot/firmware/config.txt /boot/firmware/cmdline.txt /boot/config.txt /boot/cmdline.txt 2>/dev/null || true
+exit=0
+
+===== git_status =====
+$ git status --short --branch
+exit=0
+
+===== git_remote =====
+$ git remote -v
+exit=0
+
+===== git_branch =====
+$ git branch --show-current
+exit=0
+
+===== git_head =====
+$ git rev-parse HEAD
+exit=0
+
+===== git_log_10 =====
+$ git log -10 --oneline --decorate
+exit=0
+
+===== git_submodules =====
+$ git submodule status --recursive
+exit=0
+
+===== git_lfs_env =====
+$ bash -lc git lfs env 2>&1 || true
+exit=0
+
+===== git_lfs_files =====
+$ bash -lc git lfs ls-files 2>&1 || true
+exit=0
+
+===== git_fetch_all =====
+$ git fetch --all --prune
+exit=0
+
+===== git_origin_main =====
+$ git rev-parse origin/main
+exit=0
+
+===== git_ahead_behind =====
+$ git log --oneline --left-right --cherry-pick HEAD...origin/main
+exit=0
+
+===== find_packages =====
+$ find src -maxdepth 3 -name package.xml -print
+exit=0
+
+===== colcon_list =====
+$ colcon list
+exit=0
+
+===== rosdep_check =====
+$ bash -lc rosdep check --from-paths src --ignore-src 2>&1 || true
+exit=0
+
+===== ros_env =====
+$ bash -lc env | sort | grep -E '^(ROS|RMW|AMENT|COLCON|FASTRTPS|CYCLONEDDS|LD_LIBRARY_PATH|PYTHONPATH)' || true
+exit=0
+
+===== shell_ros_sourcing =====
+$ bash -lc grep -nE 'ROS|RMW|AMENT|COLCON|setup.bash|SweePi' ~/.bashrc ~/.profile 2>/dev/null || true
+exit=0
+
+===== ros2_doctor =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && ros2 doctor --report 2>&1 || true
+exit=0
+
+===== pkg_prefixes =====
+$ bash -lc source /opt/ros/jazzy/setup.bash; source /home/sweepi/SweePi/install/setup.bash; for p in sweepi_robot_manager sweepi_api_bridge sweepi_exploration sweepi_coverage sweepi_base_driver sweepi_real_bringup sllidar_ros2; do printf "%s " "$p"; ros2 pkg prefix "$p" 2>&1 || true; done
+exit=0
+
+===== api_docs_exploration =====
+$ bash -lc rg -n 'exploration|stop|save|cleaning|coverage|health|path|validate|start-motion' docs/api_bridge.md src/sweepi_api_bridge src/sweepi_robot_manager | head -n 200
+exit=0
+
+===== api_stop_exploration_save =====
+$ curl -sv -X POST http://127.0.0.1:8080/api/exploration/stop -H Content-Type: application/json -d {"save_map":true}
+exit=0
+
+===== post_stop_pgrep =====
+$ pgrep -af ros2|launch|sweepi|slam|nav2|lidar|rviz|uvicorn|teleop|wavefront
+exit=0
+
+===== post_stop_ros_nodes =====
+$ bash -lc timeout 15 ros2 node list --all || true
+exit=0
+
+===== post_stop_serial_owners =====
+$ bash -lc fuser -v /dev/ttyAMA0 /dev/ttyUSB0 2>&1 || true
+exit=0
+
+===== manager_stop_task =====
+$ bash -lc timeout 20 ros2 service call /sweepi_robot_manager/stop_task std_srvs/srv/Trigger {} || true
+exit=0
+
+===== after_manager_stop_pgrep =====
+$ pgrep -af ros2|launch|sweepi|slam|nav2|lidar|rviz|teleop|wavefront
+exit=0
+
+===== process_groups =====
+$ bash -lc ps -o pid,ppid,pgid,sid,stat,cmd -p 4423,4427,4428,4429,4430,4431,4432,4433,4580,4599,4600,4601,4602,4603,4604,4605,4606,4607,4608,4609,4610,4823,4826 2>/dev/null || true
+exit=0
+
+===== shutdown_manual_ros_groups =====
+$ bash -lc kill -INT -4423 2>/dev/null || true; kill -INT -4823 2>/dev/null || true; sleep 8; pgrep -af "ros2|launch|sweepi|slam|nav2|lidar|rviz|teleop|wavefront" || true
+exit=0
+
+===== post_shutdown_serial_owners =====
+$ bash -lc fuser -v /dev/ttyAMA0 /dev/ttyUSB0 2>&1 || true
+exit=0
+
+===== post_shutdown_ros_nodes =====
+$ bash -lc ros2 daemon stop; ros2 daemon start; timeout 15 ros2 node list --all || true
+exit=0
+
+===== colcon_build_diagnostic =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && cd /home/sweepi/SweePi && colcon build --symlink-install --build-base build_diagnostic --install-base install_diagnostic --log-base log_diagnostic --event-handlers console_direct+
+exit=2
+
+===== colcon_build_diagnostic_corrected =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && cd /home/sweepi/SweePi && colcon --log-base log_diagnostic build --symlink-install --build-base build_diagnostic --install-base install_diagnostic --event-handlers console_direct+
+exit=0
+
+===== api_python_imports =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install_diagnostic/setup.bash && python3 - <<"PY"
+mods = ["rclpy", "yaml", "PIL.Image", "numpy", "cv2", "fastapi", "uvicorn"]
+for mod in mods:
+    try:
+        __import__(mod)
+        print(f"OK {mod}")
+    except Exception as e:
+        print(f"MISSING {mod}: {type(e).__name__}: {e}")
+PY
+exit=0
+
+===== rg_api_imports =====
+$ bash -lc rg -n '^import |^from ' src/sweepi_api_bridge src/sweepi_robot_manager src/sweepi_exploration src/sweepi_coverage | sed -n '1,240p'
+exit=0
+
+===== py_compile_patched =====
+$ python3 -m py_compile src/sweepi_exploration/sweepi_exploration/wavefront_explorer.py src/sweepi_robot_manager/sweepi_robot_manager/sweepi_robot_manager_node.py src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py
+exit=0
+
+===== colcon_build_diagnostic_patched =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && cd /home/sweepi/SweePi && colcon --log-base log_diagnostic build --symlink-install --build-base build_diagnostic --install-base install_diagnostic --event-handlers console_direct+
+exit=0
+
+===== clean_ros_state_before_hardware =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && ros2 daemon stop || true; ros2 daemon start; pgrep -af "ros2|launch|sweepi|slam|nav2|lidar|rviz|uvicorn|python" || true; fuser -v /dev/ttyAMA0 /dev/ttyUSB0 2>/dev/null || true; lsof /dev/ttyAMA0 /dev/ttyUSB0 2>/dev/null || true; ss -ltnp | grep ":8080" || true
+exit=0
+
+===== stm32_base_only_graph =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install_diagnostic/setup.bash && ros2 node list && ros2 topic list -t && ros2 topic info /hardware/status -v && ros2 topic info /wheel/odom -v && ros2 topic info /imu/data -v && fuser -v /dev/ttyAMA0 2>/dev/null || true
+exit=0
+
+===== stm32_base_only_rates =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install_diagnostic/setup.bash && timeout 8 ros2 topic hz /hardware/status; timeout 8 ros2 topic hz /wheel/odom; timeout 8 ros2 topic hz /imu/data
+exit=124
+
+===== stm32_base_only_samples =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install_diagnostic/setup.bash && timeout 5 ros2 topic echo /hardware/status --once; timeout 5 ros2 topic echo /wheel/odom --once; timeout 5 ros2 topic echo /imu/data --once
+exit=0
+
+===== stm32_bounded_motor_test =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install_diagnostic/setup.bash && echo BEFORE && timeout 5 ros2 topic echo /wheel/odom --once | sed -n "1,25p" && timeout 2 ros2 topic pub -r 10 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.03, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"; ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"; sleep 1; echo AFTER && timeout 5 ros2 topic echo /wheel/odom --once | sed -n "1,25p" && timeout 5 ros2 topic echo /hardware/status --once
+exit=0
+
+===== base_ekf_graph_tf =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install_diagnostic/setup.bash && ros2 node list && ros2 topic info /odom -v && ros2 topic info /tf -v && ros2 param get /ekf_filter_node use_sim_time && timeout 8 ros2 topic hz /odom && timeout 5 ros2 run tf2_ros tf2_echo odom base_footprint
+exit=124
+
+===== base_ekf_tf_monitor =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install_diagnostic/setup.bash && timeout 12 ros2 run tf2_ros tf2_monitor odom base_footprint
+exit=124
+
+===== lidar_only_graph_rates =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install_diagnostic/setup.bash && ros2 node list && ros2 topic info /scan -v && fuser -v /dev/ttyUSB0 2>/dev/null || true && timeout 20 ros2 topic hz /scan && timeout 5 ros2 topic echo /scan --once | sed -n "1,35p"
+exit=124
+
+===== lidar_only_kernel_after =====
+$ bash -lc dmesg -T | tail -n 80 | grep -Ei "USB disconnect|ttyUSB|cp210x|xhci|reset|serial|under-voltage|voltage" || true
+exit=0
+
+===== orphan_after_base_ekf_stop =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install_diagnostic/setup.bash && ros2 node list --all && pgrep -af "ekf|robot_state_publisher|base_driver|sllidar|ros2 launch|launch.py|component_container" && ps -o pid,ppid,pgid,sid,stat,cmd -p $(pgrep -d, -f "ekf_filter_node|robot_state_publisher|sllidar_node|base_driver_node")
+exit=0
+
+===== lidar_only_scan_sample =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install_diagnostic/setup.bash && timeout 5 ros2 topic echo /scan --once | sed -n "1,45p"
+exit=0
+
+===== lidar_only_kernel_journal =====
+$ bash -lc journalctl -k -b --no-pager | tail -n 120 | grep -Ei "USB disconnect|ttyUSB|cp210x|xhci|reset|serial|under-voltage|voltage" || true
+exit=0
+
+===== combined_hardware_graph =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install_diagnostic/setup.bash && ros2 node list && ros2 topic info /scan -v && ros2 topic info /wheel/odom -v && ros2 topic info /imu/data -v && ros2 topic info /odom -v && ros2 topic info /hardware/status -v && ros2 topic info /tf_static -v && fuser -v /dev/ttyAMA0 /dev/ttyUSB0 2>/dev/null || true
+exit=0
+
+===== combined_hardware_rates_tf =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install_diagnostic/setup.bash && timeout 8 ros2 topic hz /scan; timeout 8 ros2 topic hz /wheel/odom; timeout 8 ros2 topic hz /imu/data; timeout 8 ros2 topic hz /odom; timeout 5 ros2 run tf2_ros tf2_echo odom base_footprint; timeout 5 ros2 run tf2_ros tf2_echo base_footprint lidar_link
+exit=124
+
+===== combined_hardware_use_sim_time =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install_diagnostic/setup.bash && for n in /base_driver_node /ekf_filter_node /robot_state_publisher /sllidar_node; do echo $n; ros2 param get $n use_sim_time || true; done
+exit=0
+
+===== full_stack_initial_health =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install_diagnostic/setup.bash && sleep 5 && ros2 node list && ros2 topic list -t && ros2 service list -t | grep -Ei "sweepi_robot_manager|exploration|coverage|map_server|slam|initial" || true && ss -ltnp | grep ":8080" || true && curl -sS http://127.0.0.1:8080/api/system/health && echo && curl -sS http://localhost:8080/api/robot/status && echo && hostname -I
+exit=0
+
+===== full_stack_critical_topics =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install_diagnostic/setup.bash && ros2 topic info /scan -v && ros2 topic info /wheel/odom -v && ros2 topic info /imu/data -v && ros2 topic info /odom -v && ros2 topic info /cmd_vel -v && ros2 topic info /sweepi_robot_manager/status -v && for n in /base_driver_node /ekf_filter_node /robot_state_publisher /sllidar_node /sweepi_robot_manager /sweepi_api_bridge; do echo $n; ros2 param get $n use_sim_time || true; done
+exit=0
+
+===== full_stack_process_audit =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install_diagnostic/setup.bash && pgrep -af "coverage|planner|tracker|executor|map_server|amcl|controller_server|bt_navigator|planner_server|recoveries|smoother|ros2 launch|launch.py|nav2|slam|wavefront|api_bridge|robot_manager|sllidar|base_driver|ekf" && ros2 service list -t | grep -Ei "coverage|map_server|amcl|nav2" && ros2 node list --all
+exit=0
+
+===== api_lan_health =====
+$ bash -lc curl -sS http://192.168.8.164:8080/api/system/health && echo
+exit=0
+
+===== ros_daemon_refresh_full_stack =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && ros2 daemon stop; ros2 daemon start; source /home/sweepi/SweePi/install_diagnostic/setup.bash && ros2 service list -t | grep -Ei "coverage|map_server|amcl|nav2" || true && ros2 node list --all
+exit=0
+
+===== full_stack_no_daemon_compare =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install_diagnostic/setup.bash && pgrep -af "base_driver_node|api_bridge_node|sweepi_robot_manager|sllidar_node|ekf_node|robot_state_publisher" && ros2 node list --no-daemon || ros2 node list && curl -sS http://127.0.0.1:8080/api/system/health && echo && timeout 5 ros2 topic echo /hardware/status --once && timeout 5 ros2 topic echo /sweepi_robot_manager/status --once
+exit=0
+
+===== exploration_manual_start =====
+$ bash -lc MAP=diagnostic_manual_20260712_0145; curl -sS -X POST http://localhost:8080/api/exploration/start -H "Content-Type: application/json" -d "{\"map_name\":\"$MAP\",\"mode\":\"manual\"}" && echo
+exit=0
+
+===== exploration_manual_monitor =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install_diagnostic/setup.bash && /home/sweepi/SweePi/diagnostics/20260712_010514/tools/monitor_exploration.py 35
+exit=1
+
+===== exploration_manual_monitor_retry =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install_diagnostic/setup.bash && /home/sweepi/SweePi/diagnostics/20260712_010514/tools/monitor_exploration.py 40
+exit=0
+
+===== exploration_manual_graph =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install_diagnostic/setup.bash && ros2 node list --all && ros2 topic info /map -v && ros2 topic info /slam_map -v && ros2 topic info /exploration/mode -v && ros2 service list -t | grep -Ei "exploration|slam|map"
+exit=0
+
+===== exploration_manual_stop_save =====
+$ bash -lc curl -sS -X POST http://localhost:8080/api/exploration/stop -H "Content-Type: application/json" -d "{\"save_map\":true}" && echo && sleep 3 && curl -sS http://localhost:8080/api/robot/status && echo && ls -l maps/diagnostic_manual_20260712_0145.* || true
+exit=0
+
+===== exploration_manual_cleanup_check =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install_diagnostic/setup.bash && ros2 node list --all && pgrep -af "exploration_task|wavefront|slam_toolbox|nav2|controller_server|planner_server|bt_navigator|behavior_server|velocity_smoother" || true && ros2 topic info /map -v && ros2 topic info /slam_map -v
+exit=1
+
+===== py_compile_api_state_patch =====
+$ bash -lc python3 -m py_compile src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py src/sweepi_api_bridge/sweepi_api_bridge/runtime_state.py
+exit=0
+
+===== colcon_build_diagnostic_api_state_patch =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && cd /home/sweepi/SweePi && colcon --log-base log_diagnostic build --symlink-install --build-base build_diagnostic --install-base install_diagnostic --event-handlers console_direct+ --packages-select sweepi_api_bridge
+exit=0
+
+===== after_full_stack_stop_check =====
+$ bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install_diagnostic/setup.bash && sleep 2 && pgrep -af "ros2 launch|base_driver_node|api_bridge_node|sweepi_robot_manager|sllidar_node|ekf_node|robot_state_publisher|slam_toolbox|wavefront|nav2|controller_server|planner_server" || true && fuser -v /dev/ttyAMA0 /dev/ttyUSB0 2>/dev/null || true && ss -ltnp | grep ":8080" || true
+exit=0

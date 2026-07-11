@@ -1,0 +1,2 @@
+[ERROR] [1783780530.114704027] [ekf_filter_node]: Warning: /imu/data is listed as an input topic, but all its update variables are false
+[INFO] [1783780659.576475519] [rclcpp]: signal_handler(SIGINT/SIGTERM)

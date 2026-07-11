@@ -1,0 +1,14 @@
+source;share/sweepi_robot_manager_interfaces/hook/cmake_prefix_path.ps1
+source;share/sweepi_robot_manager_interfaces/hook/cmake_prefix_path.dsv
+source;share/sweepi_robot_manager_interfaces/hook/cmake_prefix_path.sh
+source;share/sweepi_robot_manager_interfaces/hook/ld_library_path_lib.ps1
+source;share/sweepi_robot_manager_interfaces/hook/ld_library_path_lib.dsv
+source;share/sweepi_robot_manager_interfaces/hook/ld_library_path_lib.sh
+source;share/sweepi_robot_manager_interfaces/hook/pythonpath.ps1
+source;share/sweepi_robot_manager_interfaces/hook/pythonpath.dsv
+source;share/sweepi_robot_manager_interfaces/hook/pythonpath.sh
+source;share/sweepi_robot_manager_interfaces/local_setup.bash
+source;share/sweepi_robot_manager_interfaces/local_setup.dsv
+source;share/sweepi_robot_manager_interfaces/local_setup.ps1
+source;share/sweepi_robot_manager_interfaces/local_setup.sh
+source;share/sweepi_robot_manager_interfaces/local_setup.zsh

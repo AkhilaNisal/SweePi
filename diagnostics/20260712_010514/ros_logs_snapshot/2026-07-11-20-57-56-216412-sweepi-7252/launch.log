@@ -1,0 +1,19 @@
+1783783676.2178111 [INFO] [launch]: All log files can be found below /home/sweepi/.ros/log/2026-07-11-20-57-56-216412-sweepi-7252
+1783783676.2180140 [INFO] [launch]: Default logging verbosity is set to INFO
+1783783676.5357802 [INFO] [base_driver_node-1]: process started with pid [7256]
+1783783676.5361016 [INFO] [ekf_node-2]: process started with pid [7257]
+1783783676.5362384 [INFO] [sllidar_node-3]: process started with pid [7258]
+1783783676.5363505 [INFO] [robot_state_publisher-4]: process started with pid [7259]
+1783783676.5364375 [INFO] [rviz2-5]: process started with pid [7260]
+1783783676.5365245 [INFO] [sweepi_robot_manager_node.py-6]: process started with pid [7261]
+1783783676.5366185 [INFO] [api_bridge_node-7]: process started with pid [7262]
+1783784104.8775685 [WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+1783784105.0816138 [INFO] [robot_state_publisher-4]: process has finished cleanly [pid 7259]
+1783784105.1276805 [INFO] [ekf_node-2]: process has finished cleanly [pid 7257]
+1783784105.2724712 [INFO] [sllidar_node-3]: process has finished cleanly [pid 7258]
+1783784105.3740978 [INFO] [rviz2-5]: process has finished cleanly [pid 7260]
+1783784105.5082409 [ERROR] [base_driver_node-1]: process has died [pid 7256, exit code 1, cmd '/home/sweepi/SweePi/install/sweepi_base_driver/lib/sweepi_base_driver/base_driver_node --ros-args -r __node:=base_driver_node --params-file /home/sweepi/SweePi/install/sweepi_base_driver/share/sweepi_base_driver/config/base_driver_params.yaml --params-file /tmp/launch_params_tioopyvp'].
+1783784105.6057940 [INFO] [api_bridge_node-7]: process has finished cleanly [pid 7262]
+1783784107.2533376 [WARNING] [launch]: user interrupted with ctrl-c (SIGINT) again, ignoring...
+1783784107.4638317 [WARNING] [launch]: user interrupted with ctrl-c (SIGINT) again, ignoring...
+1783784107.6436551 [ERROR] [sweepi_robot_manager_node.py-6]: process has died [pid 7261, exit code -2, cmd '/home/sweepi/SweePi/install/sweepi_robot_manager/lib/sweepi_robot_manager/sweepi_robot_manager_node.py --ros-args -r __node:=sweepi_robot_manager --params-file /tmp/launch_params_vef9v40e'].

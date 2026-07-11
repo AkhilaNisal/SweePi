@@ -1,0 +1,3 @@
+[INFO] [1783785387.091703726] [sweepi_api_bridge]: SweePi API bridge listening on http://0.0.0.0:8080/api
+[INFO] [1783785405.696434304] [sweepi_api_bridge]: HTTP "POST /api/cleaning/start HTTP/1.1" 200 -
+[INFO] [1783785440.099110819] [sweepi_api_bridge]: HTTP "POST /api/cleaning/validate HTTP/1.1" 200 -

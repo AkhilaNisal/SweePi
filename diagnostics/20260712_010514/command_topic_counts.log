@@ -1,0 +1,8 @@
+1783798975.087 /sweepi_robot_manager/status std_msgs.msg.String(data='task=exploration map_name=living_room arm_assist=false latest_coverage_status=(none) latest_exploration_mode=auto')
+1783798976.059 /sweepi_robot_manager/status std_msgs.msg.String(data='task=exploration map_name=living_room arm_assist=false latest_coverage_status=(none) latest_exploration_mode=auto')
+1783798977.059 /sweepi_robot_manager/status std_msgs.msg.String(data='task=exploration map_name=living_room arm_assist=false latest_coverage_status=(none) latest_exploration_mode=auto')
+1783798978.059 /sweepi_robot_manager/status std_msgs.msg.String(data='task=exploration map_name=living_room arm_assist=false latest_coverage_status=(none) latest_exploration_mode=auto')
+1783798979.060 /sweepi_robot_manager/status std_msgs.msg.String(data='task=exploration map_name=living_room arm_assist=false latest_coverage_status=(none) latest_exploration_mode=auto')
+1783798980.079 /sweepi_robot_manager/status std_msgs.msg.String(data='task=exploration map_name=living_room arm_assist=false latest_coverage_status=(none) latest_exploration_mode=auto')
+SUMMARY /cmd_vel=0 /cmd_vel_nav=0 /sweepi_robot_manager/status=6
+LAST /sweepi_robot_manager/status: std_msgs.msg.String(data='task=exploration map_name=living_room arm_assist=false latest_coverage_status=(none) latest_exploration_mode=auto')

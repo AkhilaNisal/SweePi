@@ -1,0 +1,17 @@
+1783778318.4654975 [INFO] [launch]: All log files can be found below /home/sweepi/.ros/log/2026-07-11-19-28-38-464025-sweepi-8924
+1783778318.4657073 [INFO] [launch]: Default logging verbosity is set to INFO
+1783778318.7766314 [INFO] [base_driver_node-1]: process started with pid [8928]
+1783778318.7781551 [INFO] [ekf_node-2]: process started with pid [8929]
+1783778318.7791719 [INFO] [sllidar_node-3]: process started with pid [8930]
+1783778318.7800927 [INFO] [robot_state_publisher-4]: process started with pid [8931]
+1783778318.7809775 [INFO] [rviz2-5]: process started with pid [8932]
+1783778318.7811477 [INFO] [sweepi_robot_manager_node.py-6]: process started with pid [8933]
+1783778368.6889007 [WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+1783778369.1286902 [INFO] [ekf_node-2]: process has finished cleanly [pid 8929]
+1783778369.1405427 [INFO] [robot_state_publisher-4]: process has finished cleanly [pid 8931]
+1783778369.2675576 [ERROR] [base_driver_node-1]: process has died [pid 8928, exit code 1, cmd '/home/sweepi/SweePi/install/sweepi_base_driver/lib/sweepi_base_driver/base_driver_node --ros-args -r __node:=base_driver_node --params-file /home/sweepi/SweePi/install/sweepi_base_driver/share/sweepi_base_driver/config/base_driver_params.yaml --params-file /tmp/launch_params_5_7pk7mv'].
+1783778369.2841611 [INFO] [rviz2-5]: process has finished cleanly [pid 8932]
+1783778369.3370261 [INFO] [sweepi_robot_manager_node.py-6]: process has finished cleanly [pid 8933]
+1783778373.6984744 [ERROR] [sllidar_node-3]: process[sllidar_node-3] failed to terminate '5' seconds after receiving 'SIGINT', escalating to 'SIGTERM'
+1783778373.6994984 [INFO] [sllidar_node-3]: sending signal 'SIGTERM' to process[sllidar_node-3]
+1783778374.4590180 [INFO] [sllidar_node-3]: process has finished cleanly [pid 8930]

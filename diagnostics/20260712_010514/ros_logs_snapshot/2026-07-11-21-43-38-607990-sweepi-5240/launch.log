@@ -1,0 +1,17 @@
+1783786418.6101451 [INFO] [launch]: All log files can be found below /home/sweepi/.ros/log/2026-07-11-21-43-38-607990-sweepi-5240
+1783786418.6103425 [INFO] [launch]: Default logging verbosity is set to INFO
+1783786418.9351475 [INFO] [base_driver_node-1]: process started with pid [5244]
+1783786418.9355454 [INFO] [ekf_node-2]: process started with pid [5245]
+1783786418.9366210 [INFO] [sllidar_node-3]: process started with pid [5246]
+1783786418.9383276 [INFO] [robot_state_publisher-4]: process started with pid [5247]
+1783786418.9395978 [INFO] [rviz2-5]: process started with pid [5248]
+1783786418.9417887 [INFO] [sweepi_robot_manager_node.py-6]: process started with pid [5249]
+1783786418.9435625 [INFO] [api_bridge_node-7]: process started with pid [5250]
+1783786594.0361719 [WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+1783786594.3232234 [INFO] [robot_state_publisher-4]: process has finished cleanly [pid 5247]
+1783786594.3547313 [INFO] [ekf_node-2]: process has finished cleanly [pid 5245]
+1783786594.3872962 [INFO] [sllidar_node-3]: process has finished cleanly [pid 5246]
+1783786594.5195162 [INFO] [rviz2-5]: process has finished cleanly [pid 5248]
+1783786594.5805087 [ERROR] [base_driver_node-1]: process has died [pid 5244, exit code 1, cmd '/home/sweepi/SweePi/install/sweepi_base_driver/lib/sweepi_base_driver/base_driver_node --ros-args -r __node:=base_driver_node --params-file /home/sweepi/SweePi/install/sweepi_base_driver/share/sweepi_base_driver/config/base_driver_params.yaml --params-file /tmp/launch_params_oz6altyg'].
+1783786594.6420214 [INFO] [sweepi_robot_manager_node.py-6]: process has finished cleanly [pid 5249]
+1783786594.7028906 [INFO] [api_bridge_node-7]: process has finished cleanly [pid 5250]

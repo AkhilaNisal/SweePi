@@ -1,0 +1,95 @@
+[INFO] [1783779915.133503714] [rviz2]: Stereo is NOT SUPPORTED
+[INFO] [1783779915.135008028] [rviz2]: OpenGl version: 3.1 (GLSL 1.4)
+[INFO] [1783779915.185543655] [rviz2]: Stereo is NOT SUPPORTED
+[INFO] [1783779918.233081646] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783779917.142 for reason 'discarding message because the queue is full'
+[INFO] [1783779920.856225988] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783779919.738 for reason 'discarding message because the queue is full'
+[INFO] [1783779923.448638630] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783779922.331 for reason 'discarding message because the queue is full'
+[INFO] [1783779926.040450783] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783779924.930 for reason 'discarding message because the queue is full'
+[INFO] [1783779928.632245825] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783779927.529 for reason 'discarding message because the queue is full'
+[INFO] [1783779931.256194530] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783779930.128 for reason 'discarding message because the queue is full'
+[INFO] [1783779933.848747759] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783779932.725 for reason 'discarding message because the queue is full'
+[INFO] [1783779936.441027851] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783779935.324 for reason 'discarding message because the queue is full'
+[INFO] [1783779939.032865335] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783779937.921 for reason 'discarding message because the queue is full'
+[INFO] [1783779941.644162956] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783779940.529 for reason 'discarding message because the queue is full'
+[INFO] [1783779944.151825275] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783779942.622 for reason 'discarding message because the queue is full'
+[INFO] [1783779946.703280012] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783779945.535 for reason 'discarding message because the queue is full'
+[INFO] [1783779947.564140821] [rviz2]: Trying to create a map of size 146 x 127 using 1 swatches
+[ERROR] [1783779947.674219152] [rviz2]: rviz/glsl120/indexed_8bit_image.vert
+rviz/glsl120/indexed_8bit_image.frag
+ GLSL link result : 
+active samplers with a different type refer to the same texture image unit
+[ERROR] [1783779947.867535315] [rviz2]: Lookup would require extrapolation into the future.  Requested time 1783779947.812718 but the latest data is at time 1783779947.812553, when looking up transform from frame [lidar_link] to frame [map]
+[INFO] [1783779951.512510527] [rviz2]: Trying to create a map of size 80 x 80 using 1 swatches
+[INFO] [1783780023.356506003] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783779946.137 for reason 'discarding message because the queue is full'
+[INFO] [1783780040.753966875] [rviz2]: Trying to create a map of size 147 x 127 using 1 swatches
+[INFO] [1783780041.531424818] [rviz2]: Trying to create a map of size 147 x 131 using 1 swatches
+[INFO] [1783780047.533778315] [rviz2]: Trying to create a map of size 147 x 132 using 1 swatches
+[INFO] [1783780049.540607088] [rviz2]: Trying to create a map of size 147 x 133 using 1 swatches
+[INFO] [1783780050.611029658] [rviz2]: Trying to create a map of size 147 x 140 using 1 swatches
+[INFO] [1783780051.053781238] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783779946.228 for reason 'discarding message because the queue is full'
+[INFO] [1783780052.886090064] [rviz2]: Trying to create a map of size 147 x 151 using 1 swatches
+[INFO] [1783780059.114029163] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783779946.534 for reason 'discarding message because the queue is full'
+[INFO] [1783780060.044320825] [rviz2]: Trying to create a map of size 148 x 151 using 1 swatches
+[INFO] [1783780066.743744784] [rviz2]: Trying to create a map of size 148 x 152 using 1 swatches
+[INFO] [1783780068.644310052] [rviz2]: Trying to create a map of size 155 x 194 using 1 swatches
+[INFO] [1783780085.648634492] [rviz2]: Trying to create a map of size 155 x 202 using 1 swatches
+[INFO] [1783780092.547894450] [rviz2]: Trying to create a map of size 155 x 213 using 1 swatches
+[INFO] [1783780093.557350684] [rviz2]: Trying to create a map of size 157 x 213 using 1 swatches
+[INFO] [1783780094.560272821] [rviz2]: Trying to create a map of size 161 x 213 using 1 swatches
+[INFO] [1783780095.551535387] [rviz2]: Trying to create a map of size 165 x 213 using 1 swatches
+[INFO] [1783780096.608675665] [rviz2]: Trying to create a map of size 181 x 213 using 1 swatches
+[INFO] [1783780097.569326939] [rviz2]: Trying to create a map of size 182 x 213 using 1 swatches
+[INFO] [1783780119.734199499] [rviz2]: Trying to create a map of size 183 x 213 using 1 swatches
+[INFO] [1783780121.775042467] [rviz2]: Trying to create a map of size 189 x 213 using 1 swatches
+[INFO] [1783780122.971601533] [rviz2]: Trying to create a map of size 224 x 213 using 1 swatches
+[INFO] [1783780130.148397422] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783779946.621 for reason 'discarding message because the queue is full'
+[INFO] [1783780131.041005613] [rviz2]: Trying to create a map of size 237 x 213 using 1 swatches
+[INFO] [1783780132.868271846] [rviz2]: Trying to create a map of size 245 x 213 using 1 swatches
+[INFO] [1783780134.616095662] [rviz2]: Trying to create a map of size 247 x 213 using 1 swatches
+[INFO] [1783780135.904824220] [rviz2]: Trying to create a map of size 248 x 213 using 1 swatches
+[INFO] [1783780136.745066165] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783779946.721 for reason 'discarding message because the queue is full'
+[INFO] [1783780146.351145118] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783779946.817 for reason 'discarding message because the queue is full'
+[INFO] [1783780148.258651406] [rviz2]: Trying to create a map of size 249 x 213 using 1 swatches
+[INFO] [1783780164.862606971] [rviz2]: Trying to create a map of size 249 x 215 using 1 swatches
+[INFO] [1783780167.783853073] [rviz2]: Trying to create a map of size 249 x 217 using 1 swatches
+[INFO] [1783780168.930230685] [rviz2]: Trying to create a map of size 249 x 218 using 1 swatches
+[INFO] [1783780169.755679986] [rviz2]: Trying to create a map of size 249 x 231 using 1 swatches
+[INFO] [1783780179.021191321] [rviz2]: Trying to create a map of size 250 x 231 using 1 swatches
+[INFO] [1783780188.833282799] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783779946.916 for reason 'discarding message because the queue is full'
+[INFO] [1783780193.023122160] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783780191.902 for reason 'discarding message because the queue is full'
+[INFO] [1783780195.740880283] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783780194.598 for reason 'discarding message because the queue is full'
+[INFO] [1783780197.680478032] [rviz2]: Trying to create a map of size 254 x 231 using 1 swatches
+[INFO] [1783780198.636888575] [rviz2]: Trying to create a map of size 255 x 231 using 1 swatches
+[INFO] [1783780199.773542057] [rviz2]: Trying to create a map of size 256 x 231 using 1 swatches
+[INFO] [1783780200.791390444] [rviz2]: Trying to create a map of size 258 x 231 using 1 swatches
+[INFO] [1783780201.764710849] [rviz2]: Trying to create a map of size 261 x 231 using 1 swatches
+[INFO] [1783780203.132144216] [rviz2]: Trying to create a map of size 263 x 231 using 1 swatches
+[INFO] [1783780205.021060105] [rviz2]: Trying to create a map of size 268 x 231 using 1 swatches
+[INFO] [1783780206.794926501] [rviz2]: Trying to create a map of size 269 x 231 using 1 swatches
+[INFO] [1783780214.693752184] [rviz2]: Trying to create a map of size 270 x 231 using 1 swatches
+[INFO] [1783780216.543548677] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783780215.378 for reason 'discarding message because the queue is full'
+[INFO] [1783780240.475341226] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783780239.348 for reason 'discarding message because the queue is full'
+[INFO] [1783780246.673837680] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783780245.555 for reason 'discarding message because the queue is full'
+[INFO] [1783780249.940463529] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783780248.840 for reason 'discarding message because the queue is full'
+[INFO] [1783780252.561252680] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783780251.430 for reason 'discarding message because the queue is full'
+[INFO] [1783780259.023762575] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783780257.932 for reason 'discarding message because the queue is full'
+[INFO] [1783780261.525915189] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783780260.426 for reason 'discarding message because the queue is full'
+[INFO] [1783780263.121294892] [rviz2]: Trying to create a map of size 270 x 261 using 1 swatches
+[INFO] [1783780265.602199431] [rviz2]: Trying to create a map of size 271 x 272 using 1 swatches
+[INFO] [1783780272.460482879] [rviz2]: Trying to create a map of size 271 x 277 using 1 swatches
+[INFO] [1783780274.231111736] [rviz2]: Trying to create a map of size 271 x 278 using 1 swatches
+[INFO] [1783780276.371318506] [rviz2]: Trying to create a map of size 271 x 279 using 1 swatches
+[INFO] [1783780281.126358516] [rviz2]: Trying to create a map of size 271 x 280 using 1 swatches
+[INFO] [1783780290.885829311] [rviz2]: Trying to create a map of size 273 x 279 using 1 swatches
+[INFO] [1783780317.496990011] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783780316.374 for reason 'discarding message because the queue is full'
+[INFO] [1783780336.998695020] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783780335.858 for reason 'discarding message because the queue is full'
+[INFO] [1783780339.560563120] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783780338.613 for reason 'discarding message because the queue is full'
+[INFO] [1783780342.152250438] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783780341.042 for reason 'discarding message because the queue is full'
+[INFO] [1783780344.745151201] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783780343.640 for reason 'discarding message because the queue is full'
+[INFO] [1783780347.368529446] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783780346.235 for reason 'discarding message because the queue is full'
+[INFO] [1783780349.961819161] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783780348.834 for reason 'discarding message because the queue is full'
+[INFO] [1783780352.552704324] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783780351.427 for reason 'discarding message because the queue is full'
+[INFO] [1783780355.145264653] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783780354.034 for reason 'discarding message because the queue is full'
+[INFO] [1783780357.736589193] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783780356.628 for reason 'discarding message because the queue is full'
+[INFO] [1783780360.329072286] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783780359.224 for reason 'discarding message because the queue is full'
+[INFO] [1783780362.721352375] [rclcpp]: signal_handler(SIGINT/SIGTERM)

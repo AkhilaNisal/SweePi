@@ -1,0 +1,2 @@
+[ERROR] [1783778154.783240043] [ekf_filter_node]: Warning: /imu/data is listed as an input topic, but all its update variables are false
+[ERROR] [1783778389.686645993] [ekf_filter_node]: Failed to meet update rate! Took 0.32603278499999999163seconds. Try decreasing the rate, limiting sensor output frequency, or limiting the number of sensors.

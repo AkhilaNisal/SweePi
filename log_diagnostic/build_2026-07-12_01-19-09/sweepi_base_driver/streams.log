@@ -1,0 +1,28 @@
+[3.428s] Invoking command in '/home/sweepi/SweePi/build_diagnostic/sweepi_base_driver': PYTHONPATH=/home/sweepi/SweePi/build_diagnostic/sweepi_base_driver/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/sweepi/SweePi/build_diagnostic/sweepi_base_driver/build --no-deps symlink_data
+[4.210s] running develop
+[4.710s] running egg_info
+[4.711s] creating sweepi_base_driver.egg-info
+[4.761s] writing sweepi_base_driver.egg-info/PKG-INFO
+[4.764s] writing dependency_links to sweepi_base_driver.egg-info/dependency_links.txt
+[4.764s] writing entry points to sweepi_base_driver.egg-info/entry_points.txt
+[4.764s] writing requirements to sweepi_base_driver.egg-info/requires.txt
+[4.764s] writing top-level names to sweepi_base_driver.egg-info/top_level.txt
+[4.766s] writing manifest file 'sweepi_base_driver.egg-info/SOURCES.txt'
+[4.893s] reading manifest file 'sweepi_base_driver.egg-info/SOURCES.txt'
+[4.895s] writing manifest file 'sweepi_base_driver.egg-info/SOURCES.txt'
+[4.944s] running build_ext
+[4.944s] Creating /home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/lib/python3.12/site-packages/sweepi-base-driver.egg-link (link to .)
+[4.945s] Installing base_driver_node script to /home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/lib/sweepi_base_driver
+[4.945s] 
+[4.945s] Installed /home/sweepi/SweePi/build_diagnostic/sweepi_base_driver
+[4.948s] running symlink_data
+[4.949s] creating /home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/share/ament_index
+[4.949s] creating /home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/share/ament_index/resource_index
+[4.949s] creating /home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/share/ament_index/resource_index/packages
+[4.949s] symbolically linking /home/sweepi/SweePi/build_diagnostic/sweepi_base_driver/resource/sweepi_base_driver -> /home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/share/ament_index/resource_index/packages
+[4.949s] symbolically linking /home/sweepi/SweePi/build_diagnostic/sweepi_base_driver/package.xml -> /home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/share/sweepi_base_driver
+[4.950s] creating /home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/share/sweepi_base_driver/launch
+[4.950s] symbolically linking /home/sweepi/SweePi/build_diagnostic/sweepi_base_driver/launch/base_driver.launch.py -> /home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/share/sweepi_base_driver/launch
+[4.950s] creating /home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/share/sweepi_base_driver/config
+[4.950s] symbolically linking /home/sweepi/SweePi/build_diagnostic/sweepi_base_driver/config/base_driver_params.yaml -> /home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/share/sweepi_base_driver/config
+[5.117s] Invoked command in '/home/sweepi/SweePi/build_diagnostic/sweepi_base_driver' returned '0': PYTHONPATH=/home/sweepi/SweePi/build_diagnostic/sweepi_base_driver/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/sweepi/SweePi/build_diagnostic/sweepi_base_driver/build --no-deps symlink_data

@@ -104,7 +104,7 @@ class StateStore:
                 self._state.active_task = 'none'
                 self._state.active_area_name = None
                 self._state.active_map_id = None
-            if self._state.robot_state == 'exploring':
+            if self._state.robot_state in ('exploring', 'exploration_stopped'):
                 self._state.robot_state = 'idle'
             self._state.last_updated_sec = time.time()
             return asdict(self._state)

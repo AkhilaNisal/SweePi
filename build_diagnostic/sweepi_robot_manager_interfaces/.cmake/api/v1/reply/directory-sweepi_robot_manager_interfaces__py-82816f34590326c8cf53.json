@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "sweepi_robot_manager_interfaces__py",
+		"source" : "/home/sweepi/SweePi/build_diagnostic/sweepi_robot_manager_interfaces/sweepi_robot_manager_interfaces__py"
+	}
+}

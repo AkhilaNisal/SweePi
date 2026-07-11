@@ -1,0 +1,24 @@
+[INFO] [1783786432.260555531] [route_server]: 
+	route_server lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1783786435.803459546] [route_server]: Configuring
+[INFO] [1783786436.065333152] [route_server]: Created GraphFileLoader GeoJsonGraphFileLoader of type nav2_route::GeoJsonGraphFileLoader
+[INFO] [1783786436.065561419] [route_server]: Configuring geojson graph file loader
+[INFO] [1783786436.065599105] [route_server]: No graph file provided to load yet.
+[INFO] [1783786436.071372709] [route_server]: Created edge cost function plugin DistanceScorer of type nav2_route::DistanceScorer
+[INFO] [1783786436.071968987] [route_server]: Configuring distance scorer.
+[INFO] [1783786436.072583358] [route_server]: Created edge cost function plugin DynamicEdgesScorer of type nav2_route::DynamicEdgesScorer
+[INFO] [1783786436.072651156] [route_server]: Configuring adjust edges scorer.
+[INFO] [1783786436.085989049] [route_server]: Created route operation AdjustSpeedLimit of type nav2_route::AdjustSpeedLimit
+[INFO] [1783786436.086070145] [route_server]: Configuring Adjust speed limit operation.
+[INFO] [1783786436.090697787] [route_server]: Created route operation ReroutingService of type nav2_route::ReroutingService
+[INFO] [1783786436.090768567] [route_server]: Configuring Rerouting service operation.
+[INFO] [1783786438.545646524] [route_server]: Activating
+[INFO] [1783786438.546185948] [route_server]: Creating bond (route_server) to lifecycle manager.
+[INFO] [1783786583.347181595] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[INFO] [1783786583.347353248] [route_server]: Running Nav2 LifecycleNode rcl preshutdown (route_server)
+[INFO] [1783786583.347478826] [route_server]: Deactivating
+[INFO] [1783786583.347516512] [route_server]: Destroying bond (route_server) to lifecycle manager.
+[INFO] [1783786583.449185012] [route_server]: Cleaning up
+[INFO] [1783786583.728245055] [route_server]: Destroying bond (route_server) to lifecycle manager.

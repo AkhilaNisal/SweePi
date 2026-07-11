@@ -1,0 +1,43 @@
+1783786430.6732631 [INFO] [launch]: All log files can be found below /home/sweepi/.ros/log/2026-07-11-21-43-50-670860-sweepi-5425
+1783786430.6735795 [INFO] [launch]: Default logging verbosity is set to INFO
+1783786431.0623393 [INFO] [launch.user]: 🚀 STARTING SWEEPI AUTONOMOUS EXPLORATION
+1783786431.0626431 [INFO] [launch.user]: 💾 Map name: ${map_name}
+1783786431.0627792 [INFO] [launch.user]: 📏 Proximity-based blocking: ${unreachable_region_radius}m
+1783786431.0629258 [INFO] [launch.user]: 🔁 Completion retry sweeps: ${completion_retry_cycles}
+1783786431.0630558 [INFO] [launch.user]: 🎮 Exploration mode: ${start_mode}
+1783786431.5282884 [INFO] [controller_server-1]: process started with pid [5456]
+1783786431.5288773 [INFO] [smoother_server-2]: process started with pid [5457]
+1783786431.5290949 [INFO] [planner_server-3]: process started with pid [5458]
+1783786431.5292552 [INFO] [route_server-4]: process started with pid [5459]
+1783786431.5294621 [INFO] [behavior_server-5]: process started with pid [5460]
+1783786431.5296810 [INFO] [bt_navigator-6]: process started with pid [5461]
+1783786431.5298040 [INFO] [waypoint_follower-7]: process started with pid [5462]
+1783786431.5300336 [INFO] [velocity_smoother-8]: process started with pid [5463]
+1783786431.5302401 [INFO] [collision_monitor-9]: process started with pid [5464]
+1783786431.5303652 [INFO] [opennav_docking-10]: process started with pid [5465]
+1783786431.5304627 [INFO] [lifecycle_manager-11]: process started with pid [5466]
+1783786431.5318921 [INFO] [async_slam_toolbox_node-12]: process started with pid [5467]
+1783786431.5321181 [INFO] [wavefront_explorer.py-13]: process started with pid [5468]
+1783786434.7069476 [INFO] [launch.user]: [LifecycleLaunch] SweePi SLAM Toolbox is activating.
+1783786583.3354435 [WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+1783786584.6341226 [INFO] [velocity_smoother-8]: process has finished cleanly [pid 5463]
+1783786584.6348484 [INFO] [collision_monitor-9]: process has finished cleanly [pid 5464]
+1783786584.6379697 [INFO] [smoother_server-2]: process has finished cleanly [pid 5457]
+1783786584.6994009 [INFO] [wavefront_explorer.py-13]: sending signal 'SIGINT' to process[wavefront_explorer.py-13]
+1783786584.7127168 [INFO] [async_slam_toolbox_node-12]: sending signal 'SIGINT' to process[async_slam_toolbox_node-12]
+1783786584.7186468 [INFO] [lifecycle_manager-11]: sending signal 'SIGINT' to process[lifecycle_manager-11]
+1783786584.7468371 [INFO] [opennav_docking-10]: sending signal 'SIGINT' to process[opennav_docking-10]
+1783786584.7587860 [INFO] [route_server-4]: process has finished cleanly [pid 5459]
+1783786584.7593250 [INFO] [waypoint_follower-7]: process has finished cleanly [pid 5462]
+1783786584.7599664 [INFO] [opennav_docking-10]: process has finished cleanly [pid 5465]
+1783786584.7680607 [ERROR] [wavefront_explorer.py-13]: process has died [pid 5468, exit code -2, cmd '/home/sweepi/SweePi/install/sweepi_exploration/lib/sweepi_exploration/wavefront_explorer.py --ros-args -r __node:=wavefront_explorer --params-file /tmp/launch_params_29xmi2nq'].
+1783786584.7822003 [INFO] [bt_navigator-6]: sending signal 'SIGINT' to process[bt_navigator-6]
+1783786584.7855062 [INFO] [behavior_server-5]: sending signal 'SIGINT' to process[behavior_server-5]
+1783786584.7897444 [INFO] [planner_server-3]: sending signal 'SIGINT' to process[planner_server-3]
+1783786584.7946851 [INFO] [controller_server-1]: sending signal 'SIGINT' to process[controller_server-1]
+1783786584.8087988 [ERROR] [async_slam_toolbox_node-12]: process has died [pid 5467, exit code -2, cmd '/opt/ros/jazzy/lib/slam_toolbox/async_slam_toolbox_node --ros-args -r __node:=slam_toolbox -r __ns:=/ --params-file /tmp/launch_params_7y7_vk3f --params-file /tmp/launch_params_w0sjv4gi -r /map:=/slam_map'].
+1783786584.8371649 [ERROR] [behavior_server-5]: process has died [pid 5460, exit code -2, cmd '/opt/ros/jazzy/lib/nav2_behaviors/behavior_server --ros-args --log-level info --ros-args -r __node:=behavior_server -p use_sim_time:=False --params-file /tmp/launch_params_4gf_e7zs -r /tf:=tf -r /tf_static:=tf_static -r cmd_vel:=cmd_vel_nav'].
+1783786584.8444264 [ERROR] [controller_server-1]: process has died [pid 5456, exit code -2, cmd '/opt/ros/jazzy/lib/nav2_controller/controller_server --ros-args --log-level info --ros-args -p use_sim_time:=False --params-file /tmp/launch_params_4gf_e7zs -r /tf:=tf -r /tf_static:=tf_static -r cmd_vel:=cmd_vel_nav'].
+1783786585.0719147 [INFO] [lifecycle_manager-11]: process has finished cleanly [pid 5466]
+1783786585.1299527 [INFO] [planner_server-3]: process has finished cleanly [pid 5458]
+1783786585.2559593 [INFO] [bt_navigator-6]: process has finished cleanly [pid 5461]

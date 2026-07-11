@@ -1,0 +1,21 @@
+// generated from rosidl_adapter/resource/srv.idl.em
+// with input from sweepi_robot_manager_interfaces/srv/StartTask.srv
+// generated code does not contain a copyright notice
+
+
+module sweepi_robot_manager_interfaces {
+  module srv {
+    struct StartTask_Request {
+      string map_name;
+
+      string mode;
+
+      boolean auto_start;
+    };
+    struct StartTask_Response {
+      boolean success;
+
+      string message;
+    };
+  };
+};

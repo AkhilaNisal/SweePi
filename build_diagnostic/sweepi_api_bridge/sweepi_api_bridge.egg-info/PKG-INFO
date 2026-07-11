@@ -1,0 +1,7 @@
+Metadata-Version: 2.1
+Name: sweepi-api-bridge
+Version: 0.1.0
+Summary: HTTP JSON API bridge for controlling SweePi through sweepi_robot_manager.
+Maintainer: akhila-wedamestrige
+Maintainer-email: wedamestrigean@gmail.com
+License: Apache-2.0

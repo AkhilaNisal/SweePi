@@ -1,0 +1,46 @@
+1783781092.0368328 [INFO] [launch]: All log files can be found below /home/sweepi/.ros/log/2026-07-11-20-14-52-035203-sweepi-18508
+1783781092.0370421 [INFO] [launch]: Default logging verbosity is set to INFO
+1783781092.3604062 [INFO] [launch.user]: 🚀 STARTING SWEEPI AUTONOMOUS EXPLORATION
+1783781092.3606303 [INFO] [launch.user]: 💾 Map name: ${map_name}
+1783781092.3607490 [INFO] [launch.user]: 📏 Proximity-based blocking: ${unreachable_region_radius}m
+1783781092.3608811 [INFO] [launch.user]: 🔁 Completion retry sweeps: ${completion_retry_cycles}
+1783781092.3609962 [INFO] [launch.user]: 🎮 Exploration mode: ${start_mode}
+1783781092.7866995 [INFO] [controller_server-1]: process started with pid [18536]
+1783781092.7870562 [INFO] [smoother_server-2]: process started with pid [18537]
+1783781092.7872016 [INFO] [planner_server-3]: process started with pid [18538]
+1783781092.7873218 [INFO] [route_server-4]: process started with pid [18539]
+1783781092.8037417 [INFO] [behavior_server-5]: process started with pid [18540]
+1783781092.8040624 [INFO] [bt_navigator-6]: process started with pid [18541]
+1783781092.8042123 [INFO] [waypoint_follower-7]: process started with pid [18542]
+1783781092.8043435 [INFO] [velocity_smoother-8]: process started with pid [18543]
+1783781092.8044715 [INFO] [collision_monitor-9]: process started with pid [18544]
+1783781092.8045645 [INFO] [opennav_docking-10]: process started with pid [18545]
+1783781092.8046417 [INFO] [lifecycle_manager-11]: process started with pid [18546]
+1783781092.8047235 [INFO] [async_slam_toolbox_node-12]: process started with pid [18547]
+1783781092.8048470 [INFO] [wavefront_explorer.py-13]: process started with pid [18548]
+1783781095.7519717 [INFO] [launch.user]: [LifecycleLaunch] SweePi SLAM Toolbox is activating.
+1783781193.7752826 [WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+1783781194.8332965 [INFO] [velocity_smoother-8]: process has finished cleanly [pid 18543]
+1783781194.8345993 [INFO] [wavefront_explorer.py-13]: sending signal 'SIGINT' to process[wavefront_explorer.py-13]
+1783781194.8375840 [INFO] [async_slam_toolbox_node-12]: sending signal 'SIGINT' to process[async_slam_toolbox_node-12]
+1783781194.8410451 [INFO] [lifecycle_manager-11]: sending signal 'SIGINT' to process[lifecycle_manager-11]
+1783781194.8439093 [INFO] [opennav_docking-10]: sending signal 'SIGINT' to process[opennav_docking-10]
+1783781194.8502803 [INFO] [collision_monitor-9]: sending signal 'SIGINT' to process[collision_monitor-9]
+1783781194.8605745 [INFO] [waypoint_follower-7]: sending signal 'SIGINT' to process[waypoint_follower-7]
+1783781194.8664522 [INFO] [bt_navigator-6]: sending signal 'SIGINT' to process[bt_navigator-6]
+1783781194.8709280 [INFO] [behavior_server-5]: sending signal 'SIGINT' to process[behavior_server-5]
+1783781194.8721738 [INFO] [smoother_server-2]: process has finished cleanly [pid 18537]
+1783781194.8749068 [INFO] [route_server-4]: sending signal 'SIGINT' to process[route_server-4]
+1783781194.8781641 [INFO] [planner_server-3]: sending signal 'SIGINT' to process[planner_server-3]
+1783781194.8834078 [INFO] [controller_server-1]: sending signal 'SIGINT' to process[controller_server-1]
+1783781194.9035726 [ERROR] [async_slam_toolbox_node-12]: process has died [pid 18547, exit code -2, cmd '/opt/ros/jazzy/lib/slam_toolbox/async_slam_toolbox_node --ros-args -r __node:=slam_toolbox -r __ns:=/ --params-file /tmp/launch_params_qf_u_7xw --params-file /tmp/launch_params_axqfl73k -r /map:=/slam_map'].
+1783781194.9090672 [ERROR] [collision_monitor-9]: process has died [pid 18544, exit code -2, cmd '/opt/ros/jazzy/lib/nav2_collision_monitor/collision_monitor --ros-args --log-level info --ros-args -r __node:=collision_monitor -p use_sim_time:=False --params-file /tmp/launch_params_ar4nn2_3 -r /tf:=tf -r /tf_static:=tf_static'].
+1783781194.9226444 [ERROR] [wavefront_explorer.py-13]: process has died [pid 18548, exit code -2, cmd '/home/sweepi/SweePi/install/sweepi_exploration/lib/sweepi_exploration/wavefront_explorer.py --ros-args -r __node:=wavefront_explorer --params-file /tmp/launch_params__va_ovew'].
+1783781194.9311719 [ERROR] [route_server-4]: process has died [pid 18539, exit code -2, cmd '/opt/ros/jazzy/lib/nav2_route/route_server --ros-args --log-level info --ros-args -r __node:=route_server -p use_sim_time:=False --params-file /tmp/launch_params_ar4nn2_3 -r /tf:=tf -r /tf_static:=tf_static'].
+1783781194.9878104 [ERROR] [waypoint_follower-7]: process has died [pid 18542, exit code -2, cmd '/opt/ros/jazzy/lib/nav2_waypoint_follower/waypoint_follower --ros-args --log-level info --ros-args -r __node:=waypoint_follower -p use_sim_time:=False --params-file /tmp/launch_params_ar4nn2_3 -r /tf:=tf -r /tf_static:=tf_static'].
+1783781195.3631275 [INFO] [lifecycle_manager-11]: process has finished cleanly [pid 18546]
+1783781195.3887246 [INFO] [behavior_server-5]: process has finished cleanly [pid 18540]
+1783781195.4583206 [INFO] [opennav_docking-10]: process has finished cleanly [pid 18545]
+1783781195.6429648 [INFO] [controller_server-1]: process has finished cleanly [pid 18536]
+1783781195.6782544 [INFO] [planner_server-3]: process has finished cleanly [pid 18538]
+1783781195.7535877 [INFO] [bt_navigator-6]: process has finished cleanly [pid 18541]

@@ -1,0 +1,4 @@
+[console_scripts]
+mpu6050_imu_node = sweepi_temp_rpi_hardware.mpu6050_imu_node:main
+stepper_driver_node = sweepi_temp_rpi_hardware.stepper_driver_node:main
+stepper_ticks_to_odom_node = sweepi_temp_rpi_hardware.stepper_ticks_to_odom_node:main

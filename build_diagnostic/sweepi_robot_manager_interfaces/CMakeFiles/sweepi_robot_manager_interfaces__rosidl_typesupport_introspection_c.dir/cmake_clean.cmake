@@ -1,0 +1,13 @@
+file(REMOVE_RECURSE
+  "CMakeFiles/sweepi_robot_manager_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/sweepi_robot_manager_interfaces/srv/detail/start_task__type_support.c.o"
+  "CMakeFiles/sweepi_robot_manager_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/sweepi_robot_manager_interfaces/srv/detail/start_task__type_support.c.o.d"
+  "libsweepi_robot_manager_interfaces__rosidl_typesupport_introspection_c.pdb"
+  "libsweepi_robot_manager_interfaces__rosidl_typesupport_introspection_c.so"
+  "rosidl_typesupport_introspection_c/sweepi_robot_manager_interfaces/srv/detail/start_task__rosidl_typesupport_introspection_c.h"
+  "rosidl_typesupport_introspection_c/sweepi_robot_manager_interfaces/srv/detail/start_task__type_support.c"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang C)
+  include(CMakeFiles/sweepi_robot_manager_interfaces__rosidl_typesupport_introspection_c.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

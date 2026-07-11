@@ -1,0 +1,7 @@
+setup.py
+sweepi_robot_manager/__init__.py
+sweepi_robot_manager/sweepi_robot_manager_node.py
+sweepi_robot_manager.egg-info/PKG-INFO
+sweepi_robot_manager.egg-info/SOURCES.txt
+sweepi_robot_manager.egg-info/dependency_links.txt
+sweepi_robot_manager.egg-info/top_level.txt

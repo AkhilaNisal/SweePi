@@ -1,0 +1,3 @@
+[INFO] [1783783678.047648105] [sweepi_api_bridge]: SweePi API bridge listening on http://0.0.0.0:8080/api
+[INFO] [1783783692.034079799] [sweepi_api_bridge]: HTTP "GET /api/robot/status HTTP/1.1" 200 -
+[INFO] [1783783707.132360673] [sweepi_api_bridge]: HTTP "POST /api/cleaning/start HTTP/1.1" 200 -

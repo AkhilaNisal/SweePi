@@ -1,0 +1,6 @@
+[INFO] [1783787997.725617252] [base_driver_node]: SweePi base driver starting on /dev/ttyAMA0 at 115200 baud
+[INFO] [1783787997.726453414] [base_driver_node]: Base driver parameters: serial_port=/dev/ttyAMA0, baud_rate=115200, wheel_radius=0.0615, wheel_separation=0.29, ticks_per_revolution=7392.0, left_encoder_sign=1.0, right_encoder_sign=1.0, left_motor_command_sign=1.0, right_motor_command_sign=1.0, command_rate_hz=50.0, feedback_poll_rate_hz=100.0, cmd_vel_timeout=0.5, gyro_units=rad_s, accel_units=m_s2
+[INFO] [1783787997.730740779] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
+[ERROR] [1783788055.892712395] [base_driver_node]: Serial write failed: Write timeout
+[INFO] [1783788055.935901347] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
+[WARN] [1783788055.966530998] [base_driver_node]: Feedback sequence jump: expected 7023, got 7026

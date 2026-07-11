@@ -1,0 +1,43 @@
+[INFO] [launch]: All log files can be found below /home/sweepi/.ros/log/2026-07-12-01-34-50-712979-sweepi-21379
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [base_driver_node-1]: process started with pid [21383]
+[INFO] [ekf_node-2]: process started with pid [21384]
+[INFO] [sllidar_node-3]: process started with pid [21385]
+[INFO] [robot_state_publisher-4]: process started with pid [21386]
+[sllidar_node-3] [INFO] [1783800291.085581527] [sllidar_node]: SLLidar running on ROS2 package SLLidar.ROS2 SDK Version:1.0.1, SLLIDAR SDK Version:2.1.0
+[robot_state_publisher-4] [INFO] [1783800291.102078710] [robot_state_publisher]: Robot initialized
+[ekf_node-2] [ERROR] [1783800291.131002170] [ekf_filter_node]: Warning: /imu/data is listed as an input topic, but all its update variables are false
+[sllidar_node-3] [INFO] [1783800291.605808423] [sllidar_node]: SLLidar S/N: 6325E0F6C1E092D4A19E9FF9F389461A
+[sllidar_node-3] [INFO] [1783800291.605873370] [sllidar_node]: Firmware Ver: 1.02
+[sllidar_node-3] [INFO] [1783800291.605888222] [sllidar_node]: Hardware Rev: 18
+[sllidar_node-3] [INFO] [1783800291.608471307] [sllidar_node]: SLLidar health status : 0
+[sllidar_node-3] [INFO] [1783800291.608538532] [sllidar_node]: SLLidar health status : OK.
+[base_driver_node-1] [INFO] [1783800291.790147988] [base_driver_node]: SweePi base driver starting on /dev/ttyAMA0 at 115200 baud
+[base_driver_node-1] [INFO] [1783800291.790771254] [base_driver_node]: Base driver parameters: serial_port=/dev/ttyAMA0, baud_rate=115200, wheel_radius=0.0615, wheel_separation=0.29, ticks_per_revolution=7392.0, left_encoder_sign=1.0, right_encoder_sign=1.0, left_motor_command_sign=1.0, right_motor_command_sign=1.0, command_rate_hz=50.0, feedback_poll_rate_hz=100.0, cmd_vel_timeout=0.5, gyro_units=rad_s, accel_units=m_s2
+[base_driver_node-1] [INFO] [1783800291.792031730] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
+[base_driver_node-1] [WARN] [1783800291.797125713] [base_driver_node]: Ignoring unknown STM32 packet: 0041,0.0123,0.2898,0.2563,11.1081,12.0,0,OK
+[sllidar_node-3] [INFO] [1783800291.884682088] [sllidar_node]: current scan mode: Standard, sample rate: 5 Khz, max_distance: 16.0 m, scan frequency:10.0 Hz, 
+[WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+[INFO] [robot_state_publisher-4]: sending signal 'SIGINT' to process[robot_state_publisher-4]
+[INFO] [sllidar_node-3]: sending signal 'SIGINT' to process[sllidar_node-3]
+[INFO] [ekf_node-2]: sending signal 'SIGINT' to process[ekf_node-2]
+[INFO] [base_driver_node-1]: sending signal 'SIGINT' to process[base_driver_node-1]
+[robot_state_publisher-4] [INFO] [1783800378.975716073] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[ekf_node-2] [INFO] [1783800378.976843460] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[robot_state_publisher-4] [INFO] [1783800378.987594668] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[ERROR] [ekf_node-2]: process has died [pid 21384, exit code -2, cmd '/opt/ros/jazzy/lib/robot_localization/ekf_node --ros-args -r __node:=ekf_filter_node --params-file /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation/config/ekf.yaml --params-file /tmp/launch_params_i9k__yvx -r odometry/filtered:=/odom'].
+[base_driver_node-1] Traceback (most recent call last):
+[base_driver_node-1]   File "/home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/lib/sweepi_base_driver/base_driver_node", line 33, in <module>
+[base_driver_node-1]     sys.exit(load_entry_point('sweepi-base-driver', 'console_scripts', 'base_driver_node')())
+[base_driver_node-1]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[base_driver_node-1]   File "/home/sweepi/SweePi/build_diagnostic/sweepi_base_driver/sweepi_base_driver/base_driver_node.py", line 483, in main
+[base_driver_node-1]     node.destroy_node()
+[base_driver_node-1]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/node.py", line 1968, in destroy_node
+[base_driver_node-1]     self.__node.destroy_when_not_in_use()
+[base_driver_node-1] KeyboardInterrupt
+[sllidar_node-3] [INFO] [1783800379.096900024] [sllidar_node]: Stop motor
+[INFO] [robot_state_publisher-4]: process has finished cleanly [pid 21386]
+[ERROR] [base_driver_node-1]: process has died [pid 21383, exit code -2, cmd '/home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/lib/sweepi_base_driver/base_driver_node --ros-args -r __node:=base_driver_node --params-file /home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/share/sweepi_base_driver/config/base_driver_params.yaml --params-file /tmp/launch_params_j80d1ui_'].
+[ERROR] [sllidar_node-3]: process[sllidar_node-3] failed to terminate '5' seconds after receiving 'SIGINT', escalating to 'SIGTERM'
+[INFO] [sllidar_node-3]: sending signal 'SIGTERM' to process[sllidar_node-3]
+[INFO] [sllidar_node-3]: process has finished cleanly [pid 21385]

@@ -1,0 +1,16 @@
+1783779501.0112693 [INFO] [launch]: All log files can be found below /home/sweepi/.ros/log/2026-07-11-19-48-21-006785-sweepi-8495
+1783779501.0115054 [INFO] [launch]: Default logging verbosity is set to INFO
+1783779501.3266995 [INFO] [base_driver_node-1]: process started with pid [8499]
+1783779501.3270257 [INFO] [ekf_node-2]: process started with pid [8500]
+1783779501.3271956 [INFO] [sllidar_node-3]: process started with pid [8501]
+1783779501.3273220 [INFO] [robot_state_publisher-4]: process started with pid [8502]
+1783779501.3274448 [INFO] [rviz2-5]: process started with pid [8503]
+1783779501.3275523 [INFO] [sweepi_robot_manager_node.py-6]: process started with pid [8504]
+1783779552.4857812 [WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+1783779552.8187470 [INFO] [ekf_node-2]: process has finished cleanly [pid 8500]
+1783779552.8227110 [INFO] [robot_state_publisher-4]: process has finished cleanly [pid 8502]
+1783779552.8873212 [INFO] [sllidar_node-3]: process has finished cleanly [pid 8501]
+1783779553.0012462 [WARNING] [launch]: user interrupted with ctrl-c (SIGINT) again, ignoring...
+1783779553.0172017 [ERROR] [sweepi_robot_manager_node.py-6]: process has died [pid 8504, exit code -2, cmd '/home/sweepi/SweePi/install/sweepi_robot_manager/lib/sweepi_robot_manager/sweepi_robot_manager_node.py --ros-args -r __node:=sweepi_robot_manager --params-file /tmp/launch_params_r0rsykpp'].
+1783779553.0214241 [ERROR] [base_driver_node-1]: process has died [pid 8499, exit code -2, cmd '/home/sweepi/SweePi/install/sweepi_base_driver/lib/sweepi_base_driver/base_driver_node --ros-args -r __node:=base_driver_node --params-file /home/sweepi/SweePi/install/sweepi_base_driver/share/sweepi_base_driver/config/base_driver_params.yaml --params-file /tmp/launch_params_0whana_r'].
+1783779553.0303316 [ERROR] [rviz2-5]: process has died [pid 8503, exit code -2, cmd '/opt/ros/jazzy/lib/rviz2/rviz2 -d /home/sweepi/SweePi/install/sweepi_bringup/share/sweepi_bringup/rviz/urdf_config.rviz --ros-args -r __node:=rviz2 --params-file /tmp/launch_params_2akzs3ho'].

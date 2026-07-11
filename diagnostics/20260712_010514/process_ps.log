@@ -1,0 +1,260 @@
+USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root           1  0.1  0.1  23708 14044 ?        Ss   00:37   0:02 /sbin/init fixrtc
+root           2  0.0  0.0      0     0 ?        S    00:37   0:00 [kthreadd]
+root           3  0.0  0.0      0     0 ?        S    00:37   0:00 [pool_workqueue_release]
+root           4  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/R-rcu_g]
+root           5  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/R-rcu_p]
+root           6  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/R-slub_]
+root           7  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/R-netns]
+root          10  0.2  0.0      0     0 ?        I    00:37   0:03 [kworker/0:1-mm_percpu_wq]
+root          12  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/R-mm_pe]
+root          13  0.0  0.0      0     0 ?        I    00:37   0:00 [rcu_tasks_kthread]
+root          14  0.0  0.0      0     0 ?        I    00:37   0:00 [rcu_tasks_rude_kthread]
+root          15  0.0  0.0      0     0 ?        I    00:37   0:00 [rcu_tasks_trace_kthread]
+root          16  0.1  0.0      0     0 ?        S    00:37   0:01 [ksoftirqd/0]
+root          17  0.3  0.0      0     0 ?        I    00:37   0:06 [rcu_preempt]
+root          18  0.0  0.0      0     0 ?        S    00:37   0:00 [migration/0]
+root          19  0.0  0.0      0     0 ?        S    00:37   0:00 [cpuhp/0]
+root          20  0.0  0.0      0     0 ?        S    00:37   0:00 [cpuhp/1]
+root          21  0.0  0.0      0     0 ?        S    00:37   0:00 [migration/1]
+root          22  0.0  0.0      0     0 ?        S    00:37   0:01 [ksoftirqd/1]
+root          25  0.0  0.0      0     0 ?        S    00:37   0:00 [cpuhp/2]
+root          26  0.0  0.0      0     0 ?        S    00:37   0:00 [migration/2]
+root          27  0.0  0.0      0     0 ?        S    00:37   0:01 [ksoftirqd/2]
+root          30  0.0  0.0      0     0 ?        S    00:37   0:00 [cpuhp/3]
+root          31  0.0  0.0      0     0 ?        S    00:37   0:00 [migration/3]
+root          32  0.1  0.0      0     0 ?        S    00:37   0:01 [ksoftirqd/3]
+root          35  0.0  0.0      0     0 ?        S    00:37   0:00 [kdevtmpfs]
+root          36  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/R-inet_]
+root          38  0.0  0.0      0     0 ?        S    00:37   0:00 [kauditd]
+root          40  0.0  0.0      0     0 ?        S    00:37   0:00 [khungtaskd]
+root          41  0.4  0.0      0     0 ?        I    00:37   0:07 [kworker/u8:1-v3d_tfu]
+root          42  0.0  0.0      0     0 ?        S    00:37   0:00 [oom_reaper]
+root          43  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/R-write]
+root          44  0.0  0.0      0     0 ?        S    00:37   0:00 [kcompactd0]
+root          45  0.0  0.0      0     0 ?        SN   00:37   0:00 [khugepaged]
+root          46  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/R-kinte]
+root          47  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/R-kbloc]
+root          48  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/R-blkcg]
+root          49  0.6  0.0      0     0 ?        I    00:37   0:11 [kworker/u8:2-v3d_render]
+root          50  0.5  0.0      0     0 ?        I    00:37   0:10 [kworker/u8:3-v3d_bin]
+root          51  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/R-tpm_d]
+root          52  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/R-edac-]
+root          53  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/R-devfr]
+root          54  0.0  0.0      0     0 ?        S    00:37   0:00 [watchdogd]
+root          56  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/R-quota]
+root          57  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/1:1H-kblockd]
+root          58  0.0  0.0      0     0 ?        S    00:37   0:00 [kswapd0]
+root          59  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/R-kthro]
+root          64  0.0  0.0      0     0 ?        S    00:37   0:00 [hwrng]
+root          67  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/R-mld]
+root          68  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/R-ipv6_]
+root          75  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/R-kstrp]
+root         103  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/2:1H-kblockd]
+root         108  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/3:1H-kblockd]
+root         153  0.0  0.0      0     0 ?        S    00:37   0:00 [irq/40-aerdrv]
+root         155  0.0  0.0      0     0 ?        S    00:37   0:00 [spi10]
+root         158  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/R-sdhci]
+root         159  0.0  0.0      0     0 ?        S    00:37   0:00 [spi0]
+root         160  0.0  0.0      0     0 ?        S    00:37   0:00 [irq/166-mmc0]
+root         161  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/R-sdhci]
+root         162  0.2  0.0      0     0 ?        S    00:37   0:04 [irq/167-mmc1]
+root         164  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/R-mmc_c]
+root         189  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/R-md]
+root         190  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/R-md_bi]
+root         195  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/R-raid5]
+root         249  0.0  0.0      0     0 ?        S    00:37   0:00 [jbd2/mmcblk0p2-8]
+root         250  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/R-ext4-]
+root         329  0.0  0.2  66820 17084 ?        S<s  00:37   0:00 /usr/lib/systemd/systemd-journald
+root         357  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/R-kmpat]
+root         359  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/R-kmpat]
+root         387  0.0  0.0  29416  8032 ?        Ss   00:37   0:00 /usr/lib/systemd/systemd-udevd
+root         396  0.0  0.0      0     0 ?        S    00:37   0:00 [psimon]
+root         454  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/R-cfg80]
+root         474  0.0  0.0      0     0 ?        I<   00:37   0:00 [kworker/R-brcmf]
+root         475  0.0  0.0      0     0 ?        S    00:37   0:00 [irq/171-1000800000.codec]
+root         478  0.0  0.0      0     0 ?        S    00:37   0:01 [brcmf_wdog/mmc1:0001:1]
+root         487  0.0  0.0      0     0 ?        S    00:37   0:00 [irq/175-vc4 hdmi hpd connected]
+root         488  0.0  0.0      0     0 ?        S    00:37   0:00 [irq/176-vc4 hdmi hpd disconnected]
+root         489  0.0  0.0      0     0 ?        S    00:37   0:00 [cec-vc4-hdmi-0]
+root         490  0.0  0.0      0     0 ?        S    00:37   0:00 [irq/177-vc4 hdmi cec rx]
+root         491  0.0  0.0      0     0 ?        S    00:37   0:00 [irq/178-vc4 hdmi cec tx]
+root         492  0.0  0.0      0     0 ?        S    00:37   0:00 [irq/179-vc4 hdmi hpd connected]
+root         493  0.0  0.0      0     0 ?        S    00:37   0:00 [irq/180-vc4 hdmi hpd disconnected]
+root         494  0.0  0.0      0     0 ?        S    00:37   0:00 [cec-vc4-hdmi-1]
+root         495  0.0  0.0      0     0 ?        S    00:37   0:00 [irq/181-vc4 hdmi cec rx]
+root         496  0.0  0.0      0     0 ?        S    00:37   0:00 [irq/182-vc4 hdmi cec tx]
+root         497  0.0  0.0      0     0 ?        S    00:37   0:00 [card1-crtc0]
+root         498  0.0  0.0      0     0 ?        S    00:37   0:00 [card1-crtc1]
+root         499  0.0  0.0      0     0 ?        S    00:37   0:00 [card1-crtc2]
+root         500  0.0  0.0      0     0 ?        S    00:37   0:00 [card1-crtc3]
+root         525  0.9  0.0      0     0 ?        I<   00:37   0:16 [kworker/u9:1-brcmf_wq/mmc1:0001:1]
+systemd+     559  0.0  0.1  21368 12332 ?        Ss   00:37   0:00 /usr/lib/systemd/systemd-resolved
+systemd+     568  0.0  0.0  90892  7112 ?        Ssl  00:37   0:00 /usr/lib/systemd/systemd-timesyncd
+root         603  0.0  0.1  17400 10012 ?        Ss   00:37   0:00 /sbin/wpa_supplicant -c /run/netplan/wpa-wlan0.conf -iwlan0 -Dnl80211,wext
+systemd+     712  0.0  0.1  18696  8744 ?        Ss   00:37   0:00 /usr/lib/systemd/systemd-networkd
+root         725  0.0  0.0 312108  7660 ?        Ssl  00:37   0:00 /usr/libexec/accounts-daemon
+avahi        726  0.0  0.0   8572  3784 ?        Ss   00:37   0:00 avahi-daemon: running [sweepi.local]
+root         727  0.0  0.0  13920  6148 ?        Ss   00:37   0:00 /usr/libexec/bluetooth/bluetoothd
+message+     728  0.0  0.0  10920  5560 ?        Ss   00:37   0:00 @dbus-daemon --system --address=systemd: --nofork --nopidfile --systemd-activation --syslog-only
+root         732  0.0  0.1 1029068 10596 ?       Ssl  00:37   0:00 /usr/bin/lttng-sessiond
+polkitd      735  0.0  0.1 385516 10304 ?        Ssl  00:37   0:00 /usr/lib/polkit-1/polkitd --no-debug
+root         744  0.0  0.0  17924  8040 ?        Ss   00:37   0:00 /usr/lib/systemd/systemd-logind
+root         745  0.0  0.1 472672 12752 ?        Ssl  00:37   0:00 /usr/libexec/udisks2/udisksd
+avahi        748  0.0  0.0   8380  1556 ?        S    00:37   0:00 avahi-daemon: chroot helper
+syslog       760  0.0  0.0 222812  5168 ?        Ssl  00:37   0:00 /usr/sbin/rsyslogd -n -iNONE
+root         796  0.0  0.0  49504  1940 ?        S    00:37   0:00 /usr/bin/lttng-sessiond
+root         827  0.0  0.2 337696 17608 ?        Ssl  00:37   0:00 /usr/sbin/NetworkManager --no-daemon
+root         831  0.0  0.0  16684  6164 ?        Ss   00:37   0:00 /usr/sbin/wpa_supplicant -u -s -O DIR=/run/wpa_supplicant GROUP=netdev
+root         851  0.0  0.1 326528 13388 ?        Ssl  00:37   0:00 /usr/sbin/ModemManager
+root         868  0.0  0.0      0     0 ?        S<   00:37   0:00 [krfcommd]
+root        1057  0.0  0.1  41312 11260 ?        Ss   00:37   0:00 /usr/sbin/cupsd -l
+root        1059  3.4  0.3 340320 26504 ?        Ssl  00:37   0:59 /usr/bin/python3 /opt/sweepi/power/sweepi_power_control.py
+root        1060  0.0  0.2 110884 22280 ?        Ssl  00:37   0:00 /usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal
+root        1072  0.0  0.0   7072  2612 ?        Ss   00:37   0:00 /usr/sbin/cron -f -P
+root        1075  0.0  0.0  16628  4096 ?        S    00:37   0:00 /usr/sbin/xrdp-sesman
+cups-br+    1082  0.0  0.2 272492 18684 ?        Ssl  00:37   0:00 /usr/sbin/cups-browsed
+root        1092  0.0  0.0  12048  7284 ?        Ss   00:37   0:00 sshd: /usr/sbin/sshd -D [listener] 0 of 10-100 startups
+root        1101  0.0  0.0   6000  1756 tty1     Ss+  00:37   0:00 /sbin/agetty -o -p -- \u --noclear - linux
+xrdp        1102  0.0  0.0  12620  2172 ?        S    00:37   0:00 /usr/sbin/xrdp
+root        1111  0.0  0.2  33812 21224 ?        Ss   00:37   0:00 /usr/bin/python3 /opt/sweepi/ble/sweepi_ble_provisioning.py
+root        1115  0.0  0.0      0     0 ?        S    00:37   0:00 [irq/187-lg]
+root        1211  0.0  0.1  16524  9232 ?        Ss   00:38   0:00 sshd: sweepi [priv]
+sweepi      1216  0.0  0.1  21232 11856 ?        Ss   00:38   0:00 /usr/lib/systemd/systemd --user
+sweepi      1217  0.0  0.0  22328  3368 ?        S    00:38   0:00 (sd-pam)
+sweepi      1225  0.0  0.2 520868 17732 ?        Ssl  00:38   0:00 /usr/bin/pulseaudio --daemonize=no --log-target=journal
+rtkit       1248  0.0  0.0  22852  3088 ?        SNsl 00:38   0:00 /usr/libexec/rtkit-daemon
+sweepi      1262  0.0  0.0  10248  5156 ?        Ss   00:38   0:00 /usr/bin/dbus-daemon --session --address=systemd: --nofork --nopidfile --systemd-activation --syslog-only
+sweepi      1330  0.0  0.0  16816  6720 ?        S    00:38   0:01 sshd: sweepi@pts/0
+sweepi      1331  0.0  0.0   9136  5660 pts/0    Ss   00:38   0:00 -bash
+root        3553  0.0  0.0      0     0 ?        S    00:42   0:00 [psimon]
+root        3568  0.1  0.4 1997720 38856 ?       Ssl  00:43   0:01 /snap/snapd/current/usr/lib/snapd/snapd
+root        3655  0.0  0.1  16524  9048 ?        Ss   00:43   0:00 sshd: sweepi [priv]
+sweepi      3714  0.0  0.0  16656  6472 ?        S    00:43   0:00 sshd: sweepi@pts/1
+sweepi      3715  0.0  0.0   8956  5500 pts/1    Ss   00:43   0:00 -bash
+root        3762  0.0  0.0      0     0 ?        I<   00:43   0:00 [kworker/0:0H-mmc_complete]
+xrdp        3847 15.2  0.2  26296 19008 ?        S    00:43   3:28 /usr/sbin/xrdp
+root        3848  0.0  0.0  16860  4224 ?        S    00:43   0:00 /usr/sbin/xrdp-sesman
+sweepi      3849  0.0  0.0   7372  3204 ?        S    00:43   0:00 /bin/bash /home/sweepi/.xsession
+sweepi      3850 15.5  1.2 443396 102728 ?       Sl   00:43   3:33 /usr/lib/xorg/Xorg :10 -auth .Xauthority -config xrdp/xorg.conf -noreset -nolisten tcp -logfile .xorgxrdp.%s.log
+sweepi      3853  0.0  0.0  90100  5296 ?        Sl   00:43   0:00 /usr/sbin/xrdp-chansrv
+sweepi      3926  0.0  0.0   7244  1484 ?        Ss   00:43   0:00 /usr/bin/ssh-agent /usr/bin/im-launch /bin/bash /home/sweepi/.xsession
+sweepi      3943  0.0  0.0 384152  7920 ?        Ssl  00:43   0:00 /usr/bin/ibus-daemon --daemonize --xim
+sweepi      3944  0.0  0.9 647652 78876 ?        Sl   00:43   0:01 xfce4-session
+sweepi      3948  0.0  0.0 312980  7400 ?        Ssl  00:43   0:00 /usr/libexec/gvfsd
+sweepi      3956  0.0  0.0 235184  6892 ?        Sl   00:43   0:00 /usr/libexec/ibus-memconf
+sweepi      3957  0.0  1.0 725112 87800 ?        Sl   00:43   0:01 /usr/libexec/ibus-ui-gtk3
+sweepi      3958  1.0  1.0 653192 86484 ?        Sl   00:43   0:14 /usr/libexec/ibus-extension-gtk3
+sweepi      3963  0.0  0.9 572296 78364 ?        Sl   00:43   0:00 /usr/libexec/ibus-x11 --kill-daemon
+sweepi      3966  0.0  0.0 309028  6924 ?        Sl   00:43   0:00 /usr/libexec/ibus-portal
+sweepi      3974  0.0  0.0 384284  7616 ?        Ssl  00:43   0:00 /usr/libexec/at-spi-bus-launcher
+sweepi      3982  0.0  0.0   9620  4528 ?        S    00:43   0:00 /usr/bin/dbus-daemon --config-file=/usr/share/defaults/at-spi2/accessibility.conf --nofork --print-address 11 --address=unix:path=/run/user/1000/at-spi/bus_10.0
+sweepi      4003  0.0  0.0 237692  7684 ?        Sl   00:43   0:00 /usr/libexec/at-spi2-registryd --use-gnome-session
+sweepi      4006  0.0  0.1 628748 15828 ?        Ssl  00:43   0:00 /usr/libexec/xdg-desktop-portal
+sweepi      4020  0.0  0.0 608992  6900 ?        Ssl  00:43   0:00 /usr/libexec/xdg-document-portal
+sweepi      4025  0.0  0.0 155188  3044 ?        SLsl 00:43   0:00 /usr/bin/gpg-agent --supervised
+sweepi      4031  0.0  0.0 307608  5732 ?        Ssl  00:43   0:00 /usr/libexec/xdg-permission-store
+sweepi      4032  7.2  1.2 662144 100460 ?       Rl   00:43   1:39 xfwm4
+root        4039  0.0  0.0   2276  1692 ?        Ss   00:43   0:00 fusermount3 -o rw,nosuid,nodev,fsname=portal,auto_unmount,subtype=portal -- /run/user/1000/doc
+sweepi      4042  0.0  0.2 417916 24360 ?        Ssl  00:43   0:00 /usr/libexec/xdg-desktop-portal-gtk
+sweepi      4049  0.0  0.0 235312  6988 ?        Sl   00:43   0:00 /usr/libexec/ibus-engine-simple
+sweepi      4064  0.0  0.3 309276 27268 ?        Sl   00:43   0:00 xfsettingsd
+root        4068  0.0  0.1 315064  8396 ?        Ssl  00:43   0:00 /usr/libexec/upowerd
+sweepi      4074  0.3  0.4 424780 34212 ?        Sl   00:43   0:05 xfce4-panel
+sweepi      4079  0.0  0.2 418984 23644 ?        Sl   00:43   0:00 Thunar --daemon
+sweepi      4085  0.1  0.5 474096 48000 ?        Sl   00:43   0:01 xfdesktop
+sweepi      4090  0.0  0.2 264816 16756 ?        Sl   00:43   0:00 xfce4-power-manager
+sweepi      4099  0.0  0.1 924380  8708 ?        Sl   00:43   0:00 xiccd
+sweepi      4101  0.0  0.4 506276 35280 ?        Sl   00:43   0:00 nm-applet
+colord      4110  0.0  0.1 319784 14064 ?        Ssl  00:43   0:00 /usr/libexec/colord
+sweepi      4124  0.0  0.0 382540  5988 ?        Sl   00:43   0:00 /usr/libexec/geoclue-2.0/demos/agent
+sweepi      4135  0.0  0.4  58160 33684 ?        S    00:43   0:01 /usr/bin/python3 /usr/share/system-config-printer/applet.py
+sweepi      4139  0.0  0.2 414540 18752 ?        Ssl  00:43   0:00 /usr/lib/aarch64-linux-gnu/xfce4/notifyd/xfce4-notifyd
+sweepi      4150  0.0  0.6 839708 56836 ?        Sl   00:43   0:00 /usr/libexec/evolution-data-server/evolution-alarm-notify
+sweepi      4151  0.0  0.1 263048 15768 ?        Sl   00:43   0:00 /usr/lib/policykit-1-gnome/polkit-gnome-authentication-agent-1
+sweepi      4166  0.0  0.0 230668  5468 ?        Ssl  00:43   0:00 /usr/libexec/dconf-service
+sweepi      4172  0.0  0.1 535832 10264 ?        Ssl  00:43   0:00 /usr/libexec/gvfs-udisks2-volume-monitor
+sweepi      4188  0.0  0.0 308384  6192 ?        Ssl  00:43   0:00 /usr/libexec/gvfs-mtp-volume-monitor
+sweepi      4193  0.0  0.0 387500  7532 ?        Ssl  00:43   0:00 /usr/libexec/gvfs-afc-volume-monitor
+sweepi      4206  0.0  0.0 309692  6576 ?        Ssl  00:43   0:00 /usr/libexec/gvfs-gphoto2-volume-monitor
+sweepi      4222  0.0  0.0 308156  6008 ?        Ssl  00:43   0:00 /usr/libexec/gvfs-goa-volume-monitor
+sweepi      4278  0.0  0.1 534600  8320 ?        Sl   00:43   0:00 /usr/libexec/gvfsd-trash --spawner :1.9 /org/gtk/gvfs/exec_spaw/0
+sweepi      4283  0.0  0.3 421700 31108 ?        Sl   00:43   0:00 /usr/lib/aarch64-linux-gnu/xfce4/panel/wrapper-2.0 /usr/lib/aarch64-linux-gnu/xfce4/panel/plugins/libsystray.so 6 23068684 systray Status Tray Plugin Provides status notifier items (application indicators) and legacy systray items
+sweepi      4291  0.0  0.4 659256 40188 ?        Sl   00:43   0:00 /usr/lib/aarch64-linux-gnu/xfce4/panel/wrapper-2.0 /usr/lib/aarch64-linux-gnu/xfce4/panel/plugins/libpulseaudio-plugin.so 8 23068685 pulseaudio PulseAudio Plugin Adjust the audio volume of the PulseAudio sound system
+sweepi      4295  0.0  0.4 391304 38440 ?        Sl   00:43   0:00 /usr/lib/aarch64-linux-gnu/xfce4/panel/wrapper-2.0 /usr/lib/aarch64-linux-gnu/xfce4/panel/plugins/libxfce4powermanager.so 9 23068686 power-manager-plugin Power Manager Plugin Display the battery levels of your devices and control the brightness of your display
+sweepi      4300  0.0  0.4 464148 38072 ?        Sl   00:43   0:00 /usr/lib/aarch64-linux-gnu/xfce4/panel/wrapper-2.0 /usr/lib/aarch64-linux-gnu/xfce4/panel/plugins/libnotification-plugin.so 10 23068687 notification-plugin Notification Plugin Notification plugin for the Xfce panel
+sweepi      4302  0.0  0.0 234856  6084 ?        Ssl  00:43   0:00 /usr/libexec/gvfsd-metadata
+sweepi      4324  0.0  0.5 613744 41076 ?        Ssl  00:43   0:00 /usr/libexec/evolution-source-registry
+sweepi      4325  0.0  0.3 346480 28644 ?        Sl   00:43   0:00 /usr/lib/aarch64-linux-gnu/xfce4/panel/wrapper-2.0 /usr/lib/aarch64-linux-gnu/xfce4/panel/plugins/libactions.so 14 23068688 actions Action Buttons Log out, lock or other system actions
+sweepi      4337  0.0  0.2 895132 23784 ?        Ssl  00:43   0:00 /usr/libexec/evolution-calendar-factory
+sweepi      4347  0.0  0.3 755176 28992 ?        Ssl  00:43   0:00 /usr/libexec/evolution-addressbook-factory
+sweepi      4391  0.0  0.9 404260 80684 ?        Sl   00:43   0:00 /usr/bin/x-terminal-emulator
+sweepi      4394  0.0  0.0   8956  5444 pts/2    Ss   00:43   0:00 bash
+sweepi      4423  0.1  0.4 203172 40280 pts/2    Sl+  00:44   0:01 /usr/bin/python3 /opt/ros/jazzy/bin/ros2 launch sweepi_robot_manager master.launch.py launch_sim:=false launch_hardware:=true use_sim_time:=false launch_api_bridge:=true api_host:=0.0.0.0 api_port:=8080 base_serial_port:=/dev/ttyAMA0 base_baud_rate:=115200 launch_lidar:=true lidar_serial_port:=/dev/ttyUSB0 lidar_baud_rate:=460800 lidar_frame_id:=lidar_link launch_rviz:=true
+sweepi      4427 22.7  1.0 895116 81412 pts/2    Sl+  00:44   5:04 /usr/bin/python3 /home/sweepi/SweePi/install/sweepi_base_driver/lib/sweepi_base_driver/base_driver_node --ros-args -r __node:=base_driver_node --params-file /home/sweepi/SweePi/install/sweepi_base_driver/share/sweepi_base_driver/config/base_driver_params.yaml --params-file /tmp/launch_params_lo2iy9de
+sweepi      4428  6.4  0.5 847544 45392 pts/2    Sl+  00:44   1:25 /opt/ros/jazzy/lib/robot_localization/ekf_node --ros-args -r __node:=ekf_filter_node --params-file /home/sweepi/SweePi/install/sweepi_state_estimation/share/sweepi_state_estimation/config/ekf.yaml --params-file /tmp/launch_params_vh0b4btg -r odometry/filtered:=/odom
+sweepi      4429  5.5  0.4 911400 37960 pts/2    Sl+  00:44   1:14 /home/sweepi/SweePi/install/sllidar_ros2/lib/sllidar_ros2/sllidar_node --ros-args -r __node:=sllidar_node --params-file /tmp/launch_params_wjct2ddf
+sweepi      4430  0.2  0.4 767232 40284 pts/2    Sl+  00:44   0:03 /opt/ros/jazzy/lib/robot_state_publisher/robot_state_publisher --ros-args -r __node:=robot_state_publisher --params-file /tmp/launch_params_sknbzyda
+sweepi      4431 33.7  2.3 1810068 192908 pts/2  Rl+  00:44   7:31 /opt/ros/jazzy/lib/rviz2/rviz2 -d /home/sweepi/SweePi/install/sweepi_bringup/share/sweepi_bringup/rviz/urdf_config.rviz --ros-args -r __node:=rviz2 --params-file /tmp/launch_params_5rgunwze
+sweepi      4432  0.6  1.0 897212 82788 pts/2    Sl+  00:44   0:08 python3 /home/sweepi/SweePi/install/sweepi_robot_manager/lib/sweepi_robot_manager/sweepi_robot_manager_node.py --ros-args -r __node:=sweepi_robot_manager --params-file /tmp/launch_params_z79ogo4q
+sweepi      4433 31.5  1.0 1272240 88624 pts/2   Rl+  00:44   7:02 /usr/bin/python3 /home/sweepi/SweePi/install/sweepi_api_bridge/lib/sweepi_api_bridge/api_bridge_node --ros-args -r __node:=sweepi_api_bridge --params-file /tmp/launch_params_oyu6q5il
+sweepi      4580  0.3  1.0 1043668 84752 ?       Ssl  00:44   0:04 /usr/bin/python3 /opt/ros/jazzy/bin/ros2 launch sweepi_robot_manager exploration_task.launch.py map_name:=living_room start_mode:=auto use_sim_time:=false
+root        4584  0.2  0.0      0     0 ?        I    00:44   0:03 [kworker/0:2-events]
+sweepi      4599 12.7  0.7 1160152 58668 ?       Sl   00:44   2:48 /opt/ros/jazzy/lib/nav2_controller/controller_server --ros-args --log-level info --ros-args -p use_sim_time:=False --params-file /tmp/launch_params_0pndsva9 -r /tf:=tf -r /tf_static:=tf_static -r cmd_vel:=cmd_vel_nav
+sweepi      4600  9.6  0.6 930488 49904 ?        Rl   00:44   2:07 /opt/ros/jazzy/lib/nav2_smoother/smoother_server --ros-args --log-level info --ros-args -r __node:=smoother_server -p use_sim_time:=False --params-file /tmp/launch_params_0pndsva9 -r /tf:=tf -r /tf_static:=tf_static
+sweepi      4601 10.6  0.7 1233628 58368 ?       Rl   00:44   2:19 /opt/ros/jazzy/lib/nav2_planner/planner_server --ros-args --log-level info --ros-args -r __node:=planner_server -p use_sim_time:=False --params-file /tmp/launch_params_0pndsva9 -r /tf:=tf -r /tf_static:=tf_static
+sweepi      4602  9.8  0.6 1019096 53596 ?       Rl   00:44   2:09 /opt/ros/jazzy/lib/nav2_route/route_server --ros-args --log-level info --ros-args -r __node:=route_server -p use_sim_time:=False --params-file /tmp/launch_params_0pndsva9 -r /tf:=tf -r /tf_static:=tf_static
+sweepi      4603 12.1  0.6 861516 54068 ?        Rl   00:44   2:39 /opt/ros/jazzy/lib/nav2_behaviors/behavior_server --ros-args --log-level info --ros-args -r __node:=behavior_server -p use_sim_time:=False --params-file /tmp/launch_params_0pndsva9 -r /tf:=tf -r /tf_static:=tf_static -r cmd_vel:=cmd_vel_nav
+sweepi      4604 14.2  0.9 893896 76468 ?        Sl   00:44   3:07 /opt/ros/jazzy/lib/nav2_bt_navigator/bt_navigator --ros-args --log-level info --ros-args -r __node:=bt_navigator -p use_sim_time:=False --params-file /tmp/launch_params_0pndsva9 -r /tf:=tf -r /tf_static:=tf_static
+sweepi      4605  7.7  0.5 778732 47388 ?        Sl   00:44   1:41 /opt/ros/jazzy/lib/nav2_waypoint_follower/waypoint_follower --ros-args --log-level info --ros-args -r __node:=waypoint_follower -p use_sim_time:=False --params-file /tmp/launch_params_0pndsva9 -r /tf:=tf -r /tf_static:=tf_static
+sweepi      4606  7.4  0.4 767824 40280 ?        Sl   00:44   1:38 /opt/ros/jazzy/lib/nav2_velocity_smoother/velocity_smoother --ros-args --log-level info --ros-args -r __node:=velocity_smoother -p use_sim_time:=False --params-file /tmp/launch_params_0pndsva9 -r /tf:=tf -r /tf_static:=tf_static -r cmd_vel:=cmd_vel_nav
+sweepi      4607  9.8  0.6 859704 51744 ?        Rl   00:44   2:10 /opt/ros/jazzy/lib/nav2_collision_monitor/collision_monitor --ros-args --log-level info --ros-args -r __node:=collision_monitor -p use_sim_time:=False --params-file /tmp/launch_params_0pndsva9 -r /tf:=tf -r /tf_static:=tf_static
+sweepi      4608 10.4  0.6 1008192 53284 ?       Rl   00:44   2:18 /opt/ros/jazzy/lib/opennav_docking/opennav_docking --ros-args --log-level info --ros-args -r __node:=docking_server -p use_sim_time:=False --params-file /tmp/launch_params_0pndsva9 -r /tf:=tf -r /tf_static:=tf_static
+sweepi      4609 19.4  0.5 922856 47616 ?        Rl   00:44   4:16 /opt/ros/jazzy/lib/nav2_lifecycle_manager/lifecycle_manager --ros-args --log-level info --ros-args -r __node:=lifecycle_manager_navigation -p use_sim_time:=False --params-file /tmp/launch_params_xlj9gi6o --params-file /tmp/launch_params_f28_o95e
+sweepi      4610  8.6  1.0 1137104 87016 ?       Sl   00:44   1:53 /opt/ros/jazzy/lib/slam_toolbox/async_slam_toolbox_node --ros-args -r __node:=slam_toolbox -r __ns:=/ --params-file /tmp/launch_params_pfr9mhoo --params-file /tmp/launch_params_1dr_eyaz -r /map:=/slam_map
+sweepi      4823  0.0  0.3 189696 28404 pts/1    Sl+  00:44   0:00 /usr/bin/python3 /opt/ros/jazzy/bin/ros2 run teleop_twist_keyboard teleop_twist_keyboard
+sweepi      4826  0.2  0.9 963644 78016 pts/1    Sl+  00:44   0:03 /usr/bin/python3 /opt/ros/jazzy/lib/teleop_twist_keyboard/teleop_twist_keyboard
+root        4850  0.5  0.0      0     0 ?        I    00:45   0:07 [kworker/u8:0-v3d_render]
+root        4872  0.1  0.0      0     0 ?        I    00:48   0:01 [kworker/3:2-events]
+root        4881  0.1  0.0      0     0 ?        I    00:49   0:01 [kworker/2:3-events]
+root        4900  0.1  0.0      0     0 ?        I    00:50   0:01 [kworker/1:2-events]
+root        5064  0.5  0.0      0     0 ?        I<   00:54   0:03 [kworker/u9:2-hci0]
+root        5073  0.0  0.0      0     0 ?        I<   00:55   0:00 [kworker/1:2H]
+root        5076  0.0  0.0      0     0 ?        I    00:55   0:00 [kworker/1:0-events]
+root        5095  0.6  0.0      0     0 ?        I    00:56   0:03 [kworker/u8:5-v3d_render]
+root        5096  0.0  0.0      0     0 ?        I<   00:56   0:00 [kworker/0:2H]
+root        5097  0.2  0.0      0     0 ?        I    00:56   0:01 [kworker/2:0-events]
+sweepi      5264  0.0  0.0   2380  1572 ?        S    00:57   0:00 sh /home/sweepi/.vscode-server/cli/servers/Stable-e7fb5e96c0730b9deb70b33781f98e2f35975036/server/bin/code-server --connection-token=remotessh --accept-server-license-terms --start-server --enable-remote-auto-shutdown --socket-path=/tmp/code-f14727f9-838b-4985-bb6b-926412af176d
+sweepi      5268  2.5  1.4 11573448 119868 ?     Sl   00:57   0:14 /home/sweepi/.vscode-server/cli/servers/Stable-e7fb5e96c0730b9deb70b33781f98e2f35975036/server/node /home/sweepi/.vscode-server/cli/servers/Stable-e7fb5e96c0730b9deb70b33781f98e2f35975036/server/out/server-main.js --connection-token=remotessh --accept-server-license-terms --start-server --enable-remote-auto-shutdown --socket-path=/tmp/code-f14727f9-838b-4985-bb6b-926412af176d
+sweepi      5336  0.4  0.9 962508 77956 ?        Sl   00:57   0:02 /home/sweepi/.vscode-server/cli/servers/Stable-e7fb5e96c0730b9deb70b33781f98e2f35975036/server/node /home/sweepi/.vscode-server/cli/servers/Stable-e7fb5e96c0730b9deb70b33781f98e2f35975036/server/out/bootstrap-fork --type=ptyHost --logsPath /home/sweepi/.vscode-server/data/logs/20260712T005724
+sweepi      5393  0.0  0.0   9084  5572 pts/3    Ss+  00:57   0:00 /usr/bin/bash --init-file /home/sweepi/.vscode-server/cli/servers/Stable-e7fb5e96c0730b9deb70b33781f98e2f35975036/server/out/vs/workbench/contrib/terminal/common/scripts/shellIntegration-bash.sh
+root        6004  0.0  0.0      0     0 ?        I<   00:58   0:00 [kworker/2:0H]
+root        6007  0.0  0.1  16524  9048 ?        Ss   00:58   0:00 sshd: sweepi [priv]
+root        6009  0.0  0.0      0     0 ?        I<   00:58   0:00 [kworker/3:0H]
+sweepi      6075  0.0  0.0  17960  7864 ?        S    00:58   0:00 sshd: sweepi@notty
+sweepi      6076  0.0  0.0   7504  3656 ?        Ss   00:58   0:00 -bash
+sweepi      6081  0.0  0.0   2380  1700 ?        S    00:58   0:00 sh
+sweepi      6099  0.2  0.2  40076 17552 ?        Sl   00:58   0:01 /home/sweepi/.vscode-server/code-e7fb5e96c0730b9deb70b33781f98e2f35975036 command-shell --cli-data-dir /home/sweepi/.vscode-server/cli --parent-process-id 6081 --on-host=127.0.0.1 --on-port
+sweepi      6497  4.2  7.5 54312552 610836 ?     Sl   00:58   0:19 /home/sweepi/.vscode-server/cli/servers/Stable-e7fb5e96c0730b9deb70b33781f98e2f35975036/server/node --dns-result-order=ipv4first /home/sweepi/.vscode-server/cli/servers/Stable-e7fb5e96c0730b9deb70b33781f98e2f35975036/server/out/bootstrap-fork --type=extensionHost --transformURIs --useHostProxy=false
+sweepi      6508  0.1  0.7 996200 57800 ?        Sl   00:58   0:00 /home/sweepi/.vscode-server/cli/servers/Stable-e7fb5e96c0730b9deb70b33781f98e2f35975036/server/node /home/sweepi/.vscode-server/cli/servers/Stable-e7fb5e96c0730b9deb70b33781f98e2f35975036/server/out/bootstrap-fork --type=fileWatcher
+sweepi      6672  0.3  0.9 408512 75044 ?        Sl   00:59   0:01 /home/sweepi/.vscode-server/extensions/openai.chatgpt-26.5707.41301-linux-arm64/bin/linux-aarch64/codex -c features.code_mode_host=true app-server --analytics-default-enabled
+sweepi      6946  0.0  0.7 826804 59464 ?        Sl   00:59   0:00 /home/sweepi/.vscode-server/cli/servers/Stable-e7fb5e96c0730b9deb70b33781f98e2f35975036/server/node /home/sweepi/.vscode-server/cli/servers/Stable-e7fb5e96c0730b9deb70b33781f98e2f35975036/server/extensions/markdown-language-features/dist/serverWorkerMain --node-ipc --clientProcessId=6497
+root        7311  0.1  0.0      0     0 ?        I    00:59   0:00 [kworker/3:0-events]
+root        7312  0.2  0.0      0     0 ?        I    00:59   0:01 [kworker/0:0-events]
+root        7338  0.0  0.0      0     0 ?        I    01:01   0:00 [kworker/1:1-mm_percpu_wq]
+root        7361  0.0  0.0      0     0 ?        I<   01:01   0:00 [kworker/0:1H]
+sweepi      7381  8.1  2.5 549800 204708 pts/0   Sl+  01:02   0:18 codex
+root        8963  0.0  0.0      0     0 ?        I    01:03   0:00 [kworker/2:1-events]
+root        8964  0.8  0.0      0     0 ?        I    01:03   0:01 [kworker/u8:4-events_unbound]
+sweepi      8966  0.0  0.0 307964  5876 ?        Sl   01:03   0:00 /usr/lib/aarch64-linux-gnu/xfce4/xfconf/xfconfd
+root        8972  0.0  0.0      0     0 ?        I<   01:03   0:00 [kworker/1:0H]
+sweepi      8973  0.0  0.0   5580  1888 ?        S    01:04   0:00 sleep 180
+root        8974  0.0  0.0      0     0 ?        I    01:04   0:00 [kworker/3:1-mm_percpu_wq]
+root        9184  0.1  0.0      0     0 ?        I    01:05   0:00 [kworker/2:2-events]
+root        9458  0.0  0.0      0     0 ?        I    01:05   0:00 [kworker/0:3-events]
+sweepi      9474  0.0  0.0   5616  2016 pts/4    Ss+  01:05   0:00 script -q -f /home/sweepi/SweePi/diagnostics/20260712_010514/transcript.log
+sweepi      9481  0.2  0.0   8840  5428 pts/5    Ss   01:05   0:00 bash -i
+root        9591  0.2  0.0  16956  6784 ?        Ss   01:05   0:00 /usr/lib/systemd/systemd-hostnamed
+root        9600  0.2  0.0  16952  6792 ?        Ss   01:05   0:00 /usr/lib/systemd/systemd-timedated
+sweepi      9743  100  0.0  11456  4484 pts/5    R+   01:06   0:00 ps auxww
+sweepi      9744  0.0  0.0   5600  1860 pts/5    S+   01:06   0:00 tee /home/sweepi/SweePi/diagnostics/20260712_010514/process_ps.log

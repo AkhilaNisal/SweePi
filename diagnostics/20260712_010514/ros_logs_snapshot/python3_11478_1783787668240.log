@@ -1,0 +1,11 @@
+[INFO] [1783787668.816648237] [coverage_planner_node]: Coverage planner started: coverage_map=/coverage_map, nav_costmap=/global_costmap/costmap, path=/coverage_path, mask=/coverage_planning_mask, percentage=/coverage_percentage, stats=/coverage_stats, direction=auto, use_nav_costmap=true, robot_radius=0.20m, safety_margin=0.10m, inflation_radius=0.24m
+[INFO] [1783787669.772709344] [coverage_planner_node]: Waiting for /global_costmap/costmap before generating frozen coverage path
+[INFO] [1783787672.765947617] [coverage_planner_node]: Waiting for /global_costmap/costmap before generating frozen coverage path
+[INFO] [1783787675.768922668] [coverage_planner_node]: Waiting for /global_costmap/costmap before generating frozen coverage path
+[INFO] [1783787676.892907068] [coverage_planner_node]: Global costmap received for coverage planning: topic=/global_costmap/costmap frame=map size=155x117 resolution=0.050 max_allowed_nav_cost=85 unknown_blocked=true
+[INFO] [1783787678.264219650] [coverage_planner_node]: Nav costmap filtered 124 coverage planning cells (blocked_by_cost=124, unknown=0, unknown_blocked=true, max_allowed_nav_cost=85)
+[INFO] [1783787678.746132298] [coverage_planner_node]: Reachability filter removed 1409 uncovered cells that are not safely connected to the robot start
+[WARN] [1783787678.753333240] [coverage_planner_node]: segment straight connector from (80, 48) to (74, 40) is blocked at cell (79, 47); trying grid connector
+[INFO] [1783787678.766062218] [coverage_planner_node]: Coverage path continuity report: segments_before_ordering=7 segments_after_ordering=7 connector_count=1 connector_pose_count=16 total_poses=123 path_length_m=7.35 max_consecutive_jump_m=0.403 max_jump_index=31 first_pose=x=0.048 y=0.009 yaw=-0.24 last_pose=x=-0.502 y=-1.041 yaw=0.00 follow_path_ready=true robot_start_used=true nav_costmap_used=true nav_blocked_cells=124 nav_filtered_cells=124 reachability_used=true reachable_cells=499 unreachable_filtered_cells=1409
+[INFO] [1783787678.766961079] [coverage_planner_node]: Coverage replan: percentage=0.7%, uncovered=6194, segments=7, poses=123, path_length=7.35m, unreachable_filtered=1409
+[INFO] [1783787678.767654949] [coverage_planner_node]: Coverage path frozen after first valid plan: poses=123 path_length=7.35m

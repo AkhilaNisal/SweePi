@@ -1,0 +1,20 @@
+1783789297.6434207 [INFO] [launch]: All log files can be found below /home/sweepi/.ros/log/2026-07-11-22-31-37-639719-sweepi-3865
+1783789297.6436234 [INFO] [launch]: Default logging verbosity is set to INFO
+1783789298.0891266 [INFO] [base_driver_node-1]: process started with pid [3996]
+1783789298.0896175 [INFO] [ekf_node-2]: process started with pid [3997]
+1783789298.0898075 [INFO] [sllidar_node-3]: process started with pid [3998]
+1783789298.0899298 [INFO] [robot_state_publisher-4]: process started with pid [3999]
+1783789298.0900371 [INFO] [rviz2-5]: process started with pid [4000]
+1783789298.0901725 [INFO] [sweepi_robot_manager_node.py-6]: process started with pid [4001]
+1783789298.0903108 [INFO] [api_bridge_node-7]: process started with pid [4002]
+1783789351.1601760 [WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+1783789351.3827510 [WARNING] [launch]: user interrupted with ctrl-c (SIGINT) again, ignoring...
+1783789351.5104136 [ERROR] [ekf_node-2]: process has died [pid 3997, exit code -2, cmd '/opt/ros/jazzy/lib/robot_localization/ekf_node --ros-args -r __node:=ekf_filter_node --params-file /home/sweepi/SweePi/install/sweepi_state_estimation/share/sweepi_state_estimation/config/ekf.yaml --params-file /tmp/launch_params_x500akss -r odometry/filtered:=/odom'].
+1783789351.5107605 [ERROR] [sllidar_node-3]: process has died [pid 3998, exit code -2, cmd '/home/sweepi/SweePi/install/sllidar_ros2/lib/sllidar_ros2/sllidar_node --ros-args -r __node:=sllidar_node --params-file /tmp/launch_params_0s3oyffw'].
+1783789351.6698751 [WARNING] [launch]: user interrupted with ctrl-c (SIGINT) again, ignoring...
+1783789351.7215126 [ERROR] [api_bridge_node-7]: process has died [pid 4002, exit code -2, cmd '/home/sweepi/SweePi/install/sweepi_api_bridge/lib/sweepi_api_bridge/api_bridge_node --ros-args -r __node:=sweepi_api_bridge --params-file /tmp/launch_params_a05i6i7y'].
+1783789351.7398150 [ERROR] [robot_state_publisher-4]: process has died [pid 3999, exit code -2, cmd '/opt/ros/jazzy/lib/robot_state_publisher/robot_state_publisher --ros-args -r __node:=robot_state_publisher --params-file /tmp/launch_params_qzgxh75b'].
+1783789351.7409787 [ERROR] [base_driver_node-1]: process has died [pid 3996, exit code -2, cmd '/home/sweepi/SweePi/install/sweepi_base_driver/lib/sweepi_base_driver/base_driver_node --ros-args -r __node:=base_driver_node --params-file /home/sweepi/SweePi/install/sweepi_base_driver/share/sweepi_base_driver/config/base_driver_params.yaml --params-file /tmp/launch_params_7g6vljlz'].
+1783789351.7456453 [ERROR] [rviz2-5]: process has died [pid 4000, exit code -2, cmd '/opt/ros/jazzy/lib/rviz2/rviz2 -d /home/sweepi/SweePi/install/sweepi_bringup/share/sweepi_bringup/rviz/urdf_config.rviz --ros-args -r __node:=rviz2 --params-file /tmp/launch_params_u26qws46'].
+1783789351.7493935 [WARNING] [launch]: user interrupted with ctrl-c (SIGINT) again, ignoring...
+1783789351.7677243 [ERROR] [sweepi_robot_manager_node.py-6]: process has died [pid 4001, exit code -2, cmd '/home/sweepi/SweePi/install/sweepi_robot_manager/lib/sweepi_robot_manager/sweepi_robot_manager_node.py --ros-args -r __node:=sweepi_robot_manager --params-file /tmp/launch_params_kpz5lol2'].

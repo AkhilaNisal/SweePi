@@ -42,7 +42,7 @@ coverage_planner_node:
     debug_path_continuity: true
     use_nav_costmap_for_planning: true
     use_global_costmap_for_planning: true
-    max_allowed_nav_cost: 50
+    max_allowed_nav_cost: 85
     treat_unknown_cost_as_blocked: true
     nav_costmap_timeout_sec: 2.0
     wait_for_nav_costmap_before_planning: true
@@ -110,9 +110,9 @@ coverage_follow_path_executor_node:
     robot_radius_m: 0.20
     enable_costmap_validation: true
     require_costmap_for_validation: true
-    max_allowed_nav_cost: 50
+    max_allowed_nav_cost: 85
     max_tolerated_blocked_costmap_samples: 25
-    max_tolerated_blocked_costmap_ratio: 0.01
+    max_tolerated_blocked_costmap_ratio: 0.06
     max_tolerated_blocked_cost: 99
     treat_unknown_cost_as_blocked: true
     freeze_path_on_start: true
@@ -166,11 +166,7 @@ coverage_follow_path_executor_node:
     dynamic_skip_lookahead_m: 0.30
     dynamic_skip_padding_m: 0.02
     dynamic_rejoin_max_search_distance_m: 5.00 # change from 3.00 m
-<<<<<<< HEAD
     dynamic_rejoin_min_clearance_m: 0.03
-=======
-    dynamic_rejoin_min_clearance_m: 0.08
->>>>>>> 8c21eaa61e02e15d2598765feef4a82c3d5d665a
     dynamic_max_rejoin_candidates: 60   # change from 20
     dynamic_required_consecutive_detections: 4
     dynamic_min_blocked_pose_count: 3

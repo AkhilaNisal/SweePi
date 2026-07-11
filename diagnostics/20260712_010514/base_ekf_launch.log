@@ -1,0 +1,34 @@
+[INFO] [launch]: All log files can be found below /home/sweepi/.ros/log/2026-07-12-01-31-41-714514-sweepi-20806
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [base_driver_node-1]: process started with pid [20810]
+[INFO] [ekf_node-2]: process started with pid [20811]
+[INFO] [robot_state_publisher-3]: process started with pid [20812]
+[robot_state_publisher-3] [INFO] [1783800102.095695526] [robot_state_publisher]: Robot initialized
+[ekf_node-2] [ERROR] [1783800102.118325988] [ekf_filter_node]: Warning: /imu/data is listed as an input topic, but all its update variables are false
+[base_driver_node-1] [INFO] [1783800102.758769927] [base_driver_node]: SweePi base driver starting on /dev/ttyAMA0 at 115200 baud
+[base_driver_node-1] [INFO] [1783800102.759386450] [base_driver_node]: Base driver parameters: serial_port=/dev/ttyAMA0, baud_rate=115200, wheel_radius=0.0615, wheel_separation=0.29, ticks_per_revolution=7392.0, left_encoder_sign=1.0, right_encoder_sign=1.0, left_motor_command_sign=1.0, right_motor_command_sign=1.0, command_rate_hz=50.0, feedback_poll_rate_hz=100.0, cmd_vel_timeout=0.5, gyro_units=rad_s, accel_units=m_s2
+[base_driver_node-1] [INFO] [1783800102.760684871] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
+[base_driver_node-1] [WARN] [1783800102.786183498] [base_driver_node]: Ignoring unknown STM32 packet: �	r����b�r����b�r����b�r����b��
+[WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+[ekf_node-2] [INFO] [1783800141.464473771] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[robot_state_publisher-3] [INFO] [1783800141.464474660] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[INFO] [robot_state_publisher-3]: sending signal 'SIGINT' to process[robot_state_publisher-3]
+[INFO] [ekf_node-2]: sending signal 'SIGINT' to process[ekf_node-2]
+[INFO] [base_driver_node-1]: sending signal 'SIGINT' to process[base_driver_node-1]
+[robot_state_publisher-3] [INFO] [1783800141.473921898] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[base_driver_node-1] Traceback (most recent call last):
+[base_driver_node-1]   File "/home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/lib/sweepi_base_driver/base_driver_node", line 33, in <module>
+[base_driver_node-1]     sys.exit(load_entry_point('sweepi-base-driver', 'console_scripts', 'base_driver_node')())
+[base_driver_node-1]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[base_driver_node-1]   File "/home/sweepi/SweePi/build_diagnostic/sweepi_base_driver/sweepi_base_driver/base_driver_node.py", line 483, in main
+[base_driver_node-1]     node.destroy_node()
+[base_driver_node-1]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/node.py", line 1962, in destroy_node
+[ERROR] [ekf_node-2]: process has died [pid 20811, exit code -2, cmd '/opt/ros/jazzy/lib/robot_localization/ekf_node --ros-args -r __node:=ekf_filter_node --params-file /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation/config/ekf.yaml --params-file /tmp/launch_params_cwgofben -r odometry/filtered:=/odom'].
+[base_driver_node-1]     self.destroy_service(self._services[0])
+[base_driver_node-1]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/node.py", line 1886, in destroy_service
+[base_driver_node-1]     service.destroy()
+[base_driver_node-1]   File "/opt/ros/jazzy/lib/python3.12/site-packages/rclpy/service.py", line 123, in destroy
+[base_driver_node-1]     self.__service.destroy_when_not_in_use()
+[base_driver_node-1] KeyboardInterrupt
+[INFO] [robot_state_publisher-3]: process has finished cleanly [pid 20812]
+[ERROR] [base_driver_node-1]: process has died [pid 20810, exit code -2, cmd '/home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/lib/sweepi_base_driver/base_driver_node --ros-args -r __node:=base_driver_node --params-file /home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/share/sweepi_base_driver/config/base_driver_params.yaml --params-file /tmp/launch_params_9kpol5xk'].

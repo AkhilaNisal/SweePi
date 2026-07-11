@@ -1,0 +1,22 @@
+[INFO] [1783785024.813927564] [rviz2]: Stereo is NOT SUPPORTED
+[INFO] [1783785024.814229185] [rviz2]: OpenGl version: 3.1 (GLSL 1.4)
+[INFO] [1783785024.863656601] [rviz2]: Stereo is NOT SUPPORTED
+[INFO] [1783785028.057215808] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783785027.060 for reason 'discarding message because the queue is full'
+[INFO] [1783785030.585155083] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783785029.473 for reason 'discarding message because the queue is full'
+[INFO] [1783785033.177294086] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783785032.064 for reason 'discarding message because the queue is full'
+[INFO] [1783785035.769037775] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783785034.658 for reason 'discarding message because the queue is full'
+[INFO] [1783785038.361394317] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783785037.256 for reason 'discarding message because the queue is full'
+[INFO] [1783785040.953456244] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783785039.848 for reason 'discarding message because the queue is full'
+[INFO] [1783785043.516621549] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783785042.157 for reason 'discarding message because the queue is full'
+[INFO] [1783785044.714096767] [rviz2]: Trying to create a map of size 161 x 127 using 1 swatches
+[ERROR] [1783785044.759223582] [rviz2]: rviz/glsl120/indexed_8bit_image.vert
+rviz/glsl120/indexed_8bit_image.frag
+ GLSL link result : 
+active samplers with a different type refer to the same texture image unit
+[INFO] [1783785046.077674341] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783785044.947 for reason 'discarding message because the queue is full'
+[INFO] [1783785048.669462704] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783785047.553 for reason 'discarding message because the queue is full'
+[INFO] [1783785049.042475730] [rviz2]: Setting estimate pose: Frame:map, Position(-0.00753094, 0.0257353, 0), Orientation(0, 0, -0.986601, 0.16315) = Angle: -2.81383
+[ERROR] [1783785049.677026031] [rviz2]: Lookup would require extrapolation into the future.  Requested time 1783785049.643116 but the latest data is at time 1783785049.638962, when looking up transform from frame [lidar_link] to frame [map]
+[INFO] [1783785050.087288188] [rviz2]: Trying to create a map of size 100 x 100 using 1 swatches
+[INFO] [1783785052.160077286] [rviz2]: Trying to create a map of size 161 x 127 using 1 swatches
+[INFO] [1783785085.367309167] [rclcpp]: signal_handler(SIGINT/SIGTERM)

@@ -1,0 +1,13 @@
+src/sweepi_coverage/package.xml
+src/sweepi_description/package.xml
+src/sweepi_exploration/package.xml
+src/sweepi_slam/package.xml
+src/sweepi_base_driver/package.xml
+src/sllidar_ros2/package.xml
+src/sweepi_temp_rpi_hardware/package.xml
+src/sweepi_robot_manager/package.xml
+src/sweepi_state_estimation/package.xml
+src/sweepi_robot_manager_interfaces/package.xml
+src/sweepi_bringup/package.xml
+src/sweepi_api_bridge/package.xml
+src/sweepi_real_bringup/package.xml

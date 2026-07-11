@@ -811,9 +811,6 @@ class SweePiApiBridge(Node):
                     'source': 'exploration',
                 },
             )
-        if result['success']:
-            self.state.reset_exploration()
-        map_saved = self.map_store.exists(map_id) if map_id else False
         if not result['success']:
             return self._error(
                 result['message'],
@@ -827,6 +824,8 @@ class SweePiApiBridge(Node):
                 map_id=map_id,
                 map_name=map_id,
             )
+        map_saved = self._wait_for_saved_map(map_id, timeout_sec=5.0)
+        self.state.reset_exploration()
         if not map_saved:
             return self._error(
                 'Exploration stopped, but saved map was not confirmed.',
@@ -853,6 +852,18 @@ class SweePiApiBridge(Node):
             map_id=map_id,
             map_name=map_id,
         )
+
+    def _wait_for_saved_map(self, map_id, timeout_sec):
+        if not map_id:
+            return False
+        deadline = time.monotonic() + timeout_sec
+        while rclpy.ok():
+            if self.map_store.exists(map_id):
+                return True
+            if time.monotonic() >= deadline:
+                return False
+            time.sleep(0.1)
+        return self.map_store.exists(map_id)
 
     def _api_manual_drive_command(self, body):
         if not self._manual_drive_allowed():
@@ -1448,7 +1459,7 @@ class SweePiApiBridge(Node):
         )
 
     def _api_validate_cleaning(self):
-        ready = self._cleaning_preconditions(require_path=False)
+        ready = self._cleaning_preconditions(require_path=True)
         if not ready['accepted']:
             return self._error(
                 ready['message'],
@@ -1459,10 +1470,21 @@ class SweePiApiBridge(Node):
                 command='validate_cleaning',
                 state=ready.get('state', 'validation_blocked'),
             )
+        path_state = self._current_coverage_path_state()
+        if not path_state['available']:
+            return self._error(
+                'Coverage path is not available yet.',
+                'INVALID_STATE',
+                accepted=False,
+                completed=False,
+                task_finished=False,
+                command='validate_cleaning',
+                state='coverage_path_unavailable',
+            )
         result = self._call_trigger('/validate_coverage_follow_path')
         if result['success']:
             self.validated_for_current_path = True
-            self.validated_coverage_path_signature = self.coverage_path_signature
+            self.validated_coverage_path_signature = path_state['signature']
             self.state.update(coverage_validated=True, robot_state='coverage_validated', task_phase='coverage_validated')
             return self._success(
                 'Coverage validation completed successfully.',
@@ -1474,6 +1496,8 @@ class SweePiApiBridge(Node):
                 task_id=self.state.snapshot().get('active_task_id'),
                 map_id=self.state.snapshot().get('active_map_id'),
                 coverage_map_id=self.state.snapshot().get('active_coverage_map_id'),
+                path_pose_count=path_state['pose_count'],
+                path_signature=path_state['signature'],
                 next_steps=['Call POST /api/cleaning/start-motion.'],
             )
         self.validated_for_current_path = False
@@ -1494,7 +1518,7 @@ class SweePiApiBridge(Node):
         )
 
     def _api_start_cleaning_motion(self):
-        ready = self._cleaning_preconditions(require_path=False)
+        ready = self._cleaning_preconditions(require_path=True)
         if not ready['accepted']:
             return self._error(
                 ready['message'],
@@ -1506,11 +1530,16 @@ class SweePiApiBridge(Node):
                 state=ready.get('state', 'start_blocked'),
             )
         snapshot = self.state.snapshot()
+        path_state = self._current_coverage_path_state()
         path_changed_after_validation = (
-            self.validated_coverage_path_signature is not None
-            and self.coverage_path_signature != self.validated_coverage_path_signature
+            self.validated_coverage_path_signature is None
+            or path_state['signature'] != self.validated_coverage_path_signature
         )
-        if not snapshot.get('coverage_validated') or path_changed_after_validation:
+        if (
+            not path_state['available']
+            or not snapshot.get('coverage_validated')
+            or path_changed_after_validation
+        ):
             return self._error(
                 'Coverage validation is required before starting motion.',
                 'VALIDATION_REQUIRED',
@@ -1522,6 +1551,8 @@ class SweePiApiBridge(Node):
                 task_id=snapshot.get('active_task_id'),
                 map_id=snapshot.get('active_map_id'),
                 coverage_map_id=snapshot.get('active_coverage_map_id'),
+                path_available=path_state['available'],
+                path_pose_count=path_state['pose_count'],
             )
         result = self._call_trigger('/start_coverage_follow_path')
         if result['success']:
@@ -1926,7 +1957,12 @@ class SweePiApiBridge(Node):
         if path is None or not path.poses:
             return {'ok': True, 'available': False, 'map_id': map_id, 'points': []}
         payload = path_to_json(path, stride=stride)
-        payload.update({'ok': True, 'map_id': map_id})
+        payload.update({
+            'ok': True,
+            'map_id': map_id,
+            'pose_count': len(path.poses),
+            'path_signature': self.coverage_path_signature,
+        })
         return payload
 
     def _cleaning_coverage_map(self):
@@ -2345,13 +2381,17 @@ class SweePiApiBridge(Node):
             mode = 'automatic'
         if mode not in ('automatic', 'manual', 'stopped'):
             mode = 'unknown'
+
+        snapshot = self.state.snapshot()
+        if snapshot.get('active_task') != 'exploration' and not snapshot.get('exploration_active'):
+            return
+
         updates = {
             'exploration_mode': mode,
         }
         if mode == 'stopped':
             updates.update(
                 robot_state='exploration_stopped',
-                active_task='exploration',
                 exploration_active=True,
             )
         elif mode in ('automatic', 'manual'):
@@ -2392,14 +2432,32 @@ class SweePiApiBridge(Node):
         if not poses:
             return None
         first = poses[0].pose.position
+        middle = poses[len(poses) // 2].pose.position
         last = poses[-1].pose.position
+        stamp = msg.header.stamp
         return (
             len(poses),
+            msg.header.frame_id or '',
+            int(stamp.sec),
+            int(stamp.nanosec),
             round(float(first.x), 3),
             round(float(first.y), 3),
+            round(float(middle.x), 3),
+            round(float(middle.y), 3),
             round(float(last.x), 3),
             round(float(last.y), 3),
         )
+
+    def _current_coverage_path_state(self):
+        with self.data_lock:
+            path = self.coverage_path
+            signature = self.coverage_path_signature
+        pose_count = len(path.poses) if path is not None else 0
+        return {
+            'available': path is not None and pose_count > 0 and signature is not None,
+            'pose_count': pose_count,
+            'signature': signature,
+        }
 
     def _coverage_percentage_callback(self, msg):
         self.coverage_percentage = float(msg.data)

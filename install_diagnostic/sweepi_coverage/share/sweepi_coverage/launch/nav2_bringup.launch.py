@@ -1,0 +1,1 @@
+/home/sweepi/SweePi/src/sweepi_coverage/launch/nav2_bringup.launch.py

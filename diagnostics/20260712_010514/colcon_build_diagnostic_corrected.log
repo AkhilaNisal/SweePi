@@ -1,0 +1,1684 @@
+Starting >>> sweepi_description
+Starting >>> sweepi_slam
+Starting >>> sllidar_ros2
+Starting >>> sweepi_base_driver
+-- The C compiler identification is GNU 13.3.0
+-- The C compiler identification is GNU 13.3.0
+-- The C compiler identification is GNU 13.3.0
+-- The CXX compiler identification is GNU 13.3.0
+-- The CXX compiler identification is GNU 13.3.0
+-- The CXX compiler identification is GNU 13.3.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Detecting C compiler ABI info - done
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting C compile features - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Detecting CXX compiler ABI info - done
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found ament_cmake: 2.5.6 (/opt/ros/jazzy/share/ament_cmake/cmake)
+-- Found ament_cmake: 2.5.6 (/opt/ros/jazzy/share/ament_cmake/cmake)
+-- Found ament_cmake: 2.5.6 (/opt/ros/jazzy/share/ament_cmake/cmake)
+-- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+-- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+-- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+-- Override CMake install command with custom implementation using symlinks instead of copying resources
+-- Override CMake install command with custom implementation using symlinks instead of copying resources
+-- Override CMake install command with custom implementation using symlinks instead of copying resources
+-- Found rclcpp: 28.1.21 (/opt/ros/jazzy/share/rclcpp/cmake)
+-- Found rosidl_generator_c: 4.6.9 (/opt/ros/jazzy/share/rosidl_generator_c/cmake)
+-- Configuring done (2.9s)
+-- Configuring done (2.9s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sweepi/SweePi/build_diagnostic/sweepi_slam
+-- Generating done (0.0s)
+-- Found rosidl_generator_cpp: 4.6.9 (/opt/ros/jazzy/share/rosidl_generator_cpp/cmake)
+-- Build files have been written to: /home/sweepi/SweePi/build_diagnostic/sweepi_description
+-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+-- Install configuration: ""
+-- Execute custom install script
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_slam/share/sweepi_slam//config/mapper_params_online_async.yaml
+-- Install configuration: ""
+-- Execute custom install script
+-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_description/share/sweepi_description//urdf/camera.xacro
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_slam/share/sweepi_slam//launch/slam_toolbox.launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_description/share/sweepi_description//urdf/cliff_sensors.xacro
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_slam/share/sweepi_slam//rviz/slam_config.rviz
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_description/share/sweepi_description//urdf/front_tof.xacro
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_slam/lib/sweepi_slam/save_map.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_description/share/sweepi_description//urdf/imu.xacro
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_description/share/sweepi_description//urdf/lidar.xacro
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_slam/lib/sweepi_slam/load_map.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_description/share/sweepi_description//urdf/robot_base.xacro
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_slam/share/ament_index/resource_index/package_run_dependencies/sweepi_slam
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_description/share/sweepi_description//urdf/robot_base_gazebo.xacro
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_slam/share/ament_index/resource_index/parent_prefix_path/sweepi_slam
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_description/share/sweepi_description//urdf/sweepi.urdf.xacro
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_slam/share/sweepi_slam/environment/ament_prefix_path.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_description/share/sweepi_description//launch/display.launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_slam/share/sweepi_slam/environment/ament_prefix_path.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_description/share/sweepi_description//launch/display.launch.xml
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_slam/share/sweepi_slam/environment/path.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_description/share/sweepi_description//rviz/urdf_config.rviz
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_slam/share/sweepi_slam/environment/path.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_slam/share/sweepi_slam/local_setup.bash
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_description/share/ament_index/resource_index/package_run_dependencies/sweepi_description
+-- Found rmw_implementation_cmake: 7.3.3 (/opt/ros/jazzy/share/rmw_implementation_cmake/cmake)
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_description/share/ament_index/resource_index/parent_prefix_path/sweepi_description
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_slam/share/sweepi_slam/local_setup.sh
+-- Found rmw_fastrtps_cpp: 8.4.4 (/opt/ros/jazzy/share/rmw_fastrtps_cpp/cmake)
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_description/share/sweepi_description/environment/ament_prefix_path.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_slam/share/sweepi_slam/local_setup.zsh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_slam/share/sweepi_slam/local_setup.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_description/share/sweepi_description/environment/ament_prefix_path.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_description/share/sweepi_description/environment/path.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_slam/share/sweepi_slam/package.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_slam/share/ament_index/resource_index/packages/sweepi_slam
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_description/share/sweepi_description/environment/path.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_slam/share/sweepi_slam/cmake/sweepi_slamConfig.cmake
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_description/share/sweepi_description/local_setup.bash
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_slam/share/sweepi_slam/cmake/sweepi_slamConfig-version.cmake
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_description/share/sweepi_description/local_setup.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_description/share/sweepi_description/local_setup.zsh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_slam/share/sweepi_slam/package.xml
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_description/share/sweepi_description/local_setup.dsv
+Finished <<< sweepi_slam [3.84s]
+Starting >>> sweepi_robot_manager_interfaces
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_description/share/sweepi_description/package.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_description/share/ament_index/resource_index/packages/sweepi_description
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_description/share/sweepi_description/cmake/sweepi_descriptionConfig.cmake
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_description/share/sweepi_description/cmake/sweepi_descriptionConfig-version.cmake
+-- Found OpenSSL: /usr/lib/aarch64-linux-gnu/libcrypto.so (found version "3.0.13")  
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_description/share/sweepi_description/package.xml
+-- Found FastRTPS: /opt/ros/jazzy/include (Required is at least version "2.13") 
+Finished <<< sweepi_description [3.98s]
+Starting >>> sweepi_state_estimation
+-- Using RMW implementation 'rmw_fastrtps_cpp' as default
+-- The C compiler identification is GNU 13.3.0
+-- The C compiler identification is GNU 13.3.0
+-- The CXX compiler identification is GNU 13.3.0
+-- Detecting C compiler ABI info
+running develop
+-- Found sensor_msgs: 5.3.8 (/opt/ros/jazzy/share/sensor_msgs/cmake)
+-- The CXX compiler identification is GNU 13.3.0
+-- Detecting C compiler ABI info
+-- Found std_srvs: 5.3.8 (/opt/ros/jazzy/share/std_srvs/cmake)
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+running egg_info
+creating sweepi_base_driver.egg-info
+-- Configuring done (4.6s)
+writing sweepi_base_driver.egg-info/PKG-INFO
+writing dependency_links to sweepi_base_driver.egg-info/dependency_links.txt
+writing entry points to sweepi_base_driver.egg-info/entry_points.txt
+writing requirements to sweepi_base_driver.egg-info/requires.txt
+writing top-level names to sweepi_base_driver.egg-info/top_level.txt
+writing manifest file 'sweepi_base_driver.egg-info/SOURCES.txt'
+-- Detecting CXX compiler ABI info - done
+-- Generating done (0.1s)
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Build files have been written to: /home/sweepi/SweePi/build_diagnostic/sllidar_ros2
+-- Found ament_cmake: 2.5.6 (/opt/ros/jazzy/share/ament_cmake/cmake)
+reading manifest file 'sweepi_base_driver.egg-info/SOURCES.txt'
+writing manifest file 'sweepi_base_driver.egg-info/SOURCES.txt'
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+running build_ext
+Creating /home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/lib/python3.12/site-packages/sweepi-base-driver.egg-link (link to .)
+Installing base_driver_node script to /home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/lib/sweepi_base_driver
+
+Installed /home/sweepi/SweePi/build_diagnostic/sweepi_base_driver
+running symlink_data
+creating /home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/share/ament_index
+creating /home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/share/ament_index/resource_index
+creating /home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/share/ament_index/resource_index/packages
+symbolically linking /home/sweepi/SweePi/build_diagnostic/sweepi_base_driver/resource/sweepi_base_driver -> /home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/share/ament_index/resource_index/packages
+symbolically linking /home/sweepi/SweePi/build_diagnostic/sweepi_base_driver/package.xml -> /home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/share/sweepi_base_driver
+creating /home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/share/sweepi_base_driver/launch
+symbolically linking /home/sweepi/SweePi/build_diagnostic/sweepi_base_driver/launch/base_driver.launch.py -> /home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/share/sweepi_base_driver/launch
+creating /home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/share/sweepi_base_driver/config
+symbolically linking /home/sweepi/SweePi/build_diagnostic/sweepi_base_driver/config/base_driver_params.yaml -> /home/sweepi/SweePi/install_diagnostic/sweepi_base_driver/share/sweepi_base_driver/config
+-- Found ament_cmake: 2.5.6 (/opt/ros/jazzy/share/ament_cmake/cmake)
+[  5%] Building CXX object CMakeFiles/sllidar_node.dir/src/sllidar_node.cpp.o
+Finished <<< sweepi_base_driver [5.14s]
+Starting >>> sweepi_temp_rpi_hardware
+-- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+-- Override CMake install command with custom implementation using symlinks instead of copying resources
+-- Found rosidl_default_generators: 1.6.1 (/opt/ros/jazzy/share/rosidl_default_generators/cmake)
+-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+-- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+-- Override CMake install command with custom implementation using symlinks instead of copying resources
+-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+-- Configuring done (1.9s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sweepi/SweePi/build_diagnostic/sweepi_state_estimation
+-- Found rosidl_adapter: 4.6.9 (/opt/ros/jazzy/share/rosidl_adapter/cmake)
+-- Install configuration: ""
+-- Execute custom install script
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation//config/ekf.yaml
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation//launch/ekf.launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/ament_index/resource_index/package_run_dependencies/sweepi_state_estimation
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/ament_index/resource_index/parent_prefix_path/sweepi_state_estimation
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation/environment/ament_prefix_path.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation/environment/ament_prefix_path.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation/environment/path.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation/environment/path.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation/local_setup.bash
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation/local_setup.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation/local_setup.zsh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation/local_setup.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation/package.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/ament_index/resource_index/packages/sweepi_state_estimation
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation/cmake/sweepi_state_estimationConfig.cmake
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation/cmake/sweepi_state_estimationConfig-version.cmake
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation/package.xml
+Finished <<< sweepi_state_estimation [2.61s]
+Starting >>> sweepi_coverage
+-- The C compiler identification is GNU 13.3.0
+-- The CXX compiler identification is GNU 13.3.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found ament_cmake: 2.5.6 (/opt/ros/jazzy/share/ament_cmake/cmake)
+-- Found ament_cmake_ros: 0.12.1 (/opt/ros/jazzy/share/ament_cmake_ros/cmake)
+-- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+-- Override CMake install command with custom implementation using symlinks instead of copying resources
+-- Found action_msgs: 2.0.4 (/opt/ros/jazzy/share/action_msgs/cmake)
+-- Found rosidl_generator_c: 4.6.9 (/opt/ros/jazzy/share/rosidl_generator_c/cmake)
+-- Found rosidl_generator_cpp: 4.6.9 (/opt/ros/jazzy/share/rosidl_generator_cpp/cmake)
+-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+-- Found geometry_msgs: 5.3.8 (/opt/ros/jazzy/share/geometry_msgs/cmake)
+-- Found nav_msgs: 5.3.8 (/opt/ros/jazzy/share/nav_msgs/cmake)
+-- Found nav2_msgs: 1.3.12 (/opt/ros/jazzy/share/nav2_msgs/cmake)
+running develop
+-- Found rclpy: 7.1.11 (/opt/ros/jazzy/share/rclpy/cmake)
+-- Found sensor_msgs: 5.3.8 (/opt/ros/jazzy/share/sensor_msgs/cmake)
+-- Found std_srvs: 5.3.8 (/opt/ros/jazzy/share/std_srvs/cmake)
+-- Found tf2_ros: 0.36.21 (/opt/ros/jazzy/share/tf2_ros/cmake)
+running egg_info
+creating sweepi_temp_rpi_hardware.egg-info
+-- Found rmw_implementation_cmake: 7.3.3 (/opt/ros/jazzy/share/rmw_implementation_cmake/cmake)
+-- Found rmw_fastrtps_cpp: 8.4.4 (/opt/ros/jazzy/share/rmw_fastrtps_cpp/cmake)
+writing sweepi_temp_rpi_hardware.egg-info/PKG-INFO
+writing dependency_links to sweepi_temp_rpi_hardware.egg-info/dependency_links.txt
+writing entry points to sweepi_temp_rpi_hardware.egg-info/entry_points.txt
+writing requirements to sweepi_temp_rpi_hardware.egg-info/requires.txt
+writing top-level names to sweepi_temp_rpi_hardware.egg-info/top_level.txt
+writing manifest file 'sweepi_temp_rpi_hardware.egg-info/SOURCES.txt'
+reading manifest file 'sweepi_temp_rpi_hardware.egg-info/SOURCES.txt'
+writing manifest file 'sweepi_temp_rpi_hardware.egg-info/SOURCES.txt'
+running build_ext
+Creating /home/sweepi/SweePi/install_diagnostic/sweepi_temp_rpi_hardware/lib/python3.12/site-packages/sweepi-temp-rpi-hardware.egg-link (link to .)
+Installing mpu6050_imu_node script to /home/sweepi/SweePi/install_diagnostic/sweepi_temp_rpi_hardware/lib/sweepi_temp_rpi_hardware
+Installing stepper_driver_node script to /home/sweepi/SweePi/install_diagnostic/sweepi_temp_rpi_hardware/lib/sweepi_temp_rpi_hardware
+Installing stepper_ticks_to_odom_node script to /home/sweepi/SweePi/install_diagnostic/sweepi_temp_rpi_hardware/lib/sweepi_temp_rpi_hardware
+
+Installed /home/sweepi/SweePi/build_diagnostic/sweepi_temp_rpi_hardware
+running symlink_data
+creating /home/sweepi/SweePi/install_diagnostic/sweepi_temp_rpi_hardware/share/ament_index
+creating /home/sweepi/SweePi/install_diagnostic/sweepi_temp_rpi_hardware/share/ament_index/resource_index
+creating /home/sweepi/SweePi/install_diagnostic/sweepi_temp_rpi_hardware/share/ament_index/resource_index/packages
+symbolically linking /home/sweepi/SweePi/build_diagnostic/sweepi_temp_rpi_hardware/resource/sweepi_temp_rpi_hardware -> /home/sweepi/SweePi/install_diagnostic/sweepi_temp_rpi_hardware/share/ament_index/resource_index/packages
+symbolically linking /home/sweepi/SweePi/build_diagnostic/sweepi_temp_rpi_hardware/package.xml -> /home/sweepi/SweePi/install_diagnostic/sweepi_temp_rpi_hardware/share/sweepi_temp_rpi_hardware
+symbolically linking /home/sweepi/SweePi/build_diagnostic/sweepi_temp_rpi_hardware/README.md -> /home/sweepi/SweePi/install_diagnostic/sweepi_temp_rpi_hardware/share/sweepi_temp_rpi_hardware
+creating /home/sweepi/SweePi/install_diagnostic/sweepi_temp_rpi_hardware/share/sweepi_temp_rpi_hardware/launch
+symbolically linking /home/sweepi/SweePi/build_diagnostic/sweepi_temp_rpi_hardware/launch/temp_rpi_hardware.launch.py -> /home/sweepi/SweePi/install_diagnostic/sweepi_temp_rpi_hardware/share/sweepi_temp_rpi_hardware/launch
+creating /home/sweepi/SweePi/install_diagnostic/sweepi_temp_rpi_hardware/share/sweepi_temp_rpi_hardware/config
+symbolically linking /home/sweepi/SweePi/build_diagnostic/sweepi_temp_rpi_hardware/config/temp_rpi_hardware.yaml -> /home/sweepi/SweePi/install_diagnostic/sweepi_temp_rpi_hardware/share/sweepi_temp_rpi_hardware/config
+-- Found OpenSSL: /usr/lib/aarch64-linux-gnu/libcrypto.so (found version "3.0.13")  
+Finished <<< sweepi_temp_rpi_hardware [5.03s]
+Starting >>> sweepi_bringup
+-- Found FastRTPS: /opt/ros/jazzy/include (Required is at least version "2.13") 
+-- Using RMW implementation 'rmw_fastrtps_cpp' as default
+-- The C compiler identification is GNU 13.3.0
+-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+-- Found python_cmake_module: 0.11.1 (/opt/ros/jazzy/share/python_cmake_module/cmake)
+-- The CXX compiler identification is GNU 13.3.0
+-- Detecting C compiler ABI info
+-- Found visualization_msgs: 5.3.8 (/opt/ros/jazzy/share/visualization_msgs/cmake)
+-- Found PythonExtra: /usr/bin/python3  
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Found ament_cmake_pytest: 2.5.6 (/opt/ros/jazzy/share/ament_cmake_pytest/cmake)
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found ament_cmake: 2.5.6 (/opt/ros/jazzy/share/ament_cmake/cmake)
+-- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+-- Override CMake install command with custom implementation using symlinks instead of copying resources
+-- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter Development NumPy Development.Module Development.Embed 
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:41,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_driver.h:54,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/src/sllidar_node.cpp:38:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+-- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+-- Configuring done (8.6s)
+-- Configuring done (2.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sweepi/SweePi/build_diagnostic/sweepi_bringup
+-- Generating done (0.1s)
+-- Install configuration: ""
+-- Execute custom install script
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/share/sweepi_bringup//launch/gazebo.launch.xml
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/share/sweepi_bringup//launch/rviz.launch.xml
+-- Build files have been written to: /home/sweepi/SweePi/build_diagnostic/sweepi_robot_manager_interfaces
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/share/sweepi_bringup//config/gazebo.bridge.yaml
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/share/sweepi_bringup//config/sweepi_controller.yaml
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/share/sweepi_bringup//config/urdf_config.rviz
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/share/sweepi_bringup//worlds/arm_assist_test.sdf
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/share/sweepi_bringup//worlds/empty.sdf
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/share/sweepi_bringup//worlds/empty.world
+[  2%] Generating type hashes for ROS interfaces
+-- Configuring done (6.2s)
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/share/sweepi_bringup//worlds/house.sdf
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/share/sweepi_bringup//worlds/sweepi_world.sdf
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sweepi/SweePi/build_diagnostic/sweepi_coverage
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/share/sweepi_bringup//worlds/sweepi_world.world
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/share/sweepi_bringup//worlds/turtlebot3_house.world
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/share/sweepi_bringup//worlds/world2.sdf
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/share/sweepi_bringup//rviz/urdf_config.rviz
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/lib/sweepi_bringup/odom_tf_broadcaster.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/lib/sweepi_bringup/front_tof_range_node.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/share/ament_index/resource_index/package_run_dependencies/sweepi_bringup
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/share/ament_index/resource_index/parent_prefix_path/sweepi_bringup
+Built target ament_cmake_python_symlink_sweepi_coverage
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/share/sweepi_bringup/environment/ament_prefix_path.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/share/sweepi_bringup/environment/ament_prefix_path.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/share/sweepi_bringup/environment/path.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/share/sweepi_bringup/environment/path.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/share/sweepi_bringup/local_setup.bash
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/share/sweepi_bringup/local_setup.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/share/sweepi_bringup/local_setup.zsh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/share/sweepi_bringup/local_setup.dsv
+[  2%] Built target sweepi_robot_manager_interfaces__rosidl_generator_type_description
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/share/sweepi_bringup/package.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/share/ament_index/resource_index/packages/sweepi_bringup
+[  2%] Built target ament_cmake_python_symlink_sweepi_robot_manager_interfaces
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/share/sweepi_bringup/cmake/sweepi_bringupConfig.cmake
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/share/sweepi_bringup/cmake/sweepi_bringupConfig-version.cmake
+[  5%] Generating C++ code for ROS interfaces
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_bringup/share/sweepi_bringup/package.xml
+Finished <<< sweepi_bringup [3.40s]
+Starting >>> sweepi_exploration
+running egg_info
+creating sweepi_coverage.egg-info
+-- The C compiler identification is GNU 13.3.0
+writing sweepi_coverage.egg-info/PKG-INFO
+writing dependency_links to sweepi_coverage.egg-info/dependency_links.txt
+writing top-level names to sweepi_coverage.egg-info/top_level.txt
+writing manifest file 'sweepi_coverage.egg-info/SOURCES.txt'
+-- The CXX compiler identification is GNU 13.3.0
+-- Detecting C compiler ABI info
+reading manifest file 'sweepi_coverage.egg-info/SOURCES.txt'
+writing manifest file 'sweepi_coverage.egg-info/SOURCES.txt'
+Built target ament_cmake_python_build_sweepi_coverage_egg
+-- Install configuration: ""
+-- Execute custom install script
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/share/sweepi_coverage/environment/pythonpath.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/share/sweepi_coverage/environment/pythonpath.dsv
+-- Detecting C compiler ABI info - done
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage-0.1.0-py3.12.egg-info/PKG-INFO
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage-0.1.0-py3.12.egg-info/SOURCES.txt
+-- Detecting CXX compiler ABI info
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage-0.1.0-py3.12.egg-info/dependency_links.txt
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage-0.1.0-py3.12.egg-info/top_level.txt
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage/__init__.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage/coverage_arm_follow_path_executor_node.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage/coverage_executor_node.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage/coverage_follow_path_executor_node.py
+[  5%] Built target sweepi_robot_manager_interfaces__cpp
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage/coverage_manager_node.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage/coverage_planner_node.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage/coverage_tracker_node.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage/coverage_utils.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/share/sweepi_coverage/launch/coverage_follow_path.launch.py
+-- Detecting CXX compiler ABI info - done
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/share/sweepi_coverage/launch/coverage_system.launch.py
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found ament_cmake: 2.5.6 (/opt/ros/jazzy/share/ament_cmake/cmake)
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/share/sweepi_coverage/launch/nav2_bringup.launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/share/sweepi_coverage/config/coverage_follow_path_params.yaml
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/share/sweepi_coverage/config/coverage_params.yaml
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/share/sweepi_coverage/config/nav2_coverage_params.yaml
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/lib/sweepi_coverage/coverage_tracker_node.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/lib/sweepi_coverage/coverage_planner_node.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/lib/sweepi_coverage/coverage_executor_node.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/lib/sweepi_coverage/coverage_follow_path_executor_node.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/lib/sweepi_coverage/coverage_arm_follow_path_executor_node.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/lib/sweepi_coverage/coverage_manager_node.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/share/ament_index/resource_index/package_run_dependencies/sweepi_coverage
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/share/ament_index/resource_index/parent_prefix_path/sweepi_coverage
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/share/sweepi_coverage/environment/ament_prefix_path.sh
+running egg_info
+creating sweepi_robot_manager_interfaces.egg-info
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/share/sweepi_coverage/environment/ament_prefix_path.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/share/sweepi_coverage/environment/path.sh
+writing sweepi_robot_manager_interfaces.egg-info/PKG-INFO
+writing dependency_links to sweepi_robot_manager_interfaces.egg-info/dependency_links.txt
+writing top-level names to sweepi_robot_manager_interfaces.egg-info/top_level.txt
+writing manifest file 'sweepi_robot_manager_interfaces.egg-info/SOURCES.txt'
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/share/sweepi_coverage/environment/path.dsv
+-- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/share/sweepi_coverage/local_setup.bash
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/share/sweepi_coverage/local_setup.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/share/sweepi_coverage/local_setup.zsh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/share/sweepi_coverage/local_setup.dsv
+reading manifest file 'sweepi_robot_manager_interfaces.egg-info/SOURCES.txt'
+writing manifest file 'sweepi_robot_manager_interfaces.egg-info/SOURCES.txt'
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/share/sweepi_coverage/package.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/share/ament_index/resource_index/packages/sweepi_coverage
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/share/sweepi_coverage/cmake/sweepi_coverageConfig.cmake
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/share/sweepi_coverage/cmake/sweepi_coverageConfig-version.cmake
+[  5%] Built target ament_cmake_python_build_sweepi_robot_manager_interfaces_egg
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_coverage/share/sweepi_coverage/package.xml
+-- Override CMake install command with custom implementation using symlinks instead of copying resources
+[  8%] Generating C code for ROS interfaces
+-- Found rclpy: 7.1.11 (/opt/ros/jazzy/share/rclpy/cmake)
+Listing '/home/sweepi/SweePi/install_diagnostic/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage'...
+Compiling '/home/sweepi/SweePi/install_diagnostic/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage/__init__.py'...
+Compiling '/home/sweepi/SweePi/install_diagnostic/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage/coverage_arm_follow_path_executor_node.py'...
+Compiling '/home/sweepi/SweePi/install_diagnostic/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage/coverage_executor_node.py'...
+Compiling '/home/sweepi/SweePi/install_diagnostic/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage/coverage_follow_path_executor_node.py'...
+Compiling '/home/sweepi/SweePi/install_diagnostic/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage/coverage_manager_node.py'...
+Compiling '/home/sweepi/SweePi/install_diagnostic/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage/coverage_planner_node.py'...
+Compiling '/home/sweepi/SweePi/install_diagnostic/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage/coverage_tracker_node.py'...
+Compiling '/home/sweepi/SweePi/install_diagnostic/sweepi_coverage/lib/python3.12/site-packages/sweepi_coverage/coverage_utils.py'...
+Finished <<< sweepi_coverage [9.19s]
+-- Configuring done (2.5s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sweepi/SweePi/build_diagnostic/sweepi_exploration
+[ 11%] Building C object CMakeFiles/sweepi_robot_manager_interfaces__rosidl_generator_c.dir/rosidl_generator_c/sweepi_robot_manager_interfaces/srv/detail/start_task__description.c.o
+Built target ament_cmake_python_symlink_sweepi_exploration
+[ 14%] Building C object CMakeFiles/sweepi_robot_manager_interfaces__rosidl_generator_c.dir/rosidl_generator_c/sweepi_robot_manager_interfaces/srv/detail/start_task__type_support.c.o
+[ 17%] Building C object CMakeFiles/sweepi_robot_manager_interfaces__rosidl_generator_c.dir/rosidl_generator_c/sweepi_robot_manager_interfaces/srv/detail/start_task__functions.c.o
+[ 20%] Linking C shared library libsweepi_robot_manager_interfaces__rosidl_generator_c.so
+[ 20%] Built target sweepi_robot_manager_interfaces__rosidl_generator_c
+running egg_info
+creating sweepi_exploration.egg-info
+[ 22%] Generating Rust code for ROS interfaces
+writing sweepi_exploration.egg-info/PKG-INFO
+writing dependency_links to sweepi_exploration.egg-info/dependency_links.txt
+writing top-level names to sweepi_exploration.egg-info/top_level.txt
+writing manifest file 'sweepi_exploration.egg-info/SOURCES.txt'
+reading manifest file 'sweepi_exploration.egg-info/SOURCES.txt'
+writing manifest file 'sweepi_exploration.egg-info/SOURCES.txt'
+Built target ament_cmake_python_build_sweepi_exploration_egg
+-- Install configuration: ""
+-- Execute custom install script
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_exploration/share/sweepi_exploration/environment/pythonpath.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_exploration/share/sweepi_exploration/environment/pythonpath.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_exploration/lib/python3.12/site-packages/sweepi_exploration-0.2.0-py3.12.egg-info/PKG-INFO
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_exploration/lib/python3.12/site-packages/sweepi_exploration-0.2.0-py3.12.egg-info/SOURCES.txt
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_exploration/lib/python3.12/site-packages/sweepi_exploration-0.2.0-py3.12.egg-info/dependency_links.txt
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_exploration/lib/python3.12/site-packages/sweepi_exploration-0.2.0-py3.12.egg-info/top_level.txt
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_exploration/lib/python3.12/site-packages/sweepi_exploration/__init__.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_exploration/lib/python3.12/site-packages/sweepi_exploration/wavefront_explorer.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_exploration/share/sweepi_exploration/launch/exploration.launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_exploration/lib/sweepi_exploration/wavefront_explorer.py
+[ 22%] Built target sweepi_robot_manager_interfaces__rs
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_exploration/share/sweepi_exploration/config/config
+[ 25%] Generating C type support for eProsima Fast-RTPS
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_exploration/share/sweepi_exploration/config/nav2_exploration_rpi_params.yaml
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_exploration/share/ament_index/resource_index/package_run_dependencies/sweepi_exploration
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_exploration/share/ament_index/resource_index/parent_prefix_path/sweepi_exploration
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_exploration/share/sweepi_exploration/environment/ament_prefix_path.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_exploration/share/sweepi_exploration/environment/ament_prefix_path.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_exploration/share/sweepi_exploration/environment/path.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_exploration/share/sweepi_exploration/environment/path.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_exploration/share/sweepi_exploration/local_setup.bash
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_exploration/share/sweepi_exploration/local_setup.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_exploration/share/sweepi_exploration/local_setup.zsh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_exploration/share/sweepi_exploration/local_setup.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_exploration/share/sweepi_exploration/package.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_exploration/share/ament_index/resource_index/packages/sweepi_exploration
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_exploration/share/sweepi_exploration/cmake/sweepi_explorationConfig.cmake
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_exploration/share/sweepi_exploration/cmake/sweepi_explorationConfig-version.cmake
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_exploration/share/sweepi_exploration/package.xml
+Listing '/home/sweepi/SweePi/install_diagnostic/sweepi_exploration/lib/python3.12/site-packages/sweepi_exploration'...
+Compiling '/home/sweepi/SweePi/install_diagnostic/sweepi_exploration/lib/python3.12/site-packages/sweepi_exploration/__init__.py'...
+Compiling '/home/sweepi/SweePi/install_diagnostic/sweepi_exploration/lib/python3.12/site-packages/sweepi_exploration/wavefront_explorer.py'...
+Finished <<< sweepi_exploration [4.22s]
+[ 28%] Building CXX object CMakeFiles/sweepi_robot_manager_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/sweepi_robot_manager_interfaces/srv/detail/start_task__type_support_c.cpp.o
+[ 31%] Linking CXX shared library libsweepi_robot_manager_interfaces__rosidl_typesupport_fastrtps_c.so
+[ 31%] Built target sweepi_robot_manager_interfaces__rosidl_typesupport_fastrtps_c
+[ 34%] Generating C introspection for ROS interfaces
+[ 10%] Building CXX object CMakeFiles/sllidar_node.dir/sdk/src/arch/linux/net_socket.cpp.o
+[ 37%] Building C object CMakeFiles/sweepi_robot_manager_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/sweepi_robot_manager_interfaces/srv/detail/start_task__type_support.c.o
+[ 40%] Linking C shared library libsweepi_robot_manager_interfaces__rosidl_typesupport_introspection_c.so
+[ 40%] Built target sweepi_robot_manager_interfaces__rosidl_typesupport_introspection_c
+[ 42%] Generating C type support dispatch for ROS interfaces
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_protocol.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:39,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/src/sdkcommon.h:49,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/arch/linux/net_socket.cpp:10:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_cmd.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:40:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/src/arch/linux/arch_linux.h:42,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/src/sdkcommon.h:41:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/arch/linux/net_socket.cpp: In member function ‘virtual u_result rp::arch::net::DGramSocketImpl::sendTo(const rp::net::SocketAddress*, const void*, size_t)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/arch/linux/net_socket.cpp:733:24: warning: comparison of integer expressions of different signedness: ‘int’ and ‘size_t’ {aka ‘long unsigned int’} [-Wsign-compare]
+  733 |             assert(ans == len);
+      |                    ~~~~^~~~~~
+[ 45%] Building CXX object CMakeFiles/sweepi_robot_manager_interfaces__rosidl_typesupport_c.dir/rosidl_typesupport_c/sweepi_robot_manager_interfaces/srv/start_task__type_support.cpp.o
+[ 15%] Building CXX object CMakeFiles/sllidar_node.dir/sdk/src/arch/linux/timer.cpp.o
+[ 48%] Linking CXX shared library libsweepi_robot_manager_interfaces__rosidl_typesupport_c.so
+[ 48%] Built target sweepi_robot_manager_interfaces__rosidl_typesupport_c
+[ 51%] Generating C++ type support for eProsima Fast-RTPS
+[ 54%] Building CXX object CMakeFiles/sweepi_robot_manager_interfaces__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/sweepi_robot_manager_interfaces/srv/detail/dds_fastrtps/start_task__type_support.cpp.o
+[ 20%] Building CXX object CMakeFiles/sllidar_node.dir/sdk/src/dataunpacker/dataunpacker.cpp.o
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_protocol.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:39,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/src/sdkcommon.h:49,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunnpacker_commondef.h:41,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.cpp:39:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_cmd.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:40:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.cpp:40:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h: In member function ‘virtual void sl::internal::LIDARSampleDataListener::onCustomSampleDataDecoded(_u8, _u32, const void*, size_t)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:54:52: warning: unused parameter ‘ansType’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                ~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:54:66: warning: unused parameter ‘customCode’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                             ~~~~~^~~~~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:54:90: warning: unused parameter ‘data’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                                              ~~~~~~~~~~~~^~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:54:103: warning: unused parameter ‘size’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                                                                ~~~~~~~^~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h: In member function ‘virtual void sl::internal::LIDARSampleDataListener::onDecodingError(int, _u8, const void*, size_t)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:56:42: warning: unused parameter ‘errMsg’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                      ~~~~^~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:56:54: warning: unused parameter ‘ansType’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                  ~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:56:75: warning: unused parameter ‘payload’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                               ~~~~~~~~~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:56:91: warning: unused parameter ‘size’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                                                    ~~~~~~~^~~~
+[ 57%] Linking CXX shared library libsweepi_robot_manager_interfaces__rosidl_typesupport_fastrtps_cpp.so
+[ 25%] Building CXX object CMakeFiles/sllidar_node.dir/sdk/src/dataunpacker/unpacker/handler_capsules.cpp.o
+[ 57%] Built target sweepi_robot_manager_interfaces__rosidl_typesupport_fastrtps_cpp
+[ 60%] Generating C++ type support dispatch for ROS interfaces
+[ 62%] Building CXX object CMakeFiles/sweepi_robot_manager_interfaces__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/sweepi_robot_manager_interfaces/srv/start_task__type_support.cpp.o
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_protocol.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:39,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/src/sdkcommon.h:49,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunnpacker_commondef.h:41,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/handler_capsules.cpp:39:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_cmd.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:40:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/handler_capsules.cpp:40:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h: In member function ‘virtual void sl::internal::LIDARSampleDataListener::onCustomSampleDataDecoded(_u8, _u32, const void*, size_t)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:52: warning: unused parameter ‘ansType’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                ~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:66: warning: unused parameter ‘customCode’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                             ~~~~~^~~~~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:90: warning: unused parameter ‘data’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                                              ~~~~~~~~~~~~^~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:103: warning: unused parameter ‘size’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                                                                ~~~~~~~^~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h: In member function ‘virtual void sl::internal::LIDARSampleDataListener::onDecodingError(int, _u8, const void*, size_t)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:42: warning: unused parameter ‘errMsg’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                      ~~~~^~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:54: warning: unused parameter ‘ansType’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                  ~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:75: warning: unused parameter ‘payload’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                               ~~~~~~~~~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:91: warning: unused parameter ‘size’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                                                    ~~~~~~~^~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/handler_capsules.cpp: In member function ‘void sl::internal::unpacker::UnpackerHandler_DenseCapsuleNode::_onScanNodeDenseCapsuleData(rplidar_response_dense_capsule_measurement_nodes_t&, sl::internal::LIDARSampleDataUnpackerInner*)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/handler_capsules.cpp:763:30: warning: type qualifiers ignored on cast result type [-Wignored-qualifiers]
+  763 |             const int dist = static_cast<const int>(_cached_previous_dense_capsuledata.cabins[pos].distance);
+      |                              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[ 30%] Building CXX object CMakeFiles/sllidar_node.dir/sdk/src/dataunpacker/unpacker/handler_hqnode.cpp.o
+[ 65%] Linking CXX shared library libsweepi_robot_manager_interfaces__rosidl_typesupport_cpp.so
+[ 65%] Built target sweepi_robot_manager_interfaces__rosidl_typesupport_cpp
+[ 68%] Generating C++ introspection for ROS interfaces
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_protocol.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:39,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/src/sdkcommon.h:49,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunnpacker_commondef.h:41,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/handler_hqnode.cpp:39:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_cmd.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:40:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+[ 71%] Building CXX object CMakeFiles/sweepi_robot_manager_interfaces__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/sweepi_robot_manager_interfaces/srv/detail/start_task__type_support.cpp.o
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/handler_hqnode.cpp:40:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h: In member function ‘virtual void sl::internal::LIDARSampleDataListener::onCustomSampleDataDecoded(_u8, _u32, const void*, size_t)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:52: warning: unused parameter ‘ansType’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                ~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:66: warning: unused parameter ‘customCode’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                             ~~~~~^~~~~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:90: warning: unused parameter ‘data’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                                              ~~~~~~~~~~~~^~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:103: warning: unused parameter ‘size’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                                                                ~~~~~~~^~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h: In member function ‘virtual void sl::internal::LIDARSampleDataListener::onDecodingError(int, _u8, const void*, size_t)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:42: warning: unused parameter ‘errMsg’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                      ~~~~^~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:54: warning: unused parameter ‘ansType’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                  ~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:75: warning: unused parameter ‘payload’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                               ~~~~~~~~~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:91: warning: unused parameter ‘size’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                                                    ~~~~~~~^~~~
+[ 35%] Building CXX object CMakeFiles/sllidar_node.dir/sdk/src/dataunpacker/unpacker/handler_normalnode.cpp.o
+[ 74%] Linking CXX shared library libsweepi_robot_manager_interfaces__rosidl_typesupport_introspection_cpp.so
+[ 74%] Built target sweepi_robot_manager_interfaces__rosidl_typesupport_introspection_cpp
+[ 74%] Built target sweepi_robot_manager_interfaces
+[ 77%] Generating Python code for ROS interfaces
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_protocol.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:39,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/src/sdkcommon.h:49,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunnpacker_commondef.h:41,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/handler_normalnode.cpp:39:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_cmd.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:40:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/handler_normalnode.cpp:40:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h: In member function ‘virtual void sl::internal::LIDARSampleDataListener::onCustomSampleDataDecoded(_u8, _u32, const void*, size_t)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:52: warning: unused parameter ‘ansType’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                ~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:66: warning: unused parameter ‘customCode’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                             ~~~~~^~~~~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:90: warning: unused parameter ‘data’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                                              ~~~~~~~~~~~~^~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:103: warning: unused parameter ‘size’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                                                                ~~~~~~~^~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h: In member function ‘virtual void sl::internal::LIDARSampleDataListener::onDecodingError(int, _u8, const void*, size_t)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:42: warning: unused parameter ‘errMsg’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                      ~~~~^~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:54: warning: unused parameter ‘ansType’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                  ~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:75: warning: unused parameter ‘payload’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                               ~~~~~~~~~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:91: warning: unused parameter ‘size’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                                                    ~~~~~~~^~~~
+[ 40%] Building CXX object CMakeFiles/sllidar_node.dir/sdk/src/hal/thread.cpp.o
+[ 77%] Built target sweepi_robot_manager_interfaces__py
+[ 80%] Building C object CMakeFiles/sweepi_robot_manager_interfaces__rosidl_generator_py.dir/rosidl_generator_py/sweepi_robot_manager_interfaces/srv/_start_task_s.c.o
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_protocol.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:39,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/src/sdkcommon.h:49,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/hal/thread.cpp:35:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_cmd.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:40:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+[ 82%] Linking C shared library libsweepi_robot_manager_interfaces__rosidl_generator_py.so
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/hal/thread.cpp:43:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/src/arch/linux/thread.hpp: In static member function ‘static rp::hal::Thread rp::hal::Thread::create(thread_proc_t, void*)’:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/src/arch/linux/thread.hpp:52:57: warning: cast between incompatible function types from ‘thread_proc_t’ {aka ‘long unsigned int (*)(void*)’} to ‘void* (*)(void*)’ [-Wcast-function-type]
+   52 |     pthread_create((pthread_t *)&newborn._handle, NULL, (void * (*)(void *))proc, data);
+      |                                                         ^~~~~~~~~~~~~~~~~~~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/src/arch/linux/thread.hpp: In member function ‘u_result rp::hal::Thread::join(long unsigned int)’:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/src/arch/linux/thread.hpp:176:37: warning: unused parameter ‘timeout’ [-Wunused-parameter]
+  176 | u_result Thread::join(unsigned long timeout)
+      |                       ~~~~~~~~~~~~~~^~~~~~~
+[ 82%] Built target sweepi_robot_manager_interfaces__rosidl_generator_py
+[ 85%] Building C object CMakeFiles/sweepi_robot_manager_interfaces_s__rosidl_typesupport_fastrtps_c.dir/rosidl_generator_py/sweepi_robot_manager_interfaces/_sweepi_robot_manager_interfaces_s.ep.rosidl_typesupport_fastrtps_c.c.o
+[ 45%] Building CXX object CMakeFiles/sllidar_node.dir/sdk/src/rplidar_driver.cpp.o
+[ 88%] Linking C shared module rosidl_generator_py/sweepi_robot_manager_interfaces/sweepi_robot_manager_interfaces_s__rosidl_typesupport_fastrtps_c.so
+[ 88%] Built target sweepi_robot_manager_interfaces_s__rosidl_typesupport_fastrtps_c
+[ 91%] Building C object CMakeFiles/sweepi_robot_manager_interfaces_s__rosidl_typesupport_c.dir/rosidl_generator_py/sweepi_robot_manager_interfaces/_sweepi_robot_manager_interfaces_s.ep.rosidl_typesupport_c.c.o
+[ 94%] Linking C shared module rosidl_generator_py/sweepi_robot_manager_interfaces/sweepi_robot_manager_interfaces_s__rosidl_typesupport_c.so
+[ 94%] Built target sweepi_robot_manager_interfaces_s__rosidl_typesupport_c
+[ 97%] Building C object CMakeFiles/sweepi_robot_manager_interfaces_s__rosidl_typesupport_introspection_c.dir/rosidl_generator_py/sweepi_robot_manager_interfaces/_sweepi_robot_manager_interfaces_s.ep.rosidl_typesupport_introspection_c.c.o
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_protocol.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:39,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sdkcommon.h:49,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/rplidar_driver.cpp:33:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_cmd.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:40:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/rplidar_driver.cpp: In member function ‘u_result rp::standalone::rplidar::RPlidarDriver::connect(const char*, _u32, _u32)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/rplidar_driver.cpp:67:77: warning: unused parameter ‘flag’ [-Wunused-parameter]
+   67 |     u_result RPlidarDriver::connect(const char *path, _u32 portOrBaud, _u32 flag)
+      |                                                                        ~~~~~^~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/rplidar_driver.cpp: In member function ‘u_result rp::standalone::rplidar::RPlidarDriver::reset(_u32)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/rplidar_driver.cpp:101:40: warning: unused parameter ‘timeout’ [-Wunused-parameter]
+  101 |     u_result RPlidarDriver::reset(_u32 timeout)
+      |                                   ~~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/rplidar_driver.cpp: In member function ‘u_result rp::standalone::rplidar::RPlidarDriver::getScanDataWithInterval(rplidar_response_measurement_node_t*, size_t&)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/rplidar_driver.cpp:180:91: warning: unused parameter ‘nodebuffer’ [-Wunused-parameter]
+  180 |     u_result RPlidarDriver::getScanDataWithInterval(rplidar_response_measurement_node_t * nodebuffer, size_t & count)
+      |                                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/rplidar_driver.cpp:180:112: warning: unused parameter ‘count’ [-Wunused-parameter]
+  180 |     u_result RPlidarDriver::getScanDataWithInterval(rplidar_response_measurement_node_t * nodebuffer, size_t & count)
+      |                                                                                                       ~~~~~~~~~^~~~~
+[100%] Linking C shared module rosidl_generator_py/sweepi_robot_manager_interfaces/sweepi_robot_manager_interfaces_s__rosidl_typesupport_introspection_c.so
+[100%] Built target sweepi_robot_manager_interfaces_s__rosidl_typesupport_introspection_c
+-- Install configuration: ""
+-- Execute custom install script
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/ament_index/resource_index/rosidl_interfaces/sweepi_robot_manager_interfaces
+[ 50%] Building CXX object CMakeFiles/sllidar_node.dir/sdk/src/sl_async_transceiver.cpp.o
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/srv/StartTask.json
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/include/sweepi_robot_manager_interfaces/sweepi_robot_manager_interfaces/msg/rosidl_generator_c__visibility_control.h
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/include/sweepi_robot_manager_interfaces/sweepi_robot_manager_interfaces/srv/detail/start_task__functions.h
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/include/sweepi_robot_manager_interfaces/sweepi_robot_manager_interfaces/srv/detail/start_task__struct.h
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/include/sweepi_robot_manager_interfaces/sweepi_robot_manager_interfaces/srv/detail/start_task__type_support.h
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/include/sweepi_robot_manager_interfaces/sweepi_robot_manager_interfaces/srv/start_task.h
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/environment/library_path.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/environment/library_path.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/include/sweepi_robot_manager_interfaces/sweepi_robot_manager_interfaces/msg/rosidl_typesupport_fastrtps_c__visibility_control.h
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/include/sweepi_robot_manager_interfaces/sweepi_robot_manager_interfaces/srv/detail/start_task__rosidl_typesupport_fastrtps_c.h
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/include/sweepi_robot_manager_interfaces/sweepi_robot_manager_interfaces/msg/rosidl_typesupport_introspection_c__visibility_control.h
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/include/sweepi_robot_manager_interfaces/sweepi_robot_manager_interfaces/srv/detail/start_task__rosidl_typesupport_introspection_c.h
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/include/sweepi_robot_manager_interfaces/sweepi_robot_manager_interfaces/msg/rosidl_generator_cpp__visibility_control.hpp
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/include/sweepi_robot_manager_interfaces/sweepi_robot_manager_interfaces/srv/detail/start_task__builder.hpp
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/include/sweepi_robot_manager_interfaces/sweepi_robot_manager_interfaces/srv/detail/start_task__struct.hpp
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/include/sweepi_robot_manager_interfaces/sweepi_robot_manager_interfaces/srv/detail/start_task__traits.hpp
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/include/sweepi_robot_manager_interfaces/sweepi_robot_manager_interfaces/srv/detail/start_task__type_support.hpp
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/include/sweepi_robot_manager_interfaces/sweepi_robot_manager_interfaces/srv/start_task.hpp
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/include/sweepi_robot_manager_interfaces/sweepi_robot_manager_interfaces/msg/rosidl_typesupport_fastrtps_cpp__visibility_control.h
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/include/sweepi_robot_manager_interfaces/sweepi_robot_manager_interfaces/srv/detail/start_task__rosidl_typesupport_fastrtps_cpp.hpp
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/include/sweepi_robot_manager_interfaces/sweepi_robot_manager_interfaces/srv/detail/start_task__rosidl_typesupport_introspection_cpp.hpp
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/environment/pythonpath.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/environment/pythonpath.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/python3.12/site-packages/sweepi_robot_manager_interfaces-0.1.0-py3.12.egg-info/PKG-INFO
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/python3.12/site-packages/sweepi_robot_manager_interfaces-0.1.0-py3.12.egg-info/SOURCES.txt
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/python3.12/site-packages/sweepi_robot_manager_interfaces-0.1.0-py3.12.egg-info/dependency_links.txt
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/python3.12/site-packages/sweepi_robot_manager_interfaces-0.1.0-py3.12.egg-info/top_level.txt
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/python3.12/site-packages/sweepi_robot_manager_interfaces/__init__.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/python3.12/site-packages/sweepi_robot_manager_interfaces/_sweepi_robot_manager_interfaces_s.ep.rosidl_typesupport_c.c
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/python3.12/site-packages/sweepi_robot_manager_interfaces/_sweepi_robot_manager_interfaces_s.ep.rosidl_typesupport_fastrtps_c.c
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/python3.12/site-packages/sweepi_robot_manager_interfaces/_sweepi_robot_manager_interfaces_s.ep.rosidl_typesupport_introspection_c.c
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/python3.12/site-packages/sweepi_robot_manager_interfaces/srv/__init__.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/python3.12/site-packages/sweepi_robot_manager_interfaces/srv/_start_task.py
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_protocol.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:39,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sdkcommon.h:49,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_async_transceiver.cpp:35:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_cmd.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:40:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/python3.12/site-packages/sweepi_robot_manager_interfaces/srv/_start_task_s.c
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/python3.12/site-packages/sweepi_robot_manager_interfaces/sweepi_robot_manager_interfaces_s__rosidl_typesupport_c.so
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/python3.12/site-packages/sweepi_robot_manager_interfaces/sweepi_robot_manager_interfaces_s__rosidl_typesupport_fastrtps_c.so
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/python3.12/site-packages/sweepi_robot_manager_interfaces/sweepi_robot_manager_interfaces_s__rosidl_typesupport_introspection_c.so
+-- Up-to-date symlink: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/python3.12/site-packages/sweepi_robot_manager_interfaces/sweepi_robot_manager_interfaces_s__rosidl_typesupport_fastrtps_c.so
+-- Up-to-date symlink: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/python3.12/site-packages/sweepi_robot_manager_interfaces/sweepi_robot_manager_interfaces_s__rosidl_typesupport_introspection_c.so
+-- Up-to-date symlink: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/python3.12/site-packages/sweepi_robot_manager_interfaces/sweepi_robot_manager_interfaces_s__rosidl_typesupport_c.so
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/ament_index/resource_index/rust_packages/sweepi_robot_manager_interfaces
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/rust/Cargo.toml
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_async_transceiver.cpp:44:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_async_transceiver.h: In member function ‘virtual void sl::internal::IAsyncProtocolCodec::onChannelError(u_result)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_async_transceiver.h:90:48: warning: unused parameter ‘errCode’ [-Wunused-parameter]
+   90 |         virtual void   onChannelError(u_result errCode) {}
+      |                                       ~~~~~~~~~^~~~~~~
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/rust/build.rs
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/rust/src/lib.rs
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/rust/src/srv.rs
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/rust/src/srv/rmw.rs
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/srv/StartTask.idl
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/srv/StartTask.srv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/ament_index/resource_index/package_run_dependencies/sweepi_robot_manager_interfaces
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/ament_index/resource_index/parent_prefix_path/sweepi_robot_manager_interfaces
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/environment/ament_prefix_path.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/environment/ament_prefix_path.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/environment/path.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/environment/path.dsv
+[ 55%] Building CXX object CMakeFiles/sllidar_node.dir/sdk/src/sl_crc.cpp.o
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/local_setup.bash
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:41,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_crc.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_crc.cpp:33:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/local_setup.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/local_setup.zsh
+[ 60%] Building CXX object CMakeFiles/sllidar_node.dir/sdk/src/sl_lidar_driver.cpp.o
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/local_setup.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/package.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/ament_index/resource_index/packages/sweepi_robot_manager_interfaces
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/cmake/rosidl_cmake-extras.cmake
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/cmake/ament_cmake_export_dependencies-extras.cmake
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/cmake/ament_cmake_export_include_directories-extras.cmake
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/cmake/ament_cmake_export_libraries-extras.cmake
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/cmake/ament_cmake_export_targets-extras.cmake
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/cmake/rosidl_cmake_export_typesupport_targets-extras.cmake
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/cmake/rosidl_cmake_export_typesupport_libraries-extras.cmake
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/cmake/rosidl_cmake_aggregate_target-extras.cmake
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/cmake/sweepi_robot_manager_interfacesConfig.cmake
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/cmake/sweepi_robot_manager_interfacesConfig-version.cmake
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/package.xml
+-- Installing: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/libsweepi_robot_manager_interfaces__rosidl_generator_c.so
+-- Set non-toolchain portion of runtime path of "/home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/libsweepi_robot_manager_interfaces__rosidl_generator_c.so" to ""
+-- Installing: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/libsweepi_robot_manager_interfaces__rosidl_typesupport_fastrtps_c.so
+-- Set non-toolchain portion of runtime path of "/home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/libsweepi_robot_manager_interfaces__rosidl_typesupport_fastrtps_c.so" to ""
+-- Installing: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/libsweepi_robot_manager_interfaces__rosidl_typesupport_introspection_c.so
+-- Set non-toolchain portion of runtime path of "/home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/libsweepi_robot_manager_interfaces__rosidl_typesupport_introspection_c.so" to ""
+-- Installing: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/libsweepi_robot_manager_interfaces__rosidl_typesupport_c.so
+-- Set non-toolchain portion of runtime path of "/home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/libsweepi_robot_manager_interfaces__rosidl_typesupport_c.so" to ""
+-- Installing: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/libsweepi_robot_manager_interfaces__rosidl_typesupport_fastrtps_cpp.so
+-- Set non-toolchain portion of runtime path of "/home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/libsweepi_robot_manager_interfaces__rosidl_typesupport_fastrtps_cpp.so" to ""
+-- Installing: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/libsweepi_robot_manager_interfaces__rosidl_typesupport_introspection_cpp.so
+-- Set non-toolchain portion of runtime path of "/home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/libsweepi_robot_manager_interfaces__rosidl_typesupport_introspection_cpp.so" to ""
+-- Installing: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/libsweepi_robot_manager_interfaces__rosidl_typesupport_cpp.so
+-- Set non-toolchain portion of runtime path of "/home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/libsweepi_robot_manager_interfaces__rosidl_typesupport_cpp.so" to ""
+Listing '/home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/python3.12/site-packages/sweepi_robot_manager_interfaces'...
+Compiling '/home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/python3.12/site-packages/sweepi_robot_manager_interfaces/__init__.py'...
+Listing '/home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/python3.12/site-packages/sweepi_robot_manager_interfaces/srv'...
+Compiling '/home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/python3.12/site-packages/sweepi_robot_manager_interfaces/srv/__init__.py'...
+Compiling '/home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/python3.12/site-packages/sweepi_robot_manager_interfaces/srv/_start_task.py'...
+-- Installing: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/libsweepi_robot_manager_interfaces__rosidl_generator_py.so
+-- Set non-toolchain portion of runtime path of "/home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/libsweepi_robot_manager_interfaces__rosidl_generator_py.so" to ""
+-- Installing: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/cmake/export_sweepi_robot_manager_interfaces__rosidl_generator_cExport.cmake
+-- Installing: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/cmake/export_sweepi_robot_manager_interfaces__rosidl_generator_cExport-noconfig.cmake
+-- Installing: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/cmake/export_sweepi_robot_manager_interfaces__rosidl_typesupport_fastrtps_cExport.cmake
+-- Installing: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/cmake/export_sweepi_robot_manager_interfaces__rosidl_typesupport_fastrtps_cExport-noconfig.cmake
+-- Installing: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/cmake/sweepi_robot_manager_interfaces__rosidl_typesupport_introspection_cExport.cmake
+-- Installing: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/cmake/sweepi_robot_manager_interfaces__rosidl_typesupport_introspection_cExport-noconfig.cmake
+-- Installing: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/cmake/sweepi_robot_manager_interfaces__rosidl_typesupport_cExport.cmake
+-- Installing: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/cmake/sweepi_robot_manager_interfaces__rosidl_typesupport_cExport-noconfig.cmake
+-- Installing: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/cmake/export_sweepi_robot_manager_interfaces__rosidl_generator_cppExport.cmake
+-- Installing: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/cmake/export_sweepi_robot_manager_interfaces__rosidl_typesupport_fastrtps_cppExport.cmake
+-- Installing: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/cmake/export_sweepi_robot_manager_interfaces__rosidl_typesupport_fastrtps_cppExport-noconfig.cmake
+-- Installing: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/cmake/sweepi_robot_manager_interfaces__rosidl_typesupport_introspection_cppExport.cmake
+-- Installing: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/cmake/sweepi_robot_manager_interfaces__rosidl_typesupport_introspection_cppExport-noconfig.cmake
+-- Installing: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/cmake/sweepi_robot_manager_interfaces__rosidl_typesupport_cppExport.cmake
+-- Installing: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/cmake/sweepi_robot_manager_interfaces__rosidl_typesupport_cppExport-noconfig.cmake
+-- Installing: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/cmake/export_sweepi_robot_manager_interfaces__rosidl_generator_pyExport.cmake
+-- Installing: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/share/sweepi_robot_manager_interfaces/cmake/export_sweepi_robot_manager_interfaces__rosidl_generator_pyExport-noconfig.cmake
+Finished <<< sweepi_robot_manager_interfaces [26.2s]
+Starting >>> sweepi_api_bridge
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_protocol.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:39,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sdkcommon.h:49,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:33:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_cmd.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:40:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:50:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h: In member function ‘virtual void sl::internal::LIDARSampleDataListener::onCustomSampleDataDecoded(_u8, _u32, const void*, size_t)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:54:52: warning: unused parameter ‘ansType’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                ~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:54:66: warning: unused parameter ‘customCode’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                             ~~~~~^~~~~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:54:90: warning: unused parameter ‘data’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                                              ~~~~~~~~~~~~^~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:54:103: warning: unused parameter ‘size’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                                                                ~~~~~~~^~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h: In member function ‘virtual void sl::internal::LIDARSampleDataListener::onDecodingError(int, _u8, const void*, size_t)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:56:42: warning: unused parameter ‘errMsg’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                      ~~~~^~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:56:54: warning: unused parameter ‘ansType’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                  ~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:56:75: warning: unused parameter ‘payload’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                               ~~~~~~~~~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:56:91: warning: unused parameter ‘size’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                                                    ~~~~~~~^~~~
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:51:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_async_transceiver.h: In member function ‘virtual void sl::internal::IAsyncProtocolCodec::onChannelError(u_result)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_async_transceiver.h:90:48: warning: unused parameter ‘errCode’ [-Wunused-parameter]
+   90 |         virtual void   onChannelError(u_result errCode) {}
+      |                                       ~~~~~~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp: In member function ‘virtual sl_result sl::SlamtecLidarDriver::reset(sl_u32)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:511:32: warning: unused parameter ‘timeoutInMs’ [-Wunused-parameter]
+  511 |         sl_result reset(sl_u32 timeoutInMs = DEFAULT_TIMEOUT)
+      |                         ~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp: In member function ‘virtual sl_result sl::SlamtecLidarDriver::startScan(bool, bool, sl_u32, sl::LidarScanMode*)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:586:69: warning: unused parameter ‘options’ [-Wunused-parameter]
+  586 |         sl_result startScan(bool force, bool useTypicalScan, sl_u32 options = 0, LidarScanMode* outUsedScanMode = nullptr)
+      |                                                              ~~~~~~~^~~~~~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp: In member function ‘virtual sl_result sl::SlamtecLidarDriver::stop(sl_u32)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:763:31: warning: unused parameter ‘timeout’ [-Wunused-parameter]
+  763 |         sl_result stop(sl_u32 timeout = DEFAULT_TIMEOUT)
+      |                        ~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp: In member function ‘virtual sl_result sl::SlamtecLidarDriver::getFrequency(const sl::LidarScanMode&, const sl_lidar_response_measurement_node_hq_t*, size_t, float&)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:880:110: warning: unused parameter ‘nodes’ [-Wunused-parameter]
+  880 |         sl_result getFrequency(const LidarScanMode& scanMode, const sl_lidar_response_measurement_node_hq_t* nodes, size_t count, float& frequency)
+      |                                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp: In member function ‘virtual sl_result sl::SlamtecLidarDriver::getMotorInfo(sl::LidarMotorInfo&, sl_u32)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:1023:66: warning: unused parameter ‘timeoutInMs’ [-Wunused-parameter]
+ 1023 |         sl_result getMotorInfo(LidarMotorInfo &motorInfo, sl_u32 timeoutInMs)
+      |                                                           ~~~~~~~^~~~~~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp: In member function ‘u_result sl::SlamtecLidarDriver::getScanModeCount(sl_u16&, sl_u32)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:1199:61: warning: unused parameter ‘timeoutInMs’ [-Wunused-parameter]
+ 1199 |         u_result getScanModeCount(sl_u16& modeCount, sl_u32 timeoutInMs = DEFAULT_TIMEOUT)
+      |                                                      ~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp: In instantiation of ‘void sl::RawSampleNodeHolder<T>::pushNode(_u64, const T*) [with T = sl_lidar_response_measurement_node_hq_t; _u64 = long unsigned int]’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:1648:42:   required from here
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:202:28: warning: unused parameter ‘timestamp_uS’ [-Wunused-parameter]
+  202 |         void pushNode(_u64 timestamp_uS, const T* node)
+      |                       ~~~~~^~~~~~~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp: At global scope:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:83:17: warning: ‘void sl::convert(const sl_lidar_response_measurement_node_hq_t&, sl_lidar_response_measurement_node_t&)’ defined but not used [-Wunused-function]
+   83 |     static void convert(const sl_lidar_response_measurement_node_hq_t& from, sl_lidar_response_measurement_node_t& to)
+      |                 ^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:75:17: warning: ‘void sl::convert(const sl_lidar_response_measurement_node_t&, sl_lidar_response_measurement_node_hq_t&)’ defined but not used [-Wunused-function]
+   75 |     static void convert(const sl_lidar_response_measurement_node_t& from, sl_lidar_response_measurement_node_hq_t& to)
+      |                 ^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:70:17: warning: ‘void sl::printDeprecationWarn(const char*, const char*)’ defined but not used [-Wunused-function]
+   70 |     static void printDeprecationWarn(const char* fn, const char* replacement)
+      |                 ^~~~~~~~~~~~~~~~~~~~
+[ 65%] Building CXX object CMakeFiles/sllidar_node.dir/sdk/src/sl_lidarprotocol_codec.cpp.o
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_protocol.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:39,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sdkcommon.h:49,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidarprotocol_codec.cpp:35:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_cmd.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:40:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidarprotocol_codec.cpp:49:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_async_transceiver.h: In member function ‘virtual void sl::internal::IAsyncProtocolCodec::onChannelError(u_result)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_async_transceiver.h:90:48: warning: unused parameter ‘errCode’ [-Wunused-parameter]
+   90 |         virtual void   onChannelError(u_result errCode) {}
+      |                                       ~~~~~~~~~^~~~~~~
+[ 70%] Building CXX object CMakeFiles/sllidar_node.dir/sdk/src/sl_serial_channel.cpp.o
+running develop
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:41,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_driver.h:54,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_serial_channel.cpp:33:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+[ 75%] Building CXX object CMakeFiles/sllidar_node.dir/sdk/src/sl_tcp_channel.cpp.o
+running egg_info
+creating sweepi_api_bridge.egg-info
+writing sweepi_api_bridge.egg-info/PKG-INFO
+writing dependency_links to sweepi_api_bridge.egg-info/dependency_links.txt
+writing entry points to sweepi_api_bridge.egg-info/entry_points.txt
+writing requirements to sweepi_api_bridge.egg-info/requires.txt
+writing top-level names to sweepi_api_bridge.egg-info/top_level.txt
+writing manifest file 'sweepi_api_bridge.egg-info/SOURCES.txt'
+reading manifest file 'sweepi_api_bridge.egg-info/SOURCES.txt'
+writing manifest file 'sweepi_api_bridge.egg-info/SOURCES.txt'
+running build_ext
+Creating /home/sweepi/SweePi/install_diagnostic/sweepi_api_bridge/lib/python3.12/site-packages/sweepi-api-bridge.egg-link (link to .)
+Installing api_bridge_node script to /home/sweepi/SweePi/install_diagnostic/sweepi_api_bridge/lib/sweepi_api_bridge
+
+Installed /home/sweepi/SweePi/build_diagnostic/sweepi_api_bridge
+running symlink_data
+creating /home/sweepi/SweePi/install_diagnostic/sweepi_api_bridge/share/ament_index
+creating /home/sweepi/SweePi/install_diagnostic/sweepi_api_bridge/share/ament_index/resource_index
+creating /home/sweepi/SweePi/install_diagnostic/sweepi_api_bridge/share/ament_index/resource_index/packages
+symbolically linking /home/sweepi/SweePi/build_diagnostic/sweepi_api_bridge/resource/sweepi_api_bridge -> /home/sweepi/SweePi/install_diagnostic/sweepi_api_bridge/share/ament_index/resource_index/packages
+symbolically linking /home/sweepi/SweePi/build_diagnostic/sweepi_api_bridge/package.xml -> /home/sweepi/SweePi/install_diagnostic/sweepi_api_bridge/share/sweepi_api_bridge
+creating /home/sweepi/SweePi/install_diagnostic/sweepi_api_bridge/share/sweepi_api_bridge/launch
+symbolically linking /home/sweepi/SweePi/build_diagnostic/sweepi_api_bridge/launch/api_bridge.launch.py -> /home/sweepi/SweePi/install_diagnostic/sweepi_api_bridge/share/sweepi_api_bridge/launch
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:41,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_driver.h:54,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_tcp_channel.cpp:33:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_tcp_channel.cpp: In member function ‘void sl::TcpChannel::setStatus(_u32)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_tcp_channel.cpp:109:29: warning: unused parameter ‘flag’ [-Wunused-parameter]
+  109 |         void setStatus(_u32 flag){}
+      |                        ~~~~~^~~~
+Finished <<< sweepi_api_bridge [3.09s]
+[ 80%] Building CXX object CMakeFiles/sllidar_node.dir/sdk/src/sl_udp_channel.cpp.o
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:41,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_driver.h:54,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_udp_channel.cpp:33:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_udp_channel.cpp: In member function ‘void sl::UdpChannel::setStatus(_u32)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_udp_channel.cpp:112:29: warning: unused parameter ‘flag’ [-Wunused-parameter]
+  112 |         void setStatus(_u32 flag){}
+      |                        ~~~~~^~~~
+[ 85%] Building CXX object CMakeFiles/sllidar_node.dir/sdk/src/arch/linux/net_serial.cpp.o
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp: In member function ‘bool rp::arch::net::raw_serial::open(const char*, uint32_t, uint32_t)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp:97:74: warning: unused parameter ‘flags’ [-Wunused-parameter]
+   97 | bool raw_serial::open(const char * portname, uint32_t baudrate, uint32_t flags)
+      |                                                                 ~~~~~~~~~^~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp: In member function ‘virtual void rp::arch::net::raw_serial::flush(_u32)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp:281:30: warning: unused parameter ‘flags’ [-Wunused-parameter]
+  281 | void raw_serial::flush( _u32 flags)
+      |                         ~~~~~^~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp: In member function ‘virtual int rp::arch::net::raw_serial::waitforsent(_u32, size_t*)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp:286:34: warning: unused parameter ‘timeout’ [-Wunused-parameter]
+  286 | int raw_serial::waitforsent(_u32 timeout, size_t * returned_size)
+      |                             ~~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp: In member function ‘virtual int rp::arch::net::raw_serial::waitforrecv(_u32, size_t*)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp:292:34: warning: unused parameter ‘timeout’ [-Wunused-parameter]
+  292 | int raw_serial::waitforrecv(_u32 timeout, size_t * returned_size)
+      |                             ~~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp: In member function ‘virtual void rp::arch::net::raw_serial::cancelOperation()’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp:427:5: warning: value computed is not used [-Wunused-value]
+  427 |     (int)::write(_selfpipe[1], "x", 1);
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[ 90%] Linking CXX executable sllidar_node
+[ 90%] Built target sllidar_node
+[ 95%] Building CXX object CMakeFiles/sllidar_client.dir/src/sllidar_client.cpp.o
+[100%] Linking CXX executable sllidar_client
+[100%] Built target sllidar_client
+-- Install configuration: ""
+-- Execute custom install script
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/launch/sllidar_a1_launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/launch/sllidar_a2m12_launch .py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/launch/sllidar_a2m7_launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/launch/sllidar_a2m8_launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/launch/sllidar_a3_launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/launch/sllidar_c1_launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/launch/sllidar_s1_launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/launch/sllidar_s1_tcp_launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/launch/sllidar_s2_launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/launch/sllidar_s2e_launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/launch/sllidar_s3_launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/launch/sllidar_t1_launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/launch/view_sllidar_a1_launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/launch/view_sllidar_a2m12_launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/launch/view_sllidar_a2m7_launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/launch/view_sllidar_a2m8_launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/launch/view_sllidar_a3_launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/launch/view_sllidar_c1_launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/launch/view_sllidar_s1_launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/launch/view_sllidar_s1_tcp_launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/launch/view_sllidar_s2_launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/launch/view_sllidar_s2e_launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/launch/view_sllidar_s3_launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/launch/view_sllidar_t1_launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/rviz/sllidar_ros2.rviz
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/lib/sllidar_ros2/sllidar_node
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/lib/sllidar_ros2/sllidar_client
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/ament_index/resource_index/package_run_dependencies/sllidar_ros2
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/ament_index/resource_index/parent_prefix_path/sllidar_ros2
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/environment/ament_prefix_path.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/environment/ament_prefix_path.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/environment/path.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/environment/path.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/local_setup.bash
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/local_setup.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/local_setup.zsh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/local_setup.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/package.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/ament_index/resource_index/packages/sllidar_ros2
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/cmake/ament_cmake_export_dependencies-extras.cmake
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/cmake/ament_cmake_export_include_directories-extras.cmake
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/cmake/sllidar_ros2Config.cmake
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/cmake/sllidar_ros2Config-version.cmake
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/share/sllidar_ros2/package.xml
+--- stderr: sllidar_ros2
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:41,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_driver.h:54,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/src/sllidar_node.cpp:38:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_protocol.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:39,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/src/sdkcommon.h:49,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/arch/linux/net_socket.cpp:10:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_cmd.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:40:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/src/arch/linux/arch_linux.h:42,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/src/sdkcommon.h:41:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/arch/linux/net_socket.cpp: In member function ‘virtual u_result rp::arch::net::DGramSocketImpl::sendTo(const rp::net::SocketAddress*, const void*, size_t)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/arch/linux/net_socket.cpp:733:24: warning: comparison of integer expressions of different signedness: ‘int’ and ‘size_t’ {aka ‘long unsigned int’} [-Wsign-compare]
+  733 |             assert(ans == len);
+      |                    ~~~~^~~~~~
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_protocol.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:39,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/src/sdkcommon.h:49,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunnpacker_commondef.h:41,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.cpp:39:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_cmd.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:40:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.cpp:40:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h: In member function ‘virtual void sl::internal::LIDARSampleDataListener::onCustomSampleDataDecoded(_u8, _u32, const void*, size_t)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:54:52: warning: unused parameter ‘ansType’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                ~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:54:66: warning: unused parameter ‘customCode’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                             ~~~~~^~~~~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:54:90: warning: unused parameter ‘data’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                                              ~~~~~~~~~~~~^~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:54:103: warning: unused parameter ‘size’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                                                                ~~~~~~~^~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h: In member function ‘virtual void sl::internal::LIDARSampleDataListener::onDecodingError(int, _u8, const void*, size_t)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:56:42: warning: unused parameter ‘errMsg’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                      ~~~~^~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:56:54: warning: unused parameter ‘ansType’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                  ~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:56:75: warning: unused parameter ‘payload’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                               ~~~~~~~~~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:56:91: warning: unused parameter ‘size’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                                                    ~~~~~~~^~~~
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_protocol.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:39,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/src/sdkcommon.h:49,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunnpacker_commondef.h:41,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/handler_capsules.cpp:39:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_cmd.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:40:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/handler_capsules.cpp:40:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h: In member function ‘virtual void sl::internal::LIDARSampleDataListener::onCustomSampleDataDecoded(_u8, _u32, const void*, size_t)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:52: warning: unused parameter ‘ansType’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                ~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:66: warning: unused parameter ‘customCode’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                             ~~~~~^~~~~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:90: warning: unused parameter ‘data’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                                              ~~~~~~~~~~~~^~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:103: warning: unused parameter ‘size’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                                                                ~~~~~~~^~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h: In member function ‘virtual void sl::internal::LIDARSampleDataListener::onDecodingError(int, _u8, const void*, size_t)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:42: warning: unused parameter ‘errMsg’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                      ~~~~^~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:54: warning: unused parameter ‘ansType’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                  ~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:75: warning: unused parameter ‘payload’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                               ~~~~~~~~~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:91: warning: unused parameter ‘size’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                                                    ~~~~~~~^~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/handler_capsules.cpp: In member function ‘void sl::internal::unpacker::UnpackerHandler_DenseCapsuleNode::_onScanNodeDenseCapsuleData(rplidar_response_dense_capsule_measurement_nodes_t&, sl::internal::LIDARSampleDataUnpackerInner*)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/handler_capsules.cpp:763:30: warning: type qualifiers ignored on cast result type [-Wignored-qualifiers]
+  763 |             const int dist = static_cast<const int>(_cached_previous_dense_capsuledata.cabins[pos].distance);
+      |                              ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_protocol.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:39,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/src/sdkcommon.h:49,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunnpacker_commondef.h:41,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/handler_hqnode.cpp:39:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_cmd.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:40:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/handler_hqnode.cpp:40:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h: In member function ‘virtual void sl::internal::LIDARSampleDataListener::onCustomSampleDataDecoded(_u8, _u32, const void*, size_t)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:52: warning: unused parameter ‘ansType’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                ~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:66: warning: unused parameter ‘customCode’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                             ~~~~~^~~~~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:90: warning: unused parameter ‘data’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                                              ~~~~~~~~~~~~^~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:103: warning: unused parameter ‘size’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                                                                ~~~~~~~^~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h: In member function ‘virtual void sl::internal::LIDARSampleDataListener::onDecodingError(int, _u8, const void*, size_t)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:42: warning: unused parameter ‘errMsg’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                      ~~~~^~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:54: warning: unused parameter ‘ansType’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                  ~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:75: warning: unused parameter ‘payload’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                               ~~~~~~~~~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:91: warning: unused parameter ‘size’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                                                    ~~~~~~~^~~~
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_protocol.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:39,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/src/sdkcommon.h:49,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunnpacker_commondef.h:41,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/handler_normalnode.cpp:39:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_cmd.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:40:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/handler_normalnode.cpp:40:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h: In member function ‘virtual void sl::internal::LIDARSampleDataListener::onCustomSampleDataDecoded(_u8, _u32, const void*, size_t)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:52: warning: unused parameter ‘ansType’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                ~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:66: warning: unused parameter ‘customCode’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                             ~~~~~^~~~~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:90: warning: unused parameter ‘data’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                                              ~~~~~~~~~~~~^~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:54:103: warning: unused parameter ‘size’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                                                                ~~~~~~~^~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h: In member function ‘virtual void sl::internal::LIDARSampleDataListener::onDecodingError(int, _u8, const void*, size_t)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:42: warning: unused parameter ‘errMsg’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                      ~~~~^~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:54: warning: unused parameter ‘ansType’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                  ~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:75: warning: unused parameter ‘payload’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                               ~~~~~~~~~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/unpacker/../dataunpacker.h:56:91: warning: unused parameter ‘size’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                                                    ~~~~~~~^~~~
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_protocol.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:39,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/src/sdkcommon.h:49,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/hal/thread.cpp:35:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_cmd.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:40:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/hal/thread.cpp:43:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/src/arch/linux/thread.hpp: In static member function ‘static rp::hal::Thread rp::hal::Thread::create(thread_proc_t, void*)’:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/src/arch/linux/thread.hpp:52:57: warning: cast between incompatible function types from ‘thread_proc_t’ {aka ‘long unsigned int (*)(void*)’} to ‘void* (*)(void*)’ [-Wcast-function-type]
+   52 |     pthread_create((pthread_t *)&newborn._handle, NULL, (void * (*)(void *))proc, data);
+      |                                                         ^~~~~~~~~~~~~~~~~~~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/src/arch/linux/thread.hpp: In member function ‘u_result rp::hal::Thread::join(long unsigned int)’:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/src/arch/linux/thread.hpp:176:37: warning: unused parameter ‘timeout’ [-Wunused-parameter]
+  176 | u_result Thread::join(unsigned long timeout)
+      |                       ~~~~~~~~~~~~~~^~~~~~~
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_protocol.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:39,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sdkcommon.h:49,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/rplidar_driver.cpp:33:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_cmd.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:40:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/rplidar_driver.cpp: In member function ‘u_result rp::standalone::rplidar::RPlidarDriver::connect(const char*, _u32, _u32)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/rplidar_driver.cpp:67:77: warning: unused parameter ‘flag’ [-Wunused-parameter]
+   67 |     u_result RPlidarDriver::connect(const char *path, _u32 portOrBaud, _u32 flag)
+      |                                                                        ~~~~~^~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/rplidar_driver.cpp: In member function ‘u_result rp::standalone::rplidar::RPlidarDriver::reset(_u32)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/rplidar_driver.cpp:101:40: warning: unused parameter ‘timeout’ [-Wunused-parameter]
+  101 |     u_result RPlidarDriver::reset(_u32 timeout)
+      |                                   ~~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/rplidar_driver.cpp: In member function ‘u_result rp::standalone::rplidar::RPlidarDriver::getScanDataWithInterval(rplidar_response_measurement_node_t*, size_t&)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/rplidar_driver.cpp:180:91: warning: unused parameter ‘nodebuffer’ [-Wunused-parameter]
+  180 |     u_result RPlidarDriver::getScanDataWithInterval(rplidar_response_measurement_node_t * nodebuffer, size_t & count)
+      |                                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/rplidar_driver.cpp:180:112: warning: unused parameter ‘count’ [-Wunused-parameter]
+  180 |     u_result RPlidarDriver::getScanDataWithInterval(rplidar_response_measurement_node_t * nodebuffer, size_t & count)
+      |                                                                                                       ~~~~~~~~~^~~~~
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_protocol.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:39,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sdkcommon.h:49,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_async_transceiver.cpp:35:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_cmd.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:40:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_async_transceiver.cpp:44:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_async_transceiver.h: In member function ‘virtual void sl::internal::IAsyncProtocolCodec::onChannelError(u_result)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_async_transceiver.h:90:48: warning: unused parameter ‘errCode’ [-Wunused-parameter]
+   90 |         virtual void   onChannelError(u_result errCode) {}
+      |                                       ~~~~~~~~~^~~~~~~
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:41,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_crc.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_crc.cpp:33:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_protocol.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:39,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sdkcommon.h:49,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:33:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_cmd.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:40:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:50:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h: In member function ‘virtual void sl::internal::LIDARSampleDataListener::onCustomSampleDataDecoded(_u8, _u32, const void*, size_t)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:54:52: warning: unused parameter ‘ansType’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                ~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:54:66: warning: unused parameter ‘customCode’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                             ~~~~~^~~~~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:54:90: warning: unused parameter ‘data’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                                              ~~~~~~~~~~~~^~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:54:103: warning: unused parameter ‘size’ [-Wunused-parameter]
+   54 |         virtual void onCustomSampleDataDecoded(_u8 ansType, _u32 customCode, const void* data, size_t size) {}
+      |                                                                                                ~~~~~~~^~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h: In member function ‘virtual void sl::internal::LIDARSampleDataListener::onDecodingError(int, _u8, const void*, size_t)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:56:42: warning: unused parameter ‘errMsg’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                      ~~~~^~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:56:54: warning: unused parameter ‘ansType’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                  ~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:56:75: warning: unused parameter ‘payload’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                               ~~~~~~~~~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/dataunpacker/dataunpacker.h:56:91: warning: unused parameter ‘size’ [-Wunused-parameter]
+   56 |         virtual void onDecodingError(int errMsg, _u8 ansType, const void* payload, size_t size) {}
+      |                                                                                    ~~~~~~~^~~~
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:51:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_async_transceiver.h: In member function ‘virtual void sl::internal::IAsyncProtocolCodec::onChannelError(u_result)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_async_transceiver.h:90:48: warning: unused parameter ‘errCode’ [-Wunused-parameter]
+   90 |         virtual void   onChannelError(u_result errCode) {}
+      |                                       ~~~~~~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp: In member function ‘virtual sl_result sl::SlamtecLidarDriver::reset(sl_u32)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:511:32: warning: unused parameter ‘timeoutInMs’ [-Wunused-parameter]
+  511 |         sl_result reset(sl_u32 timeoutInMs = DEFAULT_TIMEOUT)
+      |                         ~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp: In member function ‘virtual sl_result sl::SlamtecLidarDriver::startScan(bool, bool, sl_u32, sl::LidarScanMode*)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:586:69: warning: unused parameter ‘options’ [-Wunused-parameter]
+  586 |         sl_result startScan(bool force, bool useTypicalScan, sl_u32 options = 0, LidarScanMode* outUsedScanMode = nullptr)
+      |                                                              ~~~~~~~^~~~~~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp: In member function ‘virtual sl_result sl::SlamtecLidarDriver::stop(sl_u32)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:763:31: warning: unused parameter ‘timeout’ [-Wunused-parameter]
+  763 |         sl_result stop(sl_u32 timeout = DEFAULT_TIMEOUT)
+      |                        ~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp: In member function ‘virtual sl_result sl::SlamtecLidarDriver::getFrequency(const sl::LidarScanMode&, const sl_lidar_response_measurement_node_hq_t*, size_t, float&)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:880:110: warning: unused parameter ‘nodes’ [-Wunused-parameter]
+  880 |         sl_result getFrequency(const LidarScanMode& scanMode, const sl_lidar_response_measurement_node_hq_t* nodes, size_t count, float& frequency)
+      |                                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp: In member function ‘virtual sl_result sl::SlamtecLidarDriver::getMotorInfo(sl::LidarMotorInfo&, sl_u32)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:1023:66: warning: unused parameter ‘timeoutInMs’ [-Wunused-parameter]
+ 1023 |         sl_result getMotorInfo(LidarMotorInfo &motorInfo, sl_u32 timeoutInMs)
+      |                                                           ~~~~~~~^~~~~~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp: In member function ‘u_result sl::SlamtecLidarDriver::getScanModeCount(sl_u16&, sl_u32)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:1199:61: warning: unused parameter ‘timeoutInMs’ [-Wunused-parameter]
+ 1199 |         u_result getScanModeCount(sl_u16& modeCount, sl_u32 timeoutInMs = DEFAULT_TIMEOUT)
+      |                                                      ~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp: In instantiation of ‘void sl::RawSampleNodeHolder<T>::pushNode(_u64, const T*) [with T = sl_lidar_response_measurement_node_hq_t; _u64 = long unsigned int]’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:1648:42:   required from here
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:202:28: warning: unused parameter ‘timestamp_uS’ [-Wunused-parameter]
+  202 |         void pushNode(_u64 timestamp_uS, const T* node)
+      |                       ~~~~~^~~~~~~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp: At global scope:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:83:17: warning: ‘void sl::convert(const sl_lidar_response_measurement_node_hq_t&, sl_lidar_response_measurement_node_t&)’ defined but not used [-Wunused-function]
+   83 |     static void convert(const sl_lidar_response_measurement_node_hq_t& from, sl_lidar_response_measurement_node_t& to)
+      |                 ^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:75:17: warning: ‘void sl::convert(const sl_lidar_response_measurement_node_t&, sl_lidar_response_measurement_node_hq_t&)’ defined but not used [-Wunused-function]
+   75 |     static void convert(const sl_lidar_response_measurement_node_t& from, sl_lidar_response_measurement_node_hq_t& to)
+      |                 ^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidar_driver.cpp:70:17: warning: ‘void sl::printDeprecationWarn(const char*, const char*)’ defined but not used [-Wunused-function]
+   70 |     static void printDeprecationWarn(const char* fn, const char* replacement)
+      |                 ^~~~~~~~~~~~~~~~~~~~
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_protocol.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:39,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sdkcommon.h:49,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidarprotocol_codec.cpp:35:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar_cmd.h:36,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/rplidar.h:40:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_lidarprotocol_codec.cpp:49:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_async_transceiver.h: In member function ‘virtual void sl::internal::IAsyncProtocolCodec::onChannelError(u_result)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_async_transceiver.h:90:48: warning: unused parameter ‘errCode’ [-Wunused-parameter]
+   90 |         virtual void   onChannelError(u_result errCode) {}
+      |                                       ~~~~~~~~~^~~~~~~
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:41,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_driver.h:54,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_serial_channel.cpp:33:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:41,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_driver.h:54,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_tcp_channel.cpp:33:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_tcp_channel.cpp: In member function ‘void sl::TcpChannel::setStatus(_u32)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_tcp_channel.cpp:109:29: warning: unused parameter ‘flag’ [-Wunused-parameter]
+  109 |         void setStatus(_u32 flag){}
+      |                        ~~~~~^~~~
+In file included from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:41,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_driver.h:54,
+                 from /home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_udp_channel.cpp:33:
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_protocol.h:66:16: warning: ISO C++ forbids zero-size array ‘data’ [-Wpedantic]
+   66 |     sl_u8 data[0];
+      |                ^
+/home/sweepi/SweePi/src/sllidar_ros2/./sdk/include/sl_lidar_cmd.h:324:20: warning: ISO C++ forbids zero-size array ‘payload’ [-Wpedantic]
+  324 |     sl_u8  payload[0];
+      |                    ^
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_udp_channel.cpp: In member function ‘void sl::UdpChannel::setStatus(_u32)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/sl_udp_channel.cpp:112:29: warning: unused parameter ‘flag’ [-Wunused-parameter]
+  112 |         void setStatus(_u32 flag){}
+      |                        ~~~~~^~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp: In member function ‘bool rp::arch::net::raw_serial::open(const char*, uint32_t, uint32_t)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp:97:74: warning: unused parameter ‘flags’ [-Wunused-parameter]
+   97 | bool raw_serial::open(const char * portname, uint32_t baudrate, uint32_t flags)
+      |                                                                 ~~~~~~~~~^~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp: In member function ‘virtual void rp::arch::net::raw_serial::flush(_u32)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp:281:30: warning: unused parameter ‘flags’ [-Wunused-parameter]
+  281 | void raw_serial::flush( _u32 flags)
+      |                         ~~~~~^~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp: In member function ‘virtual int rp::arch::net::raw_serial::waitforsent(_u32, size_t*)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp:286:34: warning: unused parameter ‘timeout’ [-Wunused-parameter]
+  286 | int raw_serial::waitforsent(_u32 timeout, size_t * returned_size)
+      |                             ~~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp: In member function ‘virtual int rp::arch::net::raw_serial::waitforrecv(_u32, size_t*)’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp:292:34: warning: unused parameter ‘timeout’ [-Wunused-parameter]
+  292 | int raw_serial::waitforrecv(_u32 timeout, size_t * returned_size)
+      |                             ~~~~~^~~~~~~
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp: In member function ‘virtual void rp::arch::net::raw_serial::cancelOperation()’:
+/home/sweepi/SweePi/src/sllidar_ros2/sdk/src/arch/linux/net_serial.cpp:427:5: warning: value computed is not used [-Wunused-value]
+  427 |     (int)::write(_selfpipe[1], "x", 1);
+      |     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+---
+Finished <<< sllidar_ros2 [48.4s]
+Starting >>> sweepi_real_bringup
+-- The C compiler identification is GNU 13.3.0
+-- The CXX compiler identification is GNU 13.3.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found ament_cmake: 2.5.6 (/opt/ros/jazzy/share/ament_cmake/cmake)
+-- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+-- Override CMake install command with custom implementation using symlinks instead of copying resources
+-- Configuring done (1.3s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sweepi/SweePi/build_diagnostic/sweepi_real_bringup
+-- Install configuration: ""
+-- Execute custom install script
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_real_bringup/share/sweepi_real_bringup//launch/hardware_debug.launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_real_bringup/share/sweepi_real_bringup//launch/temp_rpi_hardware_debug.launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_real_bringup/share/ament_index/resource_index/package_run_dependencies/sweepi_real_bringup
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_real_bringup/share/ament_index/resource_index/parent_prefix_path/sweepi_real_bringup
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_real_bringup/share/sweepi_real_bringup/environment/ament_prefix_path.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_real_bringup/share/sweepi_real_bringup/environment/ament_prefix_path.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_real_bringup/share/sweepi_real_bringup/environment/path.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_real_bringup/share/sweepi_real_bringup/environment/path.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_real_bringup/share/sweepi_real_bringup/local_setup.bash
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_real_bringup/share/sweepi_real_bringup/local_setup.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_real_bringup/share/sweepi_real_bringup/local_setup.zsh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_real_bringup/share/sweepi_real_bringup/local_setup.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_real_bringup/share/sweepi_real_bringup/package.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_real_bringup/share/ament_index/resource_index/packages/sweepi_real_bringup
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_real_bringup/share/sweepi_real_bringup/cmake/sweepi_real_bringupConfig.cmake
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_real_bringup/share/sweepi_real_bringup/cmake/sweepi_real_bringupConfig-version.cmake
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_real_bringup/share/sweepi_real_bringup/package.xml
+Finished <<< sweepi_real_bringup [1.82s]
+Starting >>> sweepi_robot_manager
+-- The C compiler identification is GNU 13.3.0
+-- The CXX compiler identification is GNU 13.3.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found ament_cmake: 2.5.6 (/opt/ros/jazzy/share/ament_cmake/cmake)
+-- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+-- Override CMake install command with custom implementation using symlinks instead of copying resources
+-- Found rclpy: 7.1.11 (/opt/ros/jazzy/share/rclpy/cmake)
+-- Configuring done (1.6s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/sweepi/SweePi/build_diagnostic/sweepi_robot_manager
+Built target ament_cmake_python_symlink_sweepi_robot_manager
+running egg_info
+creating sweepi_robot_manager.egg-info
+writing sweepi_robot_manager.egg-info/PKG-INFO
+writing dependency_links to sweepi_robot_manager.egg-info/dependency_links.txt
+writing top-level names to sweepi_robot_manager.egg-info/top_level.txt
+writing manifest file 'sweepi_robot_manager.egg-info/SOURCES.txt'
+reading manifest file 'sweepi_robot_manager.egg-info/SOURCES.txt'
+writing manifest file 'sweepi_robot_manager.egg-info/SOURCES.txt'
+Built target ament_cmake_python_build_sweepi_robot_manager_egg
+-- Install configuration: ""
+-- Execute custom install script
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/share/sweepi_robot_manager/environment/pythonpath.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/share/sweepi_robot_manager/environment/pythonpath.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/lib/python3.12/site-packages/sweepi_robot_manager-0.1.0-py3.12.egg-info/PKG-INFO
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/lib/python3.12/site-packages/sweepi_robot_manager-0.1.0-py3.12.egg-info/SOURCES.txt
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/lib/python3.12/site-packages/sweepi_robot_manager-0.1.0-py3.12.egg-info/dependency_links.txt
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/lib/python3.12/site-packages/sweepi_robot_manager-0.1.0-py3.12.egg-info/top_level.txt
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/lib/python3.12/site-packages/sweepi_robot_manager/__init__.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/lib/python3.12/site-packages/sweepi_robot_manager/sweepi_robot_manager_node.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/share/sweepi_robot_manager/launch/coverage_task.launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/share/sweepi_robot_manager/launch/exploration_task.launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/share/sweepi_robot_manager/launch/master.launch.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/lib/sweepi_robot_manager/sweepi_robot_manager_node.py
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/share/ament_index/resource_index/package_run_dependencies/sweepi_robot_manager
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/share/ament_index/resource_index/parent_prefix_path/sweepi_robot_manager
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/share/sweepi_robot_manager/environment/ament_prefix_path.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/share/sweepi_robot_manager/environment/ament_prefix_path.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/share/sweepi_robot_manager/environment/path.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/share/sweepi_robot_manager/environment/path.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/share/sweepi_robot_manager/local_setup.bash
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/share/sweepi_robot_manager/local_setup.sh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/share/sweepi_robot_manager/local_setup.zsh
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/share/sweepi_robot_manager/local_setup.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/share/sweepi_robot_manager/package.dsv
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/share/ament_index/resource_index/packages/sweepi_robot_manager
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/share/sweepi_robot_manager/cmake/sweepi_robot_managerConfig.cmake
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/share/sweepi_robot_manager/cmake/sweepi_robot_managerConfig-version.cmake
+-- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/share/sweepi_robot_manager/package.xml
+Listing '/home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/lib/python3.12/site-packages/sweepi_robot_manager'...
+Compiling '/home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/lib/python3.12/site-packages/sweepi_robot_manager/__init__.py'...
+Compiling '/home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager/lib/python3.12/site-packages/sweepi_robot_manager/sweepi_robot_manager_node.py'...
+Finished <<< sweepi_robot_manager [3.01s]
+
+Summary: 13 packages finished [53.6s]
+  1 package had stderr output: sllidar_ros2

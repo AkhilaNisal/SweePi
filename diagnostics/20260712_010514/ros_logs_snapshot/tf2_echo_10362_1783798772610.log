@@ -1,0 +1,2 @@
+[INFO] [1783798772.722428676] [tf2_echo]: Waiting for transform map ->  odom: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
+[INFO] [1783798777.939621304] [rclcpp]: signal_handler(SIGINT/SIGTERM)

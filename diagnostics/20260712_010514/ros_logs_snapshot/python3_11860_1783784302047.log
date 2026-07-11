@@ -1,0 +1,19 @@
+[INFO] [1783784303.413629706] [coverage_planner_node]: Coverage planner started: coverage_map=/coverage_map, nav_costmap=/global_costmap/costmap, path=/coverage_path, mask=/coverage_planning_mask, percentage=/coverage_percentage, stats=/coverage_stats, direction=auto, use_nav_costmap=true, robot_radius=0.20m, safety_margin=0.10m, inflation_radius=0.24m
+[INFO] [1783784305.348918913] [coverage_planner_node]: Waiting for /global_costmap/costmap before generating frozen coverage path
+[INFO] [1783784308.346453573] [coverage_planner_node]: Waiting for /global_costmap/costmap before generating frozen coverage path
+[INFO] [1783784310.346534302] [coverage_planner_node]: Waiting for /global_costmap/costmap before generating frozen coverage path
+[INFO] [1783784312.143256620] [coverage_planner_node]: Global costmap received for coverage planning: topic=/global_costmap/costmap frame=map size=161x127 resolution=0.050 max_allowed_nav_cost=50 unknown_blocked=true
+[INFO] [1783784312.649111647] [coverage_planner_node]: Nav costmap filtered 881 coverage planning cells (blocked_by_cost=881, unknown=0, unknown_blocked=true, max_allowed_nav_cost=50)
+[WARN] [1783784313.129767215] [coverage_planner_node]: Reachability filter left only 2 planning cells, below the 80-cell minimum region size; keeping all safe planning cells
+[WARN] [1783784313.147264410] [coverage_planner_node]: region straight connector from (69, 77) to (61, 69) is blocked at cell (69, 77); trying grid connector
+[WARN] [1783784313.149421031] [coverage_planner_node]: No valid region connector from (69, 77) to (61, 69); publishing remaining discontinuity distance=0.57m
+[WARN] [1783784313.163676564] [coverage_planner_node]: 52 generated path poses fall on blocked travel-mask cells
+[WARN] [1783784313.165150362] [coverage_planner_node]: Generated path failed validation: outside_map=0, blocked=52; publishing an empty path
+[INFO] [1783784313.167312834] [coverage_planner_node]: Coverage path continuity report: segments_before_ordering=22 segments_after_ordering=22 connector_count=0 connector_pose_count=0 total_poses=0 path_length_m=0.00 max_consecutive_jump_m=3.620 max_jump_index=150 first_pose=unavailable last_pose=unavailable follow_path_ready=false robot_start_used=true nav_costmap_used=true nav_blocked_cells=881 nav_filtered_cells=881 reachability_used=false reachable_cells=2 unreachable_filtered_cells=1460
+[WARN] [1783784313.168352467] [coverage_planner_node]: Published /coverage_path is not continuous enough for FollowPath.
+[INFO] [1783784313.169341431] [coverage_planner_node]: Coverage replan: percentage=0.5%, uncovered=7358, segments=22, poses=0, path_length=0.00m, unreachable_filtered=1460
+[INFO] [1783784321.347053483] [coverage_planner_node]: Waiting for a fresh /global_costmap/costmap before generating frozen coverage path
+[INFO] [1783784323.349011725] [coverage_planner_node]: Waiting for a fresh /global_costmap/costmap before generating frozen coverage path
+[INFO] [1783784326.346405919] [coverage_planner_node]: Waiting for a fresh /global_costmap/costmap before generating frozen coverage path
+[INFO] [1783784329.346544523] [coverage_planner_node]: Waiting for a fresh /global_costmap/costmap before generating frozen coverage path
+[INFO] [1783784331.347059115] [coverage_planner_node]: Waiting for a fresh /global_costmap/costmap before generating frozen coverage path

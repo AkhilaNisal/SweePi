@@ -1,0 +1,3 @@
+[INFO] [1783777597.158087770] [sweepi_api_bridge]: SweePi API bridge listening on http://0.0.0.0:8080/api
+[INFO] [1783777613.079385313] [sweepi_api_bridge]: HTTP "GET /api/system/health HTTP/1.1" 200 -
+[INFO] [1783777618.441247430] [sweepi_api_bridge]: HTTP "POST /api/exploration/start HTTP/1.1" 200 -

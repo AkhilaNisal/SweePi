@@ -1,0 +1,20 @@
+*   Trying 127.0.0.1:8080...
+* Connected to 127.0.0.1 (127.0.0.1) port 8080
+> GET /api/robot/status HTTP/1.1
+> Host: 127.0.0.1:8080
+> User-Agent: curl/8.5.0
+> Accept: */*
+> 
+* HTTP 1.0, assume close after body
+< HTTP/1.0 200 OK
+< Server: BaseHTTP/0.6 Python/3.12.3
+< Date: Sat, 11 Jul 2026 19:36:49 GMT
+< Content-Type: application/json
+< Content-Length: 1107
+< Access-Control-Allow-Origin: *
+< Access-Control-Allow-Methods: GET,POST,PUT,OPTIONS
+< Access-Control-Allow-Headers: Content-Type
+< 
+{ [1107 bytes data]
+* Closing connection
+{"success":true,"message":"Robot status fetched.","error":null,"timestamp":"2026-07-11T19:36:49Z","state":"exploring","robot_id":"sweepi-robot-001","active_task":"exploration","mode":"automatic","battery":{"percent":null,"charging":null},"pose":{"x":-0.5555102963888672,"y":1.5586168302184884,"yaw":2.6437708561624818,"frame":"map"},"localization":{"initial_pose_received":false,"initial_pose_confirmed":false,"initial_pose_source":null,"pose_available":true},"exploration":{"active":true,"mode":"automatic","map_name":"living_room","map_id":"living_room","map_available":true},"cleaning":{"active":false,"paused":false,"task_id":null,"cleaning_mode":null,"progress_percent":0.0,"map_id":null,"sections":[],"path_available":false,"coverage_path_available":false,"coverage_map_available":false,"coverage_validated":false,"execution_status":"WAITING_FOR_PATH","coverage_stats":"","task_finished":false,"task_result":null,"last_error":null},"map":{"map_id":"living_room","name":"living_room","live_available":true,"saved_available":true},"nav":{"execution_status":"WAITING_FOR_PATH"},"errors":[],"warnings":[]}

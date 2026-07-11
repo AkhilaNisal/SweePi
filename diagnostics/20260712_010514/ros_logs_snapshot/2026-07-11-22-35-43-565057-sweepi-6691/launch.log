@@ -1,0 +1,20 @@
+1783789543.5665374 [INFO] [launch]: All log files can be found below /home/sweepi/.ros/log/2026-07-11-22-35-43-565057-sweepi-6691
+1783789543.5667334 [INFO] [launch]: Default logging verbosity is set to INFO
+1783789543.9415896 [INFO] [launch.user]: 🚀 STARTING SWEEPI AUTONOMOUS EXPLORATION
+1783789543.9419603 [INFO] [launch.user]: 💾 Map name: ${map_name}
+1783789543.9422297 [INFO] [launch.user]: 📏 Proximity-based blocking: ${unreachable_region_radius}m
+1783789543.9425449 [INFO] [launch.user]: 🔁 Completion retry sweeps: ${completion_retry_cycles}
+1783789543.9427450 [INFO] [launch.user]: 🎮 Exploration mode: ${start_mode}
+1783789544.4063120 [ERROR] [launch]: Caught exception in launch (see debug for traceback): executable 'wavefront_explorer.py' not found on the libexec directory '/home/sweepi/SweePi/install/sweepi_exploration/lib/sweepi_exploration' 
+1783789545.5362215 [INFO] [controller_server-1]: process started with pid [6714]
+1783789545.5491538 [INFO] [smoother_server-2]: process started with pid [6715]
+1783789545.5693140 [INFO] [planner_server-3]: process started with pid [6716]
+1783789545.5697494 [INFO] [route_server-4]: process started with pid [6717]
+1783789545.5822773 [INFO] [behavior_server-5]: process started with pid [6718]
+1783789545.5828545 [INFO] [bt_navigator-6]: process started with pid [6719]
+1783789545.5831268 [INFO] [waypoint_follower-7]: process started with pid [6720]
+1783789545.5859904 [INFO] [velocity_smoother-8]: process started with pid [6721]
+1783789545.6034467 [INFO] [collision_monitor-9]: process started with pid [6722]
+1783789545.6041925 [INFO] [opennav_docking-10]: process started with pid [6723]
+1783789545.6043720 [INFO] [lifecycle_manager-11]: process started with pid [6724]
+1783789545.6045363 [INFO] [async_slam_toolbox_node-12]: process started with pid [6725]

@@ -1,0 +1,43 @@
+[0.023s] Invoking command in '/home/sweepi/SweePi/build_diagnostic/sweepi_state_estimation': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/sweepi/SweePi/install/sweepi_temp_rpi_hardware:/home/sweepi/SweePi/install/sweepi_api_bridge:/home/sweepi/SweePi/install/sweepi_base_driver:/opt/ros/jazzy /usr/bin/cmake /home/sweepi/SweePi/src/sweepi_state_estimation -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation
+[0.182s] -- The C compiler identification is GNU 13.3.0
+[0.313s] -- The CXX compiler identification is GNU 13.3.0
+[0.374s] -- Detecting C compiler ABI info
+[0.621s] -- Detecting C compiler ABI info - done
+[0.646s] -- Check for working C compiler: /usr/bin/cc - skipped
+[0.648s] -- Detecting C compile features
+[0.650s] -- Detecting C compile features - done
+[0.673s] -- Detecting CXX compiler ABI info
+[0.963s] -- Detecting CXX compiler ABI info - done
+[0.985s] -- Check for working CXX compiler: /usr/bin/c++ - skipped
+[0.985s] -- Detecting CXX compile features
+[0.990s] -- Detecting CXX compile features - done
+[1.006s] -- Found ament_cmake: 2.5.6 (/opt/ros/jazzy/share/ament_cmake/cmake)
+[1.713s] -- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+[1.715s] -- Override CMake install command with custom implementation using symlinks instead of copying resources
+[1.959s] -- Configuring done (1.9s)
+[1.967s] -- Generating done (0.0s)
+[1.971s] -- Build files have been written to: /home/sweepi/SweePi/build_diagnostic/sweepi_state_estimation
+[1.982s] Invoked command in '/home/sweepi/SweePi/build_diagnostic/sweepi_state_estimation' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/sweepi/SweePi/install/sweepi_temp_rpi_hardware:/home/sweepi/SweePi/install/sweepi_api_bridge:/home/sweepi/SweePi/install/sweepi_base_driver:/opt/ros/jazzy /usr/bin/cmake /home/sweepi/SweePi/src/sweepi_state_estimation -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation
+[1.983s] Invoking command in '/home/sweepi/SweePi/build_diagnostic/sweepi_state_estimation': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/sweepi/SweePi/install/sweepi_temp_rpi_hardware:/home/sweepi/SweePi/install/sweepi_api_bridge:/home/sweepi/SweePi/install/sweepi_base_driver:/opt/ros/jazzy /usr/bin/cmake --build /home/sweepi/SweePi/build_diagnostic/sweepi_state_estimation -- -j4 -l4
+[2.079s] Invoked command in '/home/sweepi/SweePi/build_diagnostic/sweepi_state_estimation' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/sweepi/SweePi/install/sweepi_temp_rpi_hardware:/home/sweepi/SweePi/install/sweepi_api_bridge:/home/sweepi/SweePi/install/sweepi_base_driver:/opt/ros/jazzy /usr/bin/cmake --build /home/sweepi/SweePi/build_diagnostic/sweepi_state_estimation -- -j4 -l4
+[2.081s] Invoking command in '/home/sweepi/SweePi/build_diagnostic/sweepi_state_estimation': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/sweepi/SweePi/install/sweepi_temp_rpi_hardware:/home/sweepi/SweePi/install/sweepi_api_bridge:/home/sweepi/SweePi/install/sweepi_base_driver:/opt/ros/jazzy /usr/bin/cmake --install /home/sweepi/SweePi/build_diagnostic/sweepi_state_estimation
+[2.102s] -- Install configuration: ""
+[2.103s] -- Execute custom install script
+[2.107s] -- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation//config/ekf.yaml
+[2.132s] -- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation//launch/ekf.launch.py
+[2.157s] -- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/ament_index/resource_index/package_run_dependencies/sweepi_state_estimation
+[2.182s] -- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/ament_index/resource_index/parent_prefix_path/sweepi_state_estimation
+[2.217s] -- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation/environment/ament_prefix_path.sh
+[2.241s] -- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation/environment/ament_prefix_path.dsv
+[2.273s] -- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation/environment/path.sh
+[2.301s] -- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation/environment/path.dsv
+[2.326s] -- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation/local_setup.bash
+[2.354s] -- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation/local_setup.sh
+[2.382s] -- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation/local_setup.zsh
+[2.408s] -- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation/local_setup.dsv
+[2.435s] -- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation/package.dsv
+[2.461s] -- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/ament_index/resource_index/packages/sweepi_state_estimation
+[2.493s] -- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation/cmake/sweepi_state_estimationConfig.cmake
+[2.517s] -- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation/cmake/sweepi_state_estimationConfig-version.cmake
+[2.547s] -- Symlinking: /home/sweepi/SweePi/install_diagnostic/sweepi_state_estimation/share/sweepi_state_estimation/package.xml
+[2.579s] Invoked command in '/home/sweepi/SweePi/build_diagnostic/sweepi_state_estimation' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/sweepi/SweePi/install/sweepi_temp_rpi_hardware:/home/sweepi/SweePi/install/sweepi_api_bridge:/home/sweepi/SweePi/install/sweepi_base_driver:/opt/ros/jazzy /usr/bin/cmake --install /home/sweepi/SweePi/build_diagnostic/sweepi_state_estimation

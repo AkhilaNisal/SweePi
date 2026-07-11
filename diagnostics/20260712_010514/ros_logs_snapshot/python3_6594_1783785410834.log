@@ -1,0 +1,10 @@
+[INFO] [1783785411.706138998] [coverage_planner_node]: Coverage planner started: coverage_map=/coverage_map, nav_costmap=/global_costmap/costmap, path=/coverage_path, mask=/coverage_planning_mask, percentage=/coverage_percentage, stats=/coverage_stats, direction=auto, use_nav_costmap=true, robot_radius=0.20m, safety_margin=0.10m, inflation_radius=0.24m
+[INFO] [1783785412.623312675] [coverage_planner_node]: Waiting for /global_costmap/costmap before generating frozen coverage path
+[INFO] [1783785415.622222235] [coverage_planner_node]: Waiting for /global_costmap/costmap before generating frozen coverage path
+[INFO] [1783785417.193557501] [coverage_planner_node]: Global costmap received for coverage planning: topic=/global_costmap/costmap frame=map size=161x127 resolution=0.050 max_allowed_nav_cost=50 unknown_blocked=true
+[INFO] [1783785417.927836663] [coverage_planner_node]: Nav costmap filtered 585 coverage planning cells (blocked_by_cost=585, unknown=0, unknown_blocked=true, max_allowed_nav_cost=50)
+[INFO] [1783785418.472942496] [coverage_planner_node]: Reachability filter removed 1395 uncovered cells that are not safely connected to the robot start
+[WARN] [1783785418.481232145] [coverage_planner_node]: segment straight connector from (75, 69) to (87, 74) is blocked at cell (82, 72); trying grid connector
+[INFO] [1783785418.491542596] [coverage_planner_node]: Coverage path continuity report: segments_before_ordering=5 segments_after_ordering=5 connector_count=1 connector_pose_count=27 total_poses=97 path_length_m=5.73 max_consecutive_jump_m=0.427 max_jump_index=10 first_pose=x=-0.158 y=-0.163 yaw=-0.46 last_pose=x=0.642 y=0.487 yaw=-1.57 follow_path_ready=true robot_start_used=true nav_costmap_used=true nav_blocked_cells=585 nav_filtered_cells=585 reachability_used=true reachable_cells=318 unreachable_filtered_cells=1395
+[INFO] [1783785418.493041977] [coverage_planner_node]: Coverage replan: percentage=0.6%, uncovered=7348, segments=5, poses=97, path_length=5.73m, unreachable_filtered=1395
+[INFO] [1783785418.493827537] [coverage_planner_node]: Coverage path frozen after first valid plan: poses=97 path_length=5.73m

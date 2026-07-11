@@ -1,0 +1,11 @@
+[INFO] [1783797269.800463958] [collision_monitor]: 
+	collision_monitor lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1783797273.074796383] [collision_monitor]: Configuring
+[INFO] [1783797273.126137443] [collision_monitor]: [scan]: Creating Scan
+[INFO] [1783797273.147667266] [collision_monitor]: [FootprintApproach]: Creating Polygon
+[INFO] [1783797273.156847934] [collision_monitor]: [FootprintApproach]: Polygon points are not defined. Using dynamic subscription instead.
+[INFO] [1783797273.161584426] [collision_monitor]: [FootprintApproach]: Making footprint subscriber on /local_costmap/published_footprint topic
+[INFO] [1783797276.573176398] [collision_monitor]: Activating
+[INFO] [1783797276.573288656] [collision_monitor]: Creating bond (collision_monitor) to lifecycle manager.

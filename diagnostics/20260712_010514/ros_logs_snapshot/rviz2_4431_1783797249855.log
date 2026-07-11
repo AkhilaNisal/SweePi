@@ -1,0 +1,19 @@
+[INFO] [1783797251.011618766] [rviz2]: Stereo is NOT SUPPORTED
+[INFO] [1783797251.011965211] [rviz2]: OpenGl version: 3.1 (GLSL 1.4)
+[INFO] [1783797251.504741237] [rviz2]: Stereo is NOT SUPPORTED
+[INFO] [1783797254.339249052] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783797253.206 for reason 'discarding message because the queue is full'
+[INFO] [1783797256.935428610] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783797255.817 for reason 'discarding message because the queue is full'
+[INFO] [1783797259.439434371] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783797258.308 for reason 'discarding message because the queue is full'
+[INFO] [1783797262.033795095] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783797260.914 for reason 'discarding message because the queue is full'
+[INFO] [1783797264.625988770] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783797263.503 for reason 'discarding message because the queue is full'
+[INFO] [1783797267.220300943] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783797266.101 for reason 'discarding message because the queue is full'
+[INFO] [1783797269.753456633] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783797268.507 for reason 'discarding message because the queue is full'
+[ERROR] [1783797272.128582919] [rviz2]: Lookup would require extrapolation into the future.  Requested time 1783797272.013659 but the latest data is at time 1783797272.013330, when looking up transform from frame [lidar_link] to frame [map]
+[INFO] [1783797272.760766881] [rviz2]: Trying to create a map of size 172 x 238 using 1 swatches
+[ERROR] [1783797272.814461963] [rviz2]: rviz/glsl120/indexed_8bit_image.vert
+rviz/glsl120/indexed_8bit_image.frag
+ GLSL link result : 
+active samplers with a different type refer to the same texture image unit
+[INFO] [1783797275.320593979] [rviz2]: Trying to create a map of size 80 x 80 using 1 swatches
+[INFO] [1783797290.045507170] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783797271.005 for reason 'discarding message because the queue is full'
+[INFO] [1783797293.618900707] [rviz2]: Message Filter dropping message: frame 'lidar_link' at time 1783797271.504 for reason 'discarding message because the queue is full'

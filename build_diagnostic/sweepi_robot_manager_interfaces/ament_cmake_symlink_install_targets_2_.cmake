@@ -1,0 +1,1 @@
+ament_cmake_symlink_install_targets("TARGET_FILES" "/home/sweepi/SweePi/build_diagnostic/sweepi_robot_manager_interfaces/rosidl_generator_py/sweepi_robot_manager_interfaces/sweepi_robot_manager_interfaces_s__rosidl_typesupport_c.so" "TARGETS" "sweepi_robot_manager_interfaces_s__rosidl_typesupport_c" "DESTINATION" "lib/python3.12/site-packages/sweepi_robot_manager_interfaces")

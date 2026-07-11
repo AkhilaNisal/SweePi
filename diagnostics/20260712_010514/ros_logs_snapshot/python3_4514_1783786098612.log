@@ -1,0 +1,17 @@
+[INFO] [1783786099.010668574] [coverage_planner_node]: Coverage planner started: coverage_map=/coverage_map, nav_costmap=/global_costmap/costmap, path=/coverage_path, mask=/coverage_planning_mask, percentage=/coverage_percentage, stats=/coverage_stats, direction=auto, use_nav_costmap=true, robot_radius=0.20m, safety_margin=0.10m, inflation_radius=0.24m
+[INFO] [1783786101.965801535] [coverage_planner_node]: Waiting for /global_costmap/costmap before generating frozen coverage path
+[INFO] [1783786103.965813453] [coverage_planner_node]: Waiting for /global_costmap/costmap before generating frozen coverage path
+[INFO] [1783786106.963967897] [coverage_planner_node]: Waiting for /global_costmap/costmap before generating frozen coverage path
+[INFO] [1783786109.964219877] [coverage_planner_node]: Waiting for /global_costmap/costmap before generating frozen coverage path
+[INFO] [1783786112.963907350] [coverage_planner_node]: Waiting for /global_costmap/costmap before generating frozen coverage path
+[INFO] [1783786114.963976417] [coverage_planner_node]: Waiting for /global_costmap/costmap before generating frozen coverage path
+[INFO] [1783786117.963911116] [coverage_planner_node]: Waiting for /global_costmap/costmap before generating frozen coverage path
+[INFO] [1783786119.964129223] [coverage_planner_node]: Waiting for /global_costmap/costmap before generating frozen coverage path
+[INFO] [1783786122.812556107] [coverage_planner_node]: Global costmap received for coverage planning: topic=/global_costmap/costmap frame=map size=161x127 resolution=0.050 max_allowed_nav_cost=50 unknown_blocked=true
+[INFO] [1783786123.259800931] [coverage_planner_node]: Nav costmap filtered 507 coverage planning cells (blocked_by_cost=507, unknown=0, unknown_blocked=true, max_allowed_nav_cost=50)
+[INFO] [1783786123.962224172] [coverage_planner_node]: Reachability filter removed 1458 uncovered cells that are not safely connected to the robot start
+[WARN] [1783786123.990529055] [coverage_planner_node]: segment straight connector from (95, 88) to (75, 80) is blocked at cell (93, 87); trying grid connector
+[INFO] [1783786124.000187160] [coverage_planner_node]: Coverage path continuity report: segments_before_ordering=4 segments_after_ordering=4 connector_count=1 connector_pose_count=28 total_poses=91 path_length_m=5.15 max_consecutive_jump_m=0.320 max_jump_index=18 first_pose=x=-0.008 y=-0.113 yaw=-0.38 last_pose=x=-0.358 y=-0.463 yaw=-1.57 follow_path_ready=true robot_start_used=true nav_costmap_used=true nav_blocked_cells=507 nav_filtered_cells=507 reachability_used=true reachable_cells=333 unreachable_filtered_cells=1458
+[INFO] [1783786124.002452463] [coverage_planner_node]: Coverage replan: percentage=0.6%, uncovered=7348, segments=4, poses=91, path_length=5.15m, unreachable_filtered=1458
+[INFO] [1783786124.003383699] [coverage_planner_node]: Coverage path frozen after first valid plan: poses=91 path_length=5.15m
+[INFO] [1783786173.490214487] [coverage_planner_node]: Coverage planner reset; /coverage_path cleared

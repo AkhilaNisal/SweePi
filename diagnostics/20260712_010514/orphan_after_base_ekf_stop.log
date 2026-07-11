@@ -1,0 +1,13 @@
+/_ros2cli_daemon_0_552df7257d994919a777d08c65034fa1
+/robot_state_publisher
+/sllidar_node
+21044 bash -lc source /opt/ros/jazzy/setup.bash; source /home/sweepi/SweePi/install_diagnostic/setup.bash; ros2 launch sweepi_real_bringup hardware_debug.launch.py use_sim_time:=false launch_base:=false launch_ekf:=false launch_lidar:=true publish_robot_description:=true lidar_serial_port:=/dev/ttyUSB0 lidar_baud_rate:=460800 lidar_frame_id:=lidar_link > /home/sweepi/SweePi/diagnostics/20260712_010514/lidar_only_launch.log 2>&1
+21081 /usr/bin/python3 /opt/ros/jazzy/bin/ros2 launch sweepi_real_bringup hardware_debug.launch.py use_sim_time:=false launch_base:=false launch_ekf:=false launch_lidar:=true publish_robot_description:=true lidar_serial_port:=/dev/ttyUSB0 lidar_baud_rate:=460800 lidar_frame_id:=lidar_link
+21085 /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/lib/sllidar_ros2/sllidar_node --ros-args -r __node:=sllidar_node --params-file /tmp/launch_params_4a9ox_03
+21086 /opt/ros/jazzy/lib/robot_state_publisher/robot_state_publisher --ros-args -r __node:=robot_state_publisher --params-file /tmp/launch_params_jhys0bn_
+21206 bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install_diagnostic/setup.bash && ros2 node list --all && pgrep -af "ekf|robot_state_publisher|base_driver|sllidar|ros2 launch|launch.py|component_container" && ps -o pid,ppid,pgid,sid,stat,cmd -p $(pgrep -d, -f "ekf_filter_node|robot_state_publisher|sllidar_node|base_driver_node")
+21207 tee /home/sweepi/SweePi/diagnostics/20260712_010514/orphan_after_base_ekf_stop.log
+    PID    PPID    PGID     SID STAT CMD
+  21085   21081   21044   21044 Sl   /home/sweepi/SweePi/install_diagnostic/sllidar_ros2/lib/sllidar_ros2/sllidar_node --ros-args -r __node:=sllidar_node --params-file /tmp/launch_params_4a9ox_03
+  21086   21081   21044   21044 Sl   /opt/ros/jazzy/lib/robot_state_publisher/robot_state_publisher --ros-args -r __node:=robot_state_publisher --params-file /tmp/launch_params_jhys0bn_
+  21206    9481   21206    9481 R+   ps -o pid,ppid,pgid,sid,stat,cmd -p 21085,21086,21206

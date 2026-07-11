@@ -1,0 +1,3 @@
+[INFO] [1783785387.157087376] [sweepi_robot_manager]: SweePi robot manager ready for service commands
+[INFO] [1783785405.688809281] [sweepi_robot_manager]: coverage launch started: /opt/ros/jazzy/bin/ros2 launch sweepi_robot_manager coverage_task.launch.py map_name:=living_room auto_start:=false use_sim_time:=false use_robot_arm:=false
+[INFO] [1783785469.553005058] [sweepi_robot_manager]: Stopping active coverage launch

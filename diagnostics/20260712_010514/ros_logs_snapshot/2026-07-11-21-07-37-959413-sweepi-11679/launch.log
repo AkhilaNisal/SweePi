@@ -1,0 +1,17 @@
+1783784257.9608922 [INFO] [launch]: All log files can be found below /home/sweepi/.ros/log/2026-07-11-21-07-37-959413-sweepi-11679
+1783784257.9611053 [INFO] [launch]: Default logging verbosity is set to INFO
+1783784258.2757049 [INFO] [base_driver_node-1]: process started with pid [11683]
+1783784258.2760658 [INFO] [ekf_node-2]: process started with pid [11684]
+1783784258.2762530 [INFO] [sllidar_node-3]: process started with pid [11685]
+1783784258.2763896 [INFO] [robot_state_publisher-4]: process started with pid [11686]
+1783784258.2765002 [INFO] [rviz2-5]: process started with pid [11687]
+1783784258.2766171 [INFO] [sweepi_robot_manager_node.py-6]: process started with pid [11688]
+1783784258.2767303 [INFO] [api_bridge_node-7]: process started with pid [11689]
+1783784334.1266034 [WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+1783784334.6607912 [INFO] [robot_state_publisher-4]: process has finished cleanly [pid 11686]
+1783784334.7261457 [INFO] [ekf_node-2]: process has finished cleanly [pid 11684]
+1783784334.8005161 [INFO] [sllidar_node-3]: process has finished cleanly [pid 11685]
+1783784334.8499420 [ERROR] [base_driver_node-1]: process has died [pid 11683, exit code 1, cmd '/home/sweepi/SweePi/install/sweepi_base_driver/lib/sweepi_base_driver/base_driver_node --ros-args -r __node:=base_driver_node --params-file /home/sweepi/SweePi/install/sweepi_base_driver/share/sweepi_base_driver/config/base_driver_params.yaml --params-file /tmp/launch_params_ecvyh1zq'].
+1783784335.0373578 [INFO] [rviz2-5]: process has finished cleanly [pid 11687]
+1783784335.2699387 [INFO] [api_bridge_node-7]: process has finished cleanly [pid 11689]
+1783784337.9191406 [INFO] [sweepi_robot_manager_node.py-6]: process has finished cleanly [pid 11688]

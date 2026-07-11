@@ -1,0 +1,9 @@
+[INFO] [1783779915.834744800] [sweepi_robot_manager]: SweePi robot manager ready for service commands
+[INFO] [1783779939.101325414] [sweepi_robot_manager]: exploration launch started: /opt/ros/jazzy/bin/ros2 launch sweepi_robot_manager exploration_task.launch.py map_name:=living_room start_mode:=manual use_sim_time:=false
+[INFO] [1783780335.294053604] [sweepi_robot_manager]: Exploration reported stopped during stop-and-save. Waiting for map save to finish before returning manager to idle.
+[INFO] [1783780335.681507694] [sweepi_robot_manager]: /stop_exploration_and_save completed
+[INFO] [1783780335.682351013] [sweepi_robot_manager]: Exploration stop-and-save finished. Returning manager to idle.
+[INFO] [1783780335.692968244] [sweepi_robot_manager]: Stopping active exploration launch
+[WARN] [1783780343.695108343] [sweepi_robot_manager]: exploration launch did not exit after SIGINT; sending SIGTERM
+[WARN] [1783780346.716707807] [sweepi_robot_manager]: exploration child processes still exist after SIGINT; sending SIGTERM
+[WARN] [1783780349.720550086] [sweepi_robot_manager]: exploration child processes still exist after SIGTERM; sending SIGKILL

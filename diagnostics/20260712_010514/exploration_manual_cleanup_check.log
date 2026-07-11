@@ -1,0 +1,35 @@
+/_ros2cli_daemon_0_fba20abd5d1f488d92766e5104130ce9
+/base_driver_node
+/behavior_server
+/docking_server
+/ekf_filter_node
+/robot_state_publisher
+/slam_toolbox
+/sllidar_node
+/sweepi_api_bridge
+/sweepi_robot_manager
+/transform_listener_impl_aaaae0c05db0
+/wavefront_explorer
+23320 bash -lc source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install_diagnostic/setup.bash && ros2 node list --all && pgrep -af "exploration_task|wavefront|slam_toolbox|nav2|controller_server|planner_server|bt_navigator|behavior_server|velocity_smoother" || true && ros2 topic info /map -v && ros2 topic info /slam_map -v
+Type: nav_msgs/msg/OccupancyGrid
+
+Publisher count: 0
+
+Subscription count: 1
+
+Node name: sweepi_api_bridge
+Node namespace: /
+Topic type: nav_msgs/msg/OccupancyGrid
+Topic type hash: RIHS01_8d348150c12913a31ee0ec170fbf25089e4745d17035792a1ba94d6f0bc0cfc7
+Endpoint type: SUBSCRIPTION
+GID: 01.0f.81.bf.59.55.c2.85.00.00.00.00.00.00.3e.04
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: TRANSIENT_LOCAL
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Unknown topic '/slam_map'

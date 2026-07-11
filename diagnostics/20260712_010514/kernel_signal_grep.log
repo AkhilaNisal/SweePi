@@ -1,0 +1,136 @@
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:39:Jul 11 23:09:49 sweepi kernel: Kernel command line: reboot=w coherent_pool=1M 8250.nr_uarts=1 pci=pcie_bus_safe  smsc95xx.macaddr=2C:CF:67:90:EF:46 vc_mem.mem_base=0x3fc00000 vc_mem.mem_size=0x40000000  multipath=off dwc_otg.lpm_enable=0 console=tty1 root=LABEL=writable rootfstype=ext4 rootwait fixrtc cfg80211.ieee80211_regdom=LK
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:124:Jul 11 23:09:49 sweepi kernel: Serial: AMBA PL011 UART driver
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:126:Jul 11 23:09:49 sweepi kernel: 107d001000.serial: ttyAMA10 at MMIO 0x107d001000 (irq = 15, base_baud = 0) is a PL011 rev2
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:192:Jul 11 23:09:49 sweepi kernel: Serial: 8250/16550 driver, 1 ports, IRQ sharing enabled
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:291:Jul 11 23:09:49 sweepi kernel: 107d50c000.serial: ttyS0 at MMIO 0x107d50c000 (irq = 38, base_baud = 6000000) is a Broadcom BCM7271 UART
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:292:Jul 11 23:09:49 sweepi kernel: serial serial0: tty port ttyS0 registered
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:321:Jul 11 23:09:49 sweepi kernel: sdhci-brcmstb 1000fff000.mmc: Got CD GPIO
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:322:Jul 11 23:09:49 sweepi kernel: pl011-axi 1f00030000.serial: cts_event_workaround enabled
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:323:Jul 11 23:09:49 sweepi kernel: 1f00030000.serial: ttyAMA0 at MMIO 0x1f00030000 (irq = 127, base_baud = 0) is a PL011 AXI
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:324:Jul 11 23:09:49 sweepi kernel: mmc1: CQHCI version 5.10
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:326:Jul 11 23:09:49 sweepi kernel: mmc0: SDHCI controller on 1000fff000.mmc [1000fff000.mmc] using ADMA 64-bit
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:332:Jul 11 23:09:49 sweepi kernel: usb usb1: New USB device strings: Mfr=3, Product=2, SerialNumber=1
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:335:Jul 11 23:09:49 sweepi kernel: usb usb1: SerialNumber: 1000480000.usb
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:338:Jul 11 23:09:49 sweepi kernel: mmc0: cannot verify signal voltage switch
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:339:Jul 11 23:09:49 sweepi kernel: mmc0: new ultra high speed SDR104 SDXC card at address 0001
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:340:Jul 11 23:09:49 sweepi kernel: mmcblk0: mmc0:0001 SD16G 87.9 GiB
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:341:Jul 11 23:09:49 sweepi kernel:  mmcblk0: p1 p2
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:342:Jul 11 23:09:49 sweepi kernel: mmcblk0: mmc0:0001 SD16G 87.9 GiB
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:343:Jul 11 23:09:49 sweepi kernel: mmc1: SDHCI controller on 1001100000.mmc [1001100000.mmc] using ADMA 64-bit
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:344:Jul 11 23:09:49 sweepi kernel: xhci-hcd xhci-hcd.0: xHCI Host Controller
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:345:Jul 11 23:09:49 sweepi kernel: xhci-hcd xhci-hcd.0: new USB bus registered, assigned bus number 2
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:346:Jul 11 23:09:49 sweepi kernel: xhci-hcd xhci-hcd.0: hcc params 0x0240fe6d hci version 0x110 quirks 0x0000008000000810
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:347:Jul 11 23:09:49 sweepi kernel: xhci-hcd xhci-hcd.0: irq 133, io mem 0x1f00200000
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:348:Jul 11 23:09:49 sweepi kernel: xhci-hcd xhci-hcd.0: xHCI Host Controller
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:349:Jul 11 23:09:49 sweepi kernel: xhci-hcd xhci-hcd.0: new USB bus registered, assigned bus number 3
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:350:Jul 11 23:09:49 sweepi kernel: xhci-hcd xhci-hcd.0: Host supports USB 3.0 SuperSpeed
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:352:Jul 11 23:09:49 sweepi kernel: usb usb2: New USB device strings: Mfr=3, Product=2, SerialNumber=1
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:353:Jul 11 23:09:49 sweepi kernel: usb usb2: Product: xHCI Host Controller
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:354:Jul 11 23:09:49 sweepi kernel: usb usb2: Manufacturer: Linux 6.8.0-1060-raspi xhci-hcd
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:355:Jul 11 23:09:49 sweepi kernel: usb usb2: SerialNumber: xhci-hcd.0
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:358:Jul 11 23:09:49 sweepi kernel: mmc1: cannot verify signal voltage switch
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:360:Jul 11 23:09:49 sweepi kernel: usb usb3: New USB device strings: Mfr=3, Product=2, SerialNumber=1
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:361:Jul 11 23:09:49 sweepi kernel: usb usb3: Product: xHCI Host Controller
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:362:Jul 11 23:09:49 sweepi kernel: usb usb3: Manufacturer: Linux 6.8.0-1060-raspi xhci-hcd
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:363:Jul 11 23:09:49 sweepi kernel: usb usb3: SerialNumber: xhci-hcd.0
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:366:Jul 11 23:09:49 sweepi kernel: xhci-hcd xhci-hcd.1: xHCI Host Controller
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:367:Jul 11 23:09:49 sweepi kernel: xhci-hcd xhci-hcd.1: new USB bus registered, assigned bus number 4
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:368:Jul 11 23:09:49 sweepi kernel: xhci-hcd xhci-hcd.1: hcc params 0x0240fe6d hci version 0x110 quirks 0x0000008000000810
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:369:Jul 11 23:09:49 sweepi kernel: xhci-hcd xhci-hcd.1: irq 138, io mem 0x1f00300000
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:370:Jul 11 23:09:49 sweepi kernel: xhci-hcd xhci-hcd.1: xHCI Host Controller
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:371:Jul 11 23:09:49 sweepi kernel: xhci-hcd xhci-hcd.1: new USB bus registered, assigned bus number 5
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:372:Jul 11 23:09:49 sweepi kernel: xhci-hcd xhci-hcd.1: Host supports USB 3.0 SuperSpeed
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:374:Jul 11 23:09:49 sweepi kernel: usb usb4: New USB device strings: Mfr=3, Product=2, SerialNumber=1
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:375:Jul 11 23:09:49 sweepi kernel: usb usb4: Product: xHCI Host Controller
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:376:Jul 11 23:09:49 sweepi kernel: usb usb4: Manufacturer: Linux 6.8.0-1060-raspi xhci-hcd
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:377:Jul 11 23:09:49 sweepi kernel: usb usb4: SerialNumber: xhci-hcd.1
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:381:Jul 11 23:09:49 sweepi kernel: usb usb5: New USB device strings: Mfr=3, Product=2, SerialNumber=1
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:382:Jul 11 23:09:49 sweepi kernel: usb usb5: Product: xHCI Host Controller
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:383:Jul 11 23:09:49 sweepi kernel: usb usb5: Manufacturer: Linux 6.8.0-1060-raspi xhci-hcd
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:384:Jul 11 23:09:49 sweepi kernel: usb usb5: SerialNumber: xhci-hcd.1
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:387:Jul 11 23:09:49 sweepi kernel: mmc1: new ultra high speed DDR50 SDIO card at address 0001
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:388:Jul 11 23:09:49 sweepi kernel: usb 4-1: new full-speed USB device number 2 using xhci-hcd
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:390:Jul 11 23:09:49 sweepi kernel: usb 4-1: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:393:Jul 11 23:09:49 sweepi kernel: usb 4-1: SerialNumber: 1c341230b5d5ef11bfaa744b49d2c684
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:412:Jul 11 23:09:49 sweepi kernel: EXT4-fs (mmcblk0p2): mounted filesystem c5da9c27-d622-4e80-89db-6af2e32618b4 ro with ordered data mode. Quota mode: none.
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:490:Jul 11 23:09:49 sweepi kernel: EXT4-fs (mmcblk0p2): re-mounted c5da9c27-d622-4e80-89db-6af2e32618b4 r/w.
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:521:Jul 11 23:09:50 sweepi kernel: usbcore: registered new interface driver usbserial_generic
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:522:Jul 11 23:09:50 sweepi kernel: usbserial: USB Serial support registered for generic
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:524:Jul 11 23:09:50 sweepi kernel: usbserial: USB Serial support registered for cp210x
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:554:Jul 11 23:09:50 sweepi kernel: usb 4-1: cp210x converter now attached to ttyUSB0
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:579:Jul 11 23:09:50 sweepi kernel: hci_uart_bcm serial0-0: supply vbat not found, using dummy regulator
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:580:Jul 11 23:09:50 sweepi kernel: hci_uart_bcm serial0-0: supply vddio not found, using dummy regulator
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:665:Jul 12 00:43:34 sweepi kernel: cp210x ttyUSB0: failed set request 0x12 status: -110
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:666:Jul 12 00:44:12 sweepi kernel: pl011-axi 1f00030000.serial: DMA channel TX dma2chan2
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_current.log:667:Jul 12 00:44:12 sweepi kernel: pl011-axi 1f00030000.serial: DMA channel RX dma2chan3
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:39:Jul 11 23:09:48 sweepi kernel: Kernel command line: reboot=w coherent_pool=1M 8250.nr_uarts=1 pci=pcie_bus_safe  smsc95xx.macaddr=2C:CF:67:90:EF:46 vc_mem.mem_base=0x3fc00000 vc_mem.mem_size=0x40000000  multipath=off dwc_otg.lpm_enable=0 console=tty1 root=LABEL=writable rootfstype=ext4 rootwait fixrtc cfg80211.ieee80211_regdom=LK
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:124:Jul 11 23:09:48 sweepi kernel: Serial: AMBA PL011 UART driver
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:126:Jul 11 23:09:48 sweepi kernel: 107d001000.serial: ttyAMA10 at MMIO 0x107d001000 (irq = 15, base_baud = 0) is a PL011 rev2
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:192:Jul 11 23:09:48 sweepi kernel: Serial: 8250/16550 driver, 1 ports, IRQ sharing enabled
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:291:Jul 11 23:09:48 sweepi kernel: 107d50c000.serial: ttyS0 at MMIO 0x107d50c000 (irq = 39, base_baud = 6000000) is a Broadcom BCM7271 UART
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:292:Jul 11 23:09:48 sweepi kernel: serial serial0: tty port ttyS0 registered
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:320:Jul 11 23:09:48 sweepi kernel: sdhci-brcmstb 1000fff000.mmc: Got CD GPIO
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:322:Jul 11 23:09:48 sweepi kernel: mmc1: CQHCI version 5.10
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:324:Jul 11 23:09:48 sweepi kernel: pl011-axi 1f00030000.serial: cts_event_workaround enabled
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:325:Jul 11 23:09:48 sweepi kernel: 1f00030000.serial: ttyAMA0 at MMIO 0x1f00030000 (irq = 128, base_baud = 0) is a PL011 AXI
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:326:Jul 11 23:09:48 sweepi kernel: mmc0: SDHCI controller on 1000fff000.mmc [1000fff000.mmc] using ADMA 64-bit
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:327:Jul 11 23:09:48 sweepi kernel: mmc0: cannot verify signal voltage switch
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:333:Jul 11 23:09:48 sweepi kernel: usb usb1: New USB device strings: Mfr=3, Product=2, SerialNumber=1
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:336:Jul 11 23:09:48 sweepi kernel: usb usb1: SerialNumber: 1000480000.usb
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:339:Jul 11 23:09:48 sweepi kernel: mmc0: new ultra high speed SDR104 SDXC card at address 0001
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:340:Jul 11 23:09:48 sweepi kernel: mmcblk0: mmc0:0001 SD16G 87.9 GiB
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:341:Jul 11 23:09:48 sweepi kernel:  mmcblk0: p1 p2
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:342:Jul 11 23:09:48 sweepi kernel: mmcblk0: mmc0:0001 SD16G 87.9 GiB
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:343:Jul 11 23:09:48 sweepi kernel: mmc1: SDHCI controller on 1001100000.mmc [1001100000.mmc] using ADMA 64-bit
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:344:Jul 11 23:09:48 sweepi kernel: mmc1: cannot verify signal voltage switch
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:345:Jul 11 23:09:48 sweepi kernel: xhci-hcd xhci-hcd.0: xHCI Host Controller
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:346:Jul 11 23:09:48 sweepi kernel: xhci-hcd xhci-hcd.0: new USB bus registered, assigned bus number 2
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:347:Jul 11 23:09:48 sweepi kernel: xhci-hcd xhci-hcd.0: hcc params 0x0240fe6d hci version 0x110 quirks 0x0000008000000810
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:348:Jul 11 23:09:48 sweepi kernel: xhci-hcd xhci-hcd.0: irq 134, io mem 0x1f00200000
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:349:Jul 11 23:09:48 sweepi kernel: xhci-hcd xhci-hcd.0: xHCI Host Controller
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:350:Jul 11 23:09:48 sweepi kernel: xhci-hcd xhci-hcd.0: new USB bus registered, assigned bus number 3
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:351:Jul 11 23:09:48 sweepi kernel: xhci-hcd xhci-hcd.0: Host supports USB 3.0 SuperSpeed
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:353:Jul 11 23:09:48 sweepi kernel: usb usb2: New USB device strings: Mfr=3, Product=2, SerialNumber=1
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:354:Jul 11 23:09:48 sweepi kernel: usb usb2: Product: xHCI Host Controller
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:355:Jul 11 23:09:48 sweepi kernel: usb usb2: Manufacturer: Linux 6.8.0-1060-raspi xhci-hcd
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:356:Jul 11 23:09:48 sweepi kernel: usb usb2: SerialNumber: xhci-hcd.0
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:360:Jul 11 23:09:48 sweepi kernel: usb usb3: New USB device strings: Mfr=3, Product=2, SerialNumber=1
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:361:Jul 11 23:09:48 sweepi kernel: usb usb3: Product: xHCI Host Controller
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:362:Jul 11 23:09:48 sweepi kernel: usb usb3: Manufacturer: Linux 6.8.0-1060-raspi xhci-hcd
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:363:Jul 11 23:09:48 sweepi kernel: usb usb3: SerialNumber: xhci-hcd.0
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:366:Jul 11 23:09:48 sweepi kernel: xhci-hcd xhci-hcd.1: xHCI Host Controller
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:367:Jul 11 23:09:48 sweepi kernel: xhci-hcd xhci-hcd.1: new USB bus registered, assigned bus number 4
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:368:Jul 11 23:09:48 sweepi kernel: xhci-hcd xhci-hcd.1: hcc params 0x0240fe6d hci version 0x110 quirks 0x0000008000000810
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:369:Jul 11 23:09:48 sweepi kernel: xhci-hcd xhci-hcd.1: irq 139, io mem 0x1f00300000
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:370:Jul 11 23:09:48 sweepi kernel: xhci-hcd xhci-hcd.1: xHCI Host Controller
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:371:Jul 11 23:09:48 sweepi kernel: xhci-hcd xhci-hcd.1: new USB bus registered, assigned bus number 5
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:372:Jul 11 23:09:48 sweepi kernel: xhci-hcd xhci-hcd.1: Host supports USB 3.0 SuperSpeed
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:374:Jul 11 23:09:48 sweepi kernel: usb usb4: New USB device strings: Mfr=3, Product=2, SerialNumber=1
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:375:Jul 11 23:09:48 sweepi kernel: usb usb4: Product: xHCI Host Controller
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:376:Jul 11 23:09:48 sweepi kernel: usb usb4: Manufacturer: Linux 6.8.0-1060-raspi xhci-hcd
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:377:Jul 11 23:09:48 sweepi kernel: usb usb4: SerialNumber: xhci-hcd.1
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:381:Jul 11 23:09:48 sweepi kernel: usb usb5: New USB device strings: Mfr=3, Product=2, SerialNumber=1
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:382:Jul 11 23:09:48 sweepi kernel: usb usb5: Product: xHCI Host Controller
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:383:Jul 11 23:09:48 sweepi kernel: usb usb5: Manufacturer: Linux 6.8.0-1060-raspi xhci-hcd
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:384:Jul 11 23:09:48 sweepi kernel: usb usb5: SerialNumber: xhci-hcd.1
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:387:Jul 11 23:09:48 sweepi kernel: mmc1: new ultra high speed DDR50 SDIO card at address 0001
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:406:Jul 11 23:09:48 sweepi kernel: EXT4-fs (mmcblk0p2): mounted filesystem c5da9c27-d622-4e80-89db-6af2e32618b4 ro with ordered data mode. Quota mode: none.
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:485:Jul 11 23:09:48 sweepi kernel: EXT4-fs (mmcblk0p2): re-mounted c5da9c27-d622-4e80-89db-6af2e32618b4 r/w.
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:569:Jul 11 23:09:49 sweepi kernel: hci_uart_bcm serial0-0: supply vbat not found, using dummy regulator
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:570:Jul 11 23:09:49 sweepi kernel: hci_uart_bcm serial0-0: supply vddio not found, using dummy regulator
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:637:Jul 12 00:08:07 sweepi kernel: usb 4-1: new full-speed USB device number 2 using xhci-hcd
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:639:Jul 12 00:08:07 sweepi kernel: usb 4-1: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:642:Jul 12 00:08:07 sweepi kernel: usb 4-1: SerialNumber: 1c341230b5d5ef11bfaa744b49d2c684
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:643:Jul 12 00:08:07 sweepi kernel: usbcore: registered new interface driver usbserial_generic
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:644:Jul 12 00:08:07 sweepi kernel: usbserial: USB Serial support registered for generic
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:646:Jul 12 00:08:07 sweepi kernel: usbserial: USB Serial support registered for cp210x
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_kernel_previous.log:648:Jul 12 00:08:07 sweepi kernel: usb 4-1: cp210x converter now attached to ttyUSB0
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_warnings_current.log:3:Jul 11 23:09:49 sweepi kernel: mmc0: cannot verify signal voltage switch
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_warnings_current.log:4:Jul 11 23:09:49 sweepi kernel: mmc1: cannot verify signal voltage switch
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_warnings_current.log:8:Jul 11 23:09:50 sweepi kernel: hci_uart_bcm serial0-0: supply vbat not found, using dummy regulator
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_warnings_current.log:9:Jul 11 23:09:50 sweepi kernel: hci_uart_bcm serial0-0: supply vddio not found, using dummy regulator
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_warnings_current.log:32:Jul 12 00:43:34 sweepi kernel: cp210x ttyUSB0: failed set request 0x12 status: -110
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_warnings_previous.log:3:Jul 11 23:09:48 sweepi kernel: mmc0: cannot verify signal voltage switch
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_warnings_previous.log:4:Jul 11 23:09:48 sweepi kernel: mmc1: cannot verify signal voltage switch
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_warnings_previous.log:8:Jul 11 23:09:49 sweepi kernel: hci_uart_bcm serial0-0: supply vbat not found, using dummy regulator
+/home/sweepi/SweePi/diagnostics/20260712_010514/journal_warnings_previous.log:9:Jul 11 23:09:49 sweepi kernel: hci_uart_bcm serial0-0: supply vddio not found, using dummy regulator

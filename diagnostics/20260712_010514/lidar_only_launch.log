@@ -1,0 +1,22 @@
+[INFO] [launch]: All log files can be found below /home/sweepi/.ros/log/2026-07-12-01-32-33-485844-sweepi-21081
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [sllidar_node-1]: process started with pid [21085]
+[INFO] [robot_state_publisher-2]: process started with pid [21086]
+[sllidar_node-1] [INFO] [1783800153.829123954] [sllidar_node]: SLLidar running on ROS2 package SLLidar.ROS2 SDK Version:1.0.1, SLLIDAR SDK Version:2.1.0
+[robot_state_publisher-2] [INFO] [1783800153.842586758] [robot_state_publisher]: Robot initialized
+[sllidar_node-1] [INFO] [1783800154.348333121] [sllidar_node]: SLLidar S/N: 6325E0F6C1E092D4A19E9FF9F389461A
+[sllidar_node-1] [INFO] [1783800154.348416791] [sllidar_node]: Firmware Ver: 1.02
+[sllidar_node-1] [INFO] [1783800154.348437829] [sllidar_node]: Hardware Rev: 18
+[sllidar_node-1] [INFO] [1783800154.350988762] [sllidar_node]: SLLidar health status : 0
+[sllidar_node-1] [INFO] [1783800154.351019652] [sllidar_node]: SLLidar health status : OK.
+[sllidar_node-1] [INFO] [1783800154.626104545] [sllidar_node]: current scan mode: Standard, sample rate: 5 Khz, max_distance: 16.0 m, scan frequency:10.0 Hz, 
+[WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+[INFO] [robot_state_publisher-2]: sending signal 'SIGINT' to process[robot_state_publisher-2]
+[INFO] [sllidar_node-1]: sending signal 'SIGINT' to process[sllidar_node-1]
+[robot_state_publisher-2] [INFO] [1783800274.521931296] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[robot_state_publisher-2] [INFO] [1783800274.525474623] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[INFO] [robot_state_publisher-2]: process has finished cleanly [pid 21086]
+[sllidar_node-1] [INFO] [1783800274.657042902] [sllidar_node]: Stop motor
+[ERROR] [sllidar_node-1]: process[sllidar_node-1] failed to terminate '5' seconds after receiving 'SIGINT', escalating to 'SIGTERM'
+[INFO] [sllidar_node-1]: sending signal 'SIGTERM' to process[sllidar_node-1]
+[INFO] [sllidar_node-1]: process has finished cleanly [pid 21085]

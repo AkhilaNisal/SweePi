@@ -7,6 +7,7 @@ CRITICAL FIX: Smarter proximity blocking + connectivity check
 import copy
 import math
 import os
+import traceback
 from collections import deque
 from datetime import datetime
 
@@ -726,6 +727,12 @@ class WavefrontExplorer(Node):
                         count += 1
         return count
 
+    def _cells_to_area_m2(self, cell_count):
+        """Convert a number of map cells into square meters."""
+        if self.map_info is None:
+            return 0.0
+        return float(cell_count) * self.map_info.resolution * self.map_info.resolution
+
     def _has_clearance(self, x, y):
         """Check if position has enough clearance."""
         clearance_cells = int(self.min_clearance / self.map_info.resolution) + 1
@@ -983,6 +990,22 @@ class WavefrontExplorer(Node):
     # MAIN EXPLORATION LOOP
     # ============================================================
     def explore(self):
+        """Main exploration loop wrapper that keeps timer exceptions visible."""
+        try:
+            self._explore_once()
+        except Exception as exc:
+            self.get_logger().error(
+                'Exploration loop failed: %s\n%s' % (exc, traceback.format_exc())
+            )
+            self.navigating = False
+            self.current_goal_handle = None
+            self.current_goal_region = None
+            self.current_goal_frontier = None
+            self.current_goal_sequence = None
+            self.current_goal_start_time = None
+            self._publish_zero_velocity()
+
+    def _explore_once(self):
         """Main exploration loop."""
         if self.map_data is None:
             self.get_logger().info('⏳ Waiting for map...', throttle_duration_sec=5.0)
@@ -1113,6 +1136,8 @@ class WavefrontExplorer(Node):
         self.current_goal_frontier = (frontier_x, frontier_y)
         self.current_goal_sequence = goal_sequence
         attempts = self.region_attempts[region_key]
+        goal_mx, goal_my = self._world_to_map(goal_x, goal_y)
+        unknown_cells = self._count_unknown_cells_near(goal_mx, goal_my)
 
         self.get_logger().info(
             f'📍 Goal: ({goal_x:.2f}, {goal_y:.2f}) | '

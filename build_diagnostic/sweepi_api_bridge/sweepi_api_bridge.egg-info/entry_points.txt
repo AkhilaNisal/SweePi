@@ -1,0 +1,2 @@
+[console_scripts]
+api_bridge_node = sweepi_api_bridge.api_bridge_node:main

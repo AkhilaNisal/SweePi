@@ -1,0 +1,4 @@
+source;share/sweepi_exploration/local_setup.bash
+source;share/sweepi_exploration/local_setup.dsv
+source;share/sweepi_exploration/local_setup.sh
+source;share/sweepi_exploration/local_setup.zsh

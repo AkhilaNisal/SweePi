@@ -1,0 +1,2 @@
+[INFO] [1783771488.335547162] [talker]: Publishing: 'Hello World: 1'
+[INFO] [1783771489.160654283] [rclcpp]: signal_handler(SIGINT/SIGTERM)

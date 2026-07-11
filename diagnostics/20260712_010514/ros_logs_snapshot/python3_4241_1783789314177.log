@@ -1,0 +1,37 @@
+[INFO] [1783789315.892066037] [wavefront_explorer]: ======================================================================
+[INFO] [1783789315.965122309] [wavefront_explorer]: 🤖 WAVEFRONT EXPLORER (SMART BLOCKING FIX)
+[INFO] [1783789315.987089597] [wavefront_explorer]: ======================================================================
+[INFO] [1783789315.991982728] [wavefront_explorer]:    📋 FRONTIER DETECTION:
+[INFO] [1783789315.995143877] [wavefront_explorer]:       frontier_min_size: 3
+[INFO] [1783789316.013616812] [wavefront_explorer]:       min_unknown_region_area_m2: 0.05
+[INFO] [1783789316.017359937] [wavefront_explorer]:       exploration_frequency: 1.0 Hz (timer period: 1.00s)
+[INFO] [1783789316.020511471] [wavefront_explorer]:       max_frontier_candidates: 0
+[INFO] [1783789316.024010183] [wavefront_explorer]:       no_frontier_finish_count: 10
+[INFO] [1783789316.031985812] [wavefront_explorer]:       robot_base_frame: base_footprint
+[INFO] [1783789316.034922111] [wavefront_explorer]:       far_goals: 8, far_min_distance: 1.00m
+[INFO] [1783789316.038301214] [wavefront_explorer]:       safe_goal_clearance_weight: 250.0
+[INFO] [1783789316.040838749] [wavefront_explorer]:    🔧 ATTEMPT LIMITS:
+[INFO] [1783789316.043061741] [wavefront_explorer]:       max_attempts_per_frontier: 3
+[INFO] [1783789316.045926541] [wavefront_explorer]:       max_consecutive_timeouts: 4
+[INFO] [1783789316.049422498] [wavefront_explorer]:       max_total_timeouts: 35
+[INFO] [1783789316.054519183] [wavefront_explorer]:    📏 SMART BLOCKING:
+[INFO] [1783789316.057997889] [wavefront_explorer]:       unreachable_region_radius: 0.4m
+[INFO] [1783789316.060952843] [wavefront_explorer]:       smart_blocking_enabled: True
+[INFO] [1783789316.063785453] [wavefront_explorer]:       failed_frontier_retry_sec: 30.0s
+[INFO] [1783789316.071164259] [wavefront_explorer]:       completion_retry_cycles: 3
+[INFO] [1783789316.084324065] [wavefront_explorer]:       frontier_goal_search_radius: 1.4m
+[INFO] [1783789316.096039990] [wavefront_explorer]:       save_map_padding_m: 0.50m
+[INFO] [1783789316.111725092] [wavefront_explorer]:       close_saved_map_boundary: True thickness=0.10m
+[INFO] [1783789316.114407788] [wavefront_explorer]:    CONTROL:
+[INFO] [1783789316.117025919] [wavefront_explorer]:       map_name: living_room
+[INFO] [1783789316.120989291] [wavefront_explorer]:       start_mode: auto
+[INFO] [1783789316.123429664] [wavefront_explorer]:       cmd_vel_topic: /cmd_vel
+[INFO] [1783789316.126099750] [wavefront_explorer]:       source_map_topic: /slam_map
+[INFO] [1783789316.130789944] [wavefront_explorer]:       repaired_map_topic: /map
+[INFO] [1783789316.134868116] [wavefront_explorer]:       /set_manual_control true=manual false=auto
+[INFO] [1783789316.138487269] [wavefront_explorer]:       /stop_exploration_and_save map_url=<name>
+[INFO] [1783789316.143275623] [wavefront_explorer]: ======================================================================
+[INFO] [1783789316.745330368] [wavefront_explorer]: 🚀 Exploration started!
+[INFO] [1783789316.976557138] [wavefront_explorer]: 📊 Frontiers: 1739 cells, 107 raw clusters, 20 large -> 20 large usable | ignored small: 87 | Unreachable areas: 0
+[INFO] [1783789316.982679935] [wavefront_explorer]: 🎯 Selected far: frontier=(0.38, 1.50) goal=(0.88, 0.30) | Size: 759 | Distance: 0.93m | Clearance: 0.43m | Attempts: 0/3
+[INFO] [1783789316.983367208] [wavefront_explorer]: ✓ Using safe goal: (0.38, 1.50) -> (0.88, 0.30) | clearance=0.43m

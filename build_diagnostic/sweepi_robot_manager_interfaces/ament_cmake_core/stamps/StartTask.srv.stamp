@@ -1,0 +1,6 @@
+string map_name
+string mode
+bool auto_start
+---
+bool success
+string message

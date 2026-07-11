@@ -1,0 +1,1 @@
+/home/sweepi/SweePi/build_diagnostic/sweepi_robot_manager_interfaces/rosidl_generator_cpp/sweepi_robot_manager_interfaces/srv/start_task.hpp

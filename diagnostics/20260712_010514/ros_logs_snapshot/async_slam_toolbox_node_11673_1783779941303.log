@@ -1,0 +1,7 @@
+[INFO] [1783779944.626363141] [slam_toolbox]: Node using stack size 40000000
+[INFO] [1783779944.754743685] [slam_toolbox]: Configuring
+[INFO] [1783779945.161255560] [slam_toolbox]: Using solver plugin solver_plugins::CeresSolver
+[INFO] [1783779945.178102781] [slam_toolbox]: CeresSolver: Using SCHUR_JACOBI preconditioner.
+[INFO] [1783779945.967276360] [slam_toolbox]: Activating
+[INFO] [1783780023.427278956] [slam_toolbox]: Message Filter dropping message: frame 'lidar_link' at time 1783780023.143 for reason 'discarding message because the queue is full'
+[INFO] [1783780335.696815484] [rclcpp]: signal_handler(SIGINT/SIGTERM)

@@ -1,0 +1,17 @@
+[2.613s] Invoking command in '/home/sweepi/SweePi/build_diagnostic/sweepi_api_bridge': AMENT_PREFIX_PATH=/home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces:${CMAKE_PREFIX_PATH} LD_LIBRARY_PATH=/home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/home/sweepi/SweePi/build_diagnostic/sweepi_api_bridge/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/sweepi/SweePi/install_diagnostic/sweepi_api_bridge/lib/python3.12/site-packages:/home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/sweepi/SweePi/build_diagnostic/sweepi_api_bridge/build --no-deps symlink_data
+[3.116s] running develop
+[3.413s] running egg_info
+[3.443s] writing sweepi_api_bridge.egg-info/PKG-INFO
+[3.444s] writing dependency_links to sweepi_api_bridge.egg-info/dependency_links.txt
+[3.444s] writing entry points to sweepi_api_bridge.egg-info/entry_points.txt
+[3.445s] writing requirements to sweepi_api_bridge.egg-info/requires.txt
+[3.446s] writing top-level names to sweepi_api_bridge.egg-info/top_level.txt
+[3.505s] reading manifest file 'sweepi_api_bridge.egg-info/SOURCES.txt'
+[3.506s] writing manifest file 'sweepi_api_bridge.egg-info/SOURCES.txt'
+[3.536s] running build_ext
+[3.537s] Creating /home/sweepi/SweePi/install_diagnostic/sweepi_api_bridge/lib/python3.12/site-packages/sweepi-api-bridge.egg-link (link to .)
+[3.537s] Installing api_bridge_node script to /home/sweepi/SweePi/install_diagnostic/sweepi_api_bridge/lib/sweepi_api_bridge
+[3.538s] 
+[3.538s] Installed /home/sweepi/SweePi/build_diagnostic/sweepi_api_bridge
+[3.538s] running symlink_data
+[3.631s] Invoked command in '/home/sweepi/SweePi/build_diagnostic/sweepi_api_bridge' returned '0': AMENT_PREFIX_PATH=/home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces:${CMAKE_PREFIX_PATH} LD_LIBRARY_PATH=/home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/home/sweepi/SweePi/build_diagnostic/sweepi_api_bridge/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/sweepi/SweePi/install_diagnostic/sweepi_api_bridge/lib/python3.12/site-packages:/home/sweepi/SweePi/install_diagnostic/sweepi_robot_manager_interfaces/lib/python3.12/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/sweepi/SweePi/build_diagnostic/sweepi_api_bridge/build --no-deps symlink_data

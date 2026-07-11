@@ -1,0 +1,15 @@
+1783776131.4175990 [INFO] [launch]: All log files can be found below /home/sweepi/.ros/log/2026-07-11-18-52-11-415145-sweepi-2114
+1783776131.4178350 [INFO] [launch]: Default logging verbosity is set to INFO
+1783776131.8766685 [INFO] [base_driver_node-1]: process started with pid [2119]
+1783776131.8771777 [INFO] [ekf_node-2]: process started with pid [2120]
+1783776131.8773704 [INFO] [sllidar_node-3]: process started with pid [2121]
+1783776131.8774936 [INFO] [robot_state_publisher-4]: process started with pid [2122]
+1783776131.8776119 [INFO] [rviz2-5]: process started with pid [2123]
+1783776131.8777137 [INFO] [sweepi_robot_manager_node.py-6]: process started with pid [2124]
+1783776132.9767466 [ERROR] [sllidar_node-3]: process has died [pid 2121, exit code 255, cmd '/home/sweepi/SweePi/install/sllidar_ros2/lib/sllidar_ros2/sllidar_node --ros-args -r __node:=sllidar_node --params-file /tmp/launch_params_5mk71eaj'].
+1783776148.9428794 [WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+1783776149.1121619 [INFO] [robot_state_publisher-4]: process has finished cleanly [pid 2122]
+1783776149.1182311 [INFO] [ekf_node-2]: process has finished cleanly [pid 2120]
+1783776149.3299570 [INFO] [rviz2-5]: process has finished cleanly [pid 2123]
+1783776149.3785641 [INFO] [sweepi_robot_manager_node.py-6]: process has finished cleanly [pid 2124]
+1783776149.4595771 [ERROR] [base_driver_node-1]: process has died [pid 2119, exit code 1, cmd '/home/sweepi/SweePi/install/sweepi_base_driver/lib/sweepi_base_driver/base_driver_node --ros-args -r __node:=base_driver_node --params-file /home/sweepi/SweePi/install/sweepi_base_driver/share/sweepi_base_driver/config/base_driver_params.yaml --params-file /tmp/launch_params_34kzl1om'].

@@ -1,0 +1,14 @@
+# file: dev/ttyAMA0
+# owner: root
+# group: dialout
+user::rw-
+group::rw-
+other::---
+
+# file: dev/ttyUSB0
+# owner: root
+# group: dialout
+user::rwx
+group::rwx
+other::rwx
+

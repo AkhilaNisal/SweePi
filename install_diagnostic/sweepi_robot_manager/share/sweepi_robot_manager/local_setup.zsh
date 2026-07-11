@@ -1,0 +1,1 @@
+/home/sweepi/SweePi/build_diagnostic/sweepi_robot_manager/ament_cmake_environment_hooks/local_setup.zsh

@@ -1,0 +1,13 @@
+file(REMOVE_RECURSE
+  "CMakeFiles/sweepi_robot_manager_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/sweepi_robot_manager_interfaces/srv/detail/start_task__type_support_c.cpp.o"
+  "CMakeFiles/sweepi_robot_manager_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/sweepi_robot_manager_interfaces/srv/detail/start_task__type_support_c.cpp.o.d"
+  "libsweepi_robot_manager_interfaces__rosidl_typesupport_fastrtps_c.pdb"
+  "libsweepi_robot_manager_interfaces__rosidl_typesupport_fastrtps_c.so"
+  "rosidl_typesupport_fastrtps_c/sweepi_robot_manager_interfaces/srv/detail/start_task__rosidl_typesupport_fastrtps_c.h"
+  "rosidl_typesupport_fastrtps_c/sweepi_robot_manager_interfaces/srv/detail/start_task__type_support_c.cpp"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang CXX)
+  include(CMakeFiles/sweepi_robot_manager_interfaces__rosidl_typesupport_fastrtps_c.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

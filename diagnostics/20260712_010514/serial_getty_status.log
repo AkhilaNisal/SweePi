@@ -1,0 +1,7 @@
+Warning: The unit file, source configuration file or drop-ins of serial-getty@ttyAMA0.service changed on disk. Run 'systemctl daemon-reload' to reload units.
+○ serial-getty@ttyAMA0.service - Serial Getty on ttyAMA0
+     Loaded: loaded (/usr/lib/systemd/system/serial-getty@.service; disabled; preset: enabled)
+     Active: inactive (dead)
+       Docs: man:agetty(8)
+             man:systemd-getty-generator(8)
+             https://0pointer.de/blog/projects/serial-console.html

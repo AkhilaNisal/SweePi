@@ -1,0 +1,22 @@
+[INFO] [1783797269.947950848] [behavior_server]: 
+	behavior_server lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1783797272.515839966] [behavior_server]: Configuring
+[INFO] [1783797272.573805878] [behavior_server]: Creating behavior plugin spin of type nav2_behaviors::Spin
+[INFO] [1783797272.596085138] [behavior_server]: Creating behavior plugin backup of type nav2_behaviors::BackUp
+[INFO] [1783797272.614007597] [behavior_server]: Creating behavior plugin drive_on_heading of type nav2_behaviors::DriveOnHeading
+[INFO] [1783797272.628765505] [behavior_server]: Creating behavior plugin assisted_teleop of type nav2_behaviors::AssistedTeleop
+[INFO] [1783797272.662237896] [behavior_server]: Creating behavior plugin wait of type nav2_behaviors::Wait
+[INFO] [1783797272.728783561] [behavior_server]: Configuring spin
+[INFO] [1783797272.815228084] [behavior_server]: Configuring backup
+[INFO] [1783797272.842217550] [behavior_server]: Configuring drive_on_heading
+[INFO] [1783797272.876427472] [behavior_server]: Configuring assisted_teleop
+[INFO] [1783797272.959277274] [behavior_server]: Configuring wait
+[INFO] [1783797276.324438181] [behavior_server]: Activating
+[INFO] [1783797276.324480535] [behavior_server]: Activating spin
+[INFO] [1783797276.324501934] [behavior_server]: Activating backup
+[INFO] [1783797276.324518442] [behavior_server]: Activating drive_on_heading
+[INFO] [1783797276.324534876] [behavior_server]: Activating assisted_teleop
+[INFO] [1783797276.324552736] [behavior_server]: Activating wait
+[INFO] [1783797276.324575470] [behavior_server]: Creating bond (behavior_server) to lifecycle manager.

@@ -1,0 +1,16 @@
+[INFO] [1783779915.454251558] [base_driver_node]: SweePi base driver starting on /dev/ttyAMA0 at 115200 baud
+[INFO] [1783779915.455140391] [base_driver_node]: Base driver parameters: serial_port=/dev/ttyAMA0, baud_rate=115200, wheel_radius=0.0615, wheel_separation=0.29, ticks_per_revolution=7392.0, left_encoder_sign=1.0, right_encoder_sign=1.0, left_motor_command_sign=1.0, right_motor_command_sign=1.0, command_rate_hz=50.0, feedback_poll_rate_hz=100.0, cmd_vel_timeout=0.5, gyro_units=rad_s, accel_units=m_s2
+[INFO] [1783779915.458060222] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
+[ERROR] [1783780153.766818972] [base_driver_node]: Serial write failed: Write timeout
+[INFO] [1783780153.770740632] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
+[WARN] [1783780153.797996013] [base_driver_node]: Ignoring unknown STM32 packet: LL)�r����b��r�b�bz-5)�FB,171903,3613591000,28,29,0.0210,0.0478,-0.0117,-0.4551,0.1545,11.2003,12.0,0,OK
+[WARN] [1783780153.855229728] [base_driver_node]: Feedback sequence jump: expected 171901, got 171904
+[ERROR] [1783780164.267825320] [base_driver_node]: Serial write failed: Write timeout
+[INFO] [1783780164.283730593] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
+[WARN] [1783780164.311684146] [base_driver_node]: Feedback sequence jump: expected 172402, got 172404
+[ERROR] [1783780164.418354137] [base_driver_node]: Serial write failed: Write timeout
+[INFO] [1783780165.290082829] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
+[WARN] [1783780165.319151941] [base_driver_node]: Feedback sequence jump: expected 172409, got 172452
+[ERROR] [1783780254.092634315] [base_driver_node]: Serial write failed: Write timeout
+[INFO] [1783780254.113759472] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
+[WARN] [1783780254.151250082] [base_driver_node]: Feedback sequence jump: expected 176685, got 176688

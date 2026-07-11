@@ -1,0 +1,11 @@
+{
+  "package_name": "sweepi_robot_manager_interfaces",
+  "output_dir": "/home/sweepi/SweePi/build_diagnostic/sweepi_robot_manager_interfaces/rosidl_generator_type_description/sweepi_robot_manager_interfaces",
+  "idl_tuples": [
+    "/home/sweepi/SweePi/build_diagnostic/sweepi_robot_manager_interfaces/rosidl_adapter/sweepi_robot_manager_interfaces:srv/StartTask.idl"
+  ],
+  "include_paths": [
+    "service_msgs:/opt/ros/jazzy/share/service_msgs",
+    "builtin_interfaces:/opt/ros/jazzy/share/builtin_interfaces"
+  ]
+}

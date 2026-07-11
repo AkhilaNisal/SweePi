@@ -1,0 +1,21 @@
+Type: nav_msgs/msg/Path
+
+Publisher count: 0
+
+Subscription count: 1
+
+Node name: sweepi_api_bridge
+Node namespace: /
+Topic type: nav_msgs/msg/Path
+Topic type hash: RIHS01_1957a5bb3cee5da65c4e52e52b65a93df227efce4c20f8458b36e73066ca334b
+Endpoint type: SUBSCRIPTION
+GID: 01.0f.81.bf.51.11.38.8b.00.00.00.00.00.00.40.04
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: TRANSIENT_LOCAL
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+

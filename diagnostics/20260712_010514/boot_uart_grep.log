@@ -1,0 +1,8 @@
+/boot/firmware/config.txt:9:# other dtoverlay= specification
+/boot/firmware/config.txt:25:dtoverlay=vc4-kms-v3d
+/boot/firmware/config.txt:29:enable_uart=1
+/boot/firmware/config.txt:38:dtoverlay=dwc2
+/boot/firmware/config.txt:48:dtoverlay=vc4-kms-v3d,cma-128
+/boot/firmware/config.txt:53:dtoverlay=vc4-kms-v3d,cma-128
+/boot/firmware/config.txt:58:dtoverlay=dwc2,dr_mode=host
+/boot/firmware/cmdline.txt:1: multipath=off dwc_otg.lpm_enable=0 console=tty1 root=LABEL=writable rootfstype=ext4 rootwait fixrtc cfg80211.ieee80211_regdom=LK

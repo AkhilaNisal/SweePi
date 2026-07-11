@@ -55,6 +55,9 @@ class SweePiRobotManager(Node):
         self.last_coverage_summary = 'No coverage task has completed yet.'
         self.coverage_reset_shutdown_deadline = 0.0
         self.latest_exploration_mode = ''
+        self.latest_exploration_mode_time = 0.0
+        self.exploration_startup_grace_sec = 8.0
+        self.exploration_watchdog_failures = 0
         self.exploration_stop_candidate_time = 0.0
         self.exploration_stop_grace_sec = 2.0
         self.exploration_stop_handled = False
@@ -426,6 +429,8 @@ class SweePiRobotManager(Node):
         self.coverage_reset_shutdown_deadline = 0.0
         self.exploration_stop_requested = False
         self.exploration_task_end_requested = False
+        self.latest_exploration_mode_time = 0.0
+        self.exploration_watchdog_failures = 0
         self._publish_status()
         return True
 
@@ -759,8 +764,16 @@ class SweePiRobotManager(Node):
             self._save_map_clients[target_service] = client
 
         if not client.wait_for_service(timeout_sec=1.0):
-            response.success = False
-            response.message = 'Target service unavailable: %s' % target_service
+            self.get_logger().warn(
+                'Target service unavailable: %s; closing exploration launch without saving'
+                % target_service
+            )
+            self._stop_active_task()
+            response.success = True
+            response.message = (
+                'Exploration launch closed, but map save could not run because ' 
+                'the exploration save service was unavailable.'
+            )
             return response
 
         self.exploration_task_end_requested = True
@@ -857,6 +870,8 @@ class SweePiRobotManager(Node):
 
         previous_mode = self.latest_exploration_mode
         self.latest_exploration_mode = mode
+        self.latest_exploration_mode_time = time.monotonic()
+        self.exploration_watchdog_failures = 0
         if self.active_task != 'exploration' or self.exploration_stop_handled:
             return
 
@@ -922,6 +937,8 @@ class SweePiRobotManager(Node):
 
     def _reset_active_exploration_tracking(self, initial_mode=''):
         self.latest_exploration_mode = str(initial_mode or '').strip().lower()
+        self.latest_exploration_mode_time = 0.0
+        self.exploration_watchdog_failures = 0
         self.exploration_stop_candidate_time = 0.0
         self.exploration_stop_handled = False
         self.exploration_stop_requested = False
@@ -1042,11 +1059,65 @@ class SweePiRobotManager(Node):
 
     def _timer_callback(self):
         self._refresh_active_process()
+        self._tick_active_exploration_health()
         self._tick_pending_coverage_start()
         self._tick_pending_coverage_reset_shutdown()
         self._finalize_completed_coverage_if_ready()
         self._finalize_completed_exploration_if_ready()
         self._publish_status()
+
+    def _tick_active_exploration_health(self):
+        if self.active_task != 'exploration' or self.active_process is None:
+            return
+        if self.active_task_start_monotonic is None:
+            return
+        elapsed = time.monotonic() - self.active_task_start_monotonic
+        if elapsed < self.exploration_startup_grace_sec:
+            return
+
+        required_services = (
+            '/stop_exploration',
+            '/stop_exploration_and_save',
+        )
+        missing = []
+        for service_name in required_services:
+            if service_name == '/stop_exploration_and_save':
+                client = self._save_map_clients.get(service_name)
+                if client is None:
+                    client = self.create_client(SaveMap, service_name)
+                    self._save_map_clients[service_name] = client
+            else:
+                client = self._trigger_clients.get(service_name)
+                if client is None:
+                    client = self.create_client(Trigger, service_name)
+                    self._trigger_clients[service_name] = client
+            if not client.wait_for_service(timeout_sec=0.0):
+                missing.append(service_name)
+
+        mode_stale = (
+            self.latest_exploration_mode_time <= 0.0
+            or time.monotonic() - self.latest_exploration_mode_time > 5.0
+        )
+        if not missing and not mode_stale:
+            self.exploration_watchdog_failures = 0
+            return
+
+        self.exploration_watchdog_failures += 1
+        self.get_logger().warn(
+            'Exploration health check failed %d/3: missing_services=%s mode_stale=%s'
+            % (
+                self.exploration_watchdog_failures,
+                ','.join(missing) or '(none)',
+                self._bool_arg(mode_stale),
+            )
+        )
+        if self.exploration_watchdog_failures < 3:
+            return
+
+        self.get_logger().error(
+            'Exploration critical node is not healthy. Closing exploration launch.'
+        )
+        self._stop_active_task()
 
     def _tick_pending_coverage_reset_shutdown(self):
         if self.coverage_reset_shutdown_deadline <= 0.0:

@@ -1,0 +1,32 @@
+1783784299.3965364 [INFO] [launch]: All log files can be found below /home/sweepi/.ros/log/2026-07-11-21-08-19-395035-sweepi-11824
+1783784299.3967452 [INFO] [launch]: Default logging verbosity is set to INFO
+1783784300.7097464 [INFO] [component_container_isolated-1]: process started with pid [11858]
+1783784300.7101505 [INFO] [coverage_tracker_node.py-2]: process started with pid [11859]
+1783784300.7103007 [INFO] [coverage_planner_node.py-3]: process started with pid [11860]
+1783784300.7104158 [INFO] [coverage_arm_follow_path_executor_node.py-4]: process started with pid [11861]
+1783784300.7105350 [INFO] [coverage_manager_node.py-5]: process started with pid [11862]
+1783784301.5129392 [INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/controller_server' in container '/nav2_container'
+1783784301.7512581 [INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/map_server' in container '/nav2_container'
+1783784302.0003052 [INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/amcl' in container '/nav2_container'
+1783784302.1169195 [INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/smoother_server' in container '/nav2_container'
+1783784302.3889942 [INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/lifecycle_manager_localization' in container '/nav2_container'
+1783784303.1092117 [INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/planner_server' in container '/nav2_container'
+1783784303.5278563 [INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/route_server' in container '/nav2_container'
+1783784303.6893435 [INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/behavior_server' in container '/nav2_container'
+1783784303.9322414 [INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/bt_navigator' in container '/nav2_container'
+1783784304.1574786 [INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/waypoint_follower' in container '/nav2_container'
+1783784304.3588367 [INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/velocity_smoother' in container '/nav2_container'
+1783784304.7806070 [INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/collision_monitor' in container '/nav2_container'
+1783784305.0086706 [INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/docking_server' in container '/nav2_container'
+1783784305.1596479 [INFO] [launch_ros.actions.load_composable_nodes]: Loaded node '/lifecycle_manager_navigation' in container '/nav2_container'
+1783784334.1316905 [WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+1783784334.5231042 [INFO] [coverage_manager_node.py-5]: sending signal 'SIGINT' to process[coverage_manager_node.py-5]
+1783784334.5317476 [INFO] [coverage_arm_follow_path_executor_node.py-4]: sending signal 'SIGINT' to process[coverage_arm_follow_path_executor_node.py-4]
+1783784334.5328526 [INFO] [coverage_planner_node.py-3]: sending signal 'SIGINT' to process[coverage_planner_node.py-3]
+1783784334.5454743 [INFO] [coverage_tracker_node.py-2]: sending signal 'SIGINT' to process[coverage_tracker_node.py-2]
+1783784334.5506632 [INFO] [component_container_isolated-1]: sending signal 'SIGINT' to process[component_container_isolated-1]
+1783784334.5787389 [ERROR] [coverage_manager_node.py-5]: process has died [pid 11862, exit code -2, cmd '/home/sweepi/SweePi/install/sweepi_coverage/lib/sweepi_coverage/coverage_manager_node.py --ros-args -r __node:=coverage_manager_node --params-file /home/sweepi/SweePi/install/sweepi_coverage/share/sweepi_coverage/config/coverage_follow_path_params.yaml --params-file /tmp/launch_params_m_9fjuvi'].
+1783784334.6020050 [ERROR] [coverage_tracker_node.py-2]: process has died [pid 11859, exit code -2, cmd '/home/sweepi/SweePi/install/sweepi_coverage/lib/sweepi_coverage/coverage_tracker_node.py --ros-args -r __node:=coverage_tracker_node --params-file /home/sweepi/SweePi/install/sweepi_coverage/share/sweepi_coverage/config/coverage_follow_path_params.yaml --params-file /tmp/launch_params__6x7ta89'].
+1783784335.0907743 [ERROR] [coverage_planner_node.py-3]: process has died [pid 11860, exit code -2, cmd '/home/sweepi/SweePi/install/sweepi_coverage/lib/sweepi_coverage/coverage_planner_node.py --ros-args -r __node:=coverage_planner_node --params-file /home/sweepi/SweePi/install/sweepi_coverage/share/sweepi_coverage/config/coverage_follow_path_params.yaml --params-file /tmp/launch_params_pinixg7a'].
+1783784335.1205807 [ERROR] [coverage_arm_follow_path_executor_node.py-4]: process has died [pid 11861, exit code -2, cmd '/home/sweepi/SweePi/install/sweepi_coverage/lib/sweepi_coverage/coverage_arm_follow_path_executor_node.py --ros-args -r __node:=coverage_follow_path_executor_node --params-file /home/sweepi/SweePi/install/sweepi_coverage/share/sweepi_coverage/config/coverage_follow_path_params.yaml --params-file /tmp/launch_params_0_k69mzo --params-file /tmp/launch_params_zqdpg4m4'].
+1783784337.3705685 [ERROR] [component_container_isolated-1]: process has died [pid 11858, exit code -6, cmd '/opt/ros/jazzy/lib/rclcpp_components/component_container_isolated --ros-args --log-level info --ros-args -r __node:=nav2_container --params-file /tmp/launch_params_nng87u46 --params-file /tmp/launch_params_kin91xp3 -r /tf:=tf -r /tf_static:=tf_static'].

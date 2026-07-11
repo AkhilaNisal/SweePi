@@ -1,0 +1,831 @@
+systemd,1 fixrtc
+  |-ModemManager,851
+  |   |-{ModemManager},855
+  |   |-{ModemManager},856
+  |   `-{ModemManager},858
+  |-NetworkManager,827 --no-daemon
+  |   |-{NetworkManager},864
+  |   |-{NetworkManager},865
+  |   `-{NetworkManager},866
+  |-accounts-daemon,725
+  |   |-{accounts-daemon},733
+  |   |-{accounts-daemon},734
+  |   `-{accounts-daemon},828
+  |-agetty,1101 -o -p -- \\u --noclear - linux
+  |-avahi-daemon,726
+  |   `-avahi-daemon,748
+  |-bluetoothd,727
+  |-colord,4110
+  |   |-{colord},4121
+  |   |-{colord},4122
+  |   `-{colord},4125
+  |-cron,1072 -f -P
+  |-cups-browsed,1082
+  |   |-{cups-browsed},1121
+  |   |-{cups-browsed},1122
+  |   `-{cups-browsed},1123
+  |-cupsd,1057 -l
+  |-dbus-daemon,728 --system --address=systemd: --nofork --nopidfile --systemd-activation --syslog-only
+  |-ibus-daemon,3943 --daemonize --xim
+  |   |-ibus-engine-sim,4049
+  |   |   |-{ibus-engine-sim},4051
+  |   |   |-{ibus-engine-sim},4052
+  |   |   `-{ibus-engine-sim},4053
+  |   |-ibus-extension-,3958
+  |   |   |-{ibus-extension-},3973
+  |   |   |-{ibus-extension-},3988
+  |   |   |-{ibus-extension-},3991
+  |   |   |-{ibus-extension-},3995
+  |   |   `-{ibus-extension-},4062
+  |   |-ibus-memconf,3956
+  |   |   |-{ibus-memconf},3959
+  |   |   |-{ibus-memconf},3960
+  |   |   `-{ibus-memconf},3961
+  |   |-ibus-ui-gtk3,3957
+  |   |   |-{ibus-ui-gtk3},3975
+  |   |   |-{ibus-ui-gtk3},3989
+  |   |   |-{ibus-ui-gtk3},3990
+  |   |   |-{ibus-ui-gtk3},3996
+  |   |   |-{ibus-ui-gtk3},4005
+  |   |   `-{ibus-ui-gtk3},4019
+  |   |-{ibus-daemon},3945
+  |   |-{ibus-daemon},3946
+  |   `-{ibus-daemon},3947
+  |-ibus-x11,3963 --kill-daemon
+  |   |-{ibus-x11},3972
+  |   |-{ibus-x11},3986
+  |   |-{ibus-x11},3987
+  |   `-{ibus-x11},3992
+  |-lttng-sessiond,732
+  |   |-lttng-runas,796
+  |   |-{lttng-sessiond},797
+  |   |-{lttng-sessiond},798
+  |   |-{lttng-sessiond},800
+  |   |-{lttng-sessiond},801
+  |   |-{lttng-sessiond},802
+  |   |-{lttng-sessiond},803
+  |   |-{lttng-sessiond},804
+  |   |-{lttng-sessiond},805
+  |   |-{lttng-sessiond},806
+  |   |-{lttng-sessiond},807
+  |   |-{lttng-sessiond},808
+  |   |-{lttng-sessiond},809
+  |   |-{lttng-sessiond},810
+  |   |-{lttng-sessiond},811
+  |   `-{lttng-sessiond},3834
+  |-polkitd,735 --no-debug
+  |   |-{polkitd},790
+  |   |-{polkitd},791
+  |   `-{polkitd},830
+  |-python3,1059 /opt/sweepi/power/sweepi_power_control.py
+  |   |-{python3},1112
+  |   |-{python3},1113
+  |   |-{python3},1114
+  |   |-{python3},1116
+  |   `-{python3},1117
+  |-python3,1111 /opt/sweepi/ble/sweepi_ble_provisioning.py
+  |-rsyslogd,760 -n -iNONE
+  |   |-{rsyslogd},812
+  |   |-{rsyslogd},813
+  |   `-{rsyslogd},814
+  |-rtkit-daemon,1248
+  |   |-{rtkit-daemon},1249
+  |   `-{rtkit-daemon},1250
+  |-sh,5264 /home/sweepi/.vscode-server/cli/servers/Stable-e7fb5e96c0730b9deb70b33781f98e2f35975036/server/bin/code-server...
+  |   `-node,5268/home/sweepi/.vscode-server/cli/
+  |       |-node,5336/home/sweepi/.vscode-server/cli/
+  |       |   |-bash,5393 --init-file...
+  |       |   |-{node},5338
+  |       |   |-{node},5339
+  |       |   |-{node},5340
+  |       |   |-{node},5341
+  |       |   |-{node},5342
+  |       |   |-{node},5343
+  |       |   |-{node},5344
+  |       |   |-{node},5345
+  |       |   |-{node},5346
+  |       |   |-{node},5347
+  |       |   `-{node},5394
+  |       |-node,6497 --dns-result-order=ipv4first/ho
+  |       |   |-codex,6672 -cfeatures.code_mode_host=t
+  |       |   |   |-{codex},6673
+  |       |   |   |-{codex},6674
+  |       |   |   |-{codex},6675
+  |       |   |   |-{codex},6676
+  |       |   |   |-{codex},6677
+  |       |   |   |-{codex},6680
+  |       |   |   |-{codex},6715
+  |       |   |   |-{codex},6716
+  |       |   |   |-{codex},6717
+  |       |   |   |-{codex},6718
+  |       |   |   |-{codex},6719
+  |       |   |   |-{codex},6720
+  |       |   |   |-{codex},6721
+  |       |   |   |-{codex},6740
+  |       |   |   |-{codex},6743
+  |       |   |   |-{codex},6938
+  |       |   |   `-{codex},6939
+  |       |   |-node,6946/home/sweepi/.vscode-server/cli/
+  |       |   |   |-{node},6947
+  |       |   |   |-{node},6948
+  |       |   |   |-{node},6949
+  |       |   |   |-{node},6950
+  |       |   |   |-{node},6951
+  |       |   |   `-{node},6952
+  |       |   |-{node},6498
+  |       |   |-{node},6499
+  |       |   |-{node},6500
+  |       |   |-{node},6501
+  |       |   |-{node},6502
+  |       |   |-{node},6503
+  |       |   |-{node},6504
+  |       |   |-{node},6505
+  |       |   |-{node},6506
+  |       |   |-{node},6507
+  |       |   |-{node},6538
+  |       |   `-{node},6558
+  |       |-node,6508/home/sweepi/.vscode-server/cli/
+  |       |   |-{node},6509
+  |       |   |-{node},6510
+  |       |   |-{node},6511
+  |       |   |-{node},6512
+  |       |   |-{node},6513
+  |       |   |-{node},6514
+  |       |   |-{node},6515
+  |       |   |-{node},6516
+  |       |   |-{node},6517
+  |       |   |-{node},6518
+  |       |   |-{node},6520
+  |       |   `-{node},6521
+  |       |-{node},5269
+  |       |-{node},5270
+  |       |-{node},5271
+  |       |-{node},5272
+  |       |-{node},5273
+  |       |-{node},5274
+  |       |-{node},5276
+  |       |-{node},5277
+  |       |-{node},5278
+  |       `-{node},5279
+  |-snapd,3568
+  |   |-{snapd},3577
+  |   |-{snapd},3578
+  |   |-{snapd},3579
+  |   |-{snapd},3580
+  |   |-{snapd},3581
+  |   |-{snapd},3582
+  |   |-{snapd},3588
+  |   |-{snapd},3652
+  |   |-{snapd},3654
+  |   `-{snapd},3659
+  |-sshd,1092
+  |   |-sshd,1211
+  |   |   `-sshd,1330
+  |   |       `-bash,1331
+  |   |           `-codex,7381
+  |   |               |-script,9474 -q -f /home/sweepi/SweePi/diagnostics/20260712_010514/transcript.log
+  |   |               |   `-bash,9481 -i
+  |   |               |       |-pstree,9751 -ap
+  |   |               |       `-tee,9752 /home/sweepi/SweePi/diagnostics/20260712_010514/process_pstree.log
+  |   |               |-{codex},7382
+  |   |               |-{codex},7383
+  |   |               |-{codex},7384
+  |   |               |-{codex},7385
+  |   |               |-{codex},7386
+  |   |               |-{codex},7424
+  |   |               |-{codex},7425
+  |   |               |-{codex},7426
+  |   |               |-{codex},7427
+  |   |               |-{codex},7428
+  |   |               |-{codex},7429
+  |   |               |-{codex},7430
+  |   |               |-{codex},7431
+  |   |               |-{codex},7470
+  |   |               |-{codex},7474
+  |   |               |-{codex},7684
+  |   |               |-{codex},8976
+  |   |               |-{codex},8977
+  |   |               |-{codex},9240
+  |   |               |-{codex},9331
+  |   |               |-{codex},9407
+  |   |               |-{codex},9526
+  |   |               `-{codex},9527
+  |   |-sshd,3655
+  |   |   `-sshd,3714
+  |   |       `-bash,3715
+  |   |           `-ros2,4823 /opt/ros/jazzy/bin/ros2 run teleop_twist_keyboard teleop_twist_keyboard
+  |   |               |-teleop_twist_ke,4826 /opt/ros/jazzy/lib/teleop_twist_keyboard/teleop_twist_keyboard
+  |   |               |   |-{teleop_twist_ke},4827
+  |   |               |   |-{teleop_twist_ke},4828
+  |   |               |   |-{teleop_twist_ke},4829
+  |   |               |   |-{teleop_twist_ke},4830
+  |   |               |   |-{teleop_twist_ke},4831
+  |   |               |   |-{teleop_twist_ke},4832
+  |   |               |   |-{teleop_twist_ke},4833
+  |   |               |   |-{teleop_twist_ke},4834
+  |   |               |   |-{teleop_twist_ke},4835
+  |   |               |   |-{teleop_twist_ke},4836
+  |   |               |   |-{teleop_twist_ke},4837
+  |   |               |   |-{teleop_twist_ke},4838
+  |   |               |   |-{teleop_twist_ke},4839
+  |   |               |   |-{teleop_twist_ke},4840
+  |   |               |   `-{teleop_twist_ke},4841
+  |   |               |-{ros2},4824
+  |   |               `-{ros2},4825
+  |   `-sshd,6007
+  |       `-sshd,6075
+  |           `-bash,6076
+  |               `-sh,6081
+  |                   |-code-e7fb5e96c0,6099 command-shell --cli-data-dir/home/sweepi/.vscode-server/c
+  |                   |   |-{code-e7fb5e96c0},6103
+  |                   |   |-{code-e7fb5e96c0},6104
+  |                   |   |-{code-e7fb5e96c0},6105
+  |                   |   `-{code-e7fb5e96c0},6107
+  |                   `-sleep,8973 180
+  |-systemd,1216 --user
+  |   |-(sd-pam),1217
+  |   |-at-spi-bus-laun,3974
+  |   |   |-dbus-daemon,3982 --config-file=/usr/share/defaults/at-spi2/accessibility.conf --nofork --print-address 11...
+  |   |   |-{at-spi-bus-laun},3976
+  |   |   |-{at-spi-bus-laun},3977
+  |   |   |-{at-spi-bus-laun},3978
+  |   |   `-{at-spi-bus-laun},3980
+  |   |-at-spi2-registr,4003 --use-gnome-session
+  |   |   |-{at-spi2-registr},4007
+  |   |   |-{at-spi2-registr},4008
+  |   |   `-{at-spi2-registr},4009
+  |   |-dbus-daemon,1262 --session --address=systemd: --nofork --nopidfile --systemd-activation --syslog-only
+  |   |-dconf-service,4166
+  |   |   |-{dconf-service},4173
+  |   |   |-{dconf-service},4174
+  |   |   `-{dconf-service},4175
+  |   |-evolution-addre,4347
+  |   |   |-{evolution-addre},4354
+  |   |   |-{evolution-addre},4355
+  |   |   |-{evolution-addre},4356
+  |   |   |-{evolution-addre},4360
+  |   |   |-{evolution-addre},4361
+  |   |   `-{evolution-addre},4363
+  |   |-evolution-calen,4337
+  |   |   |-{evolution-calen},4338
+  |   |   |-{evolution-calen},4339
+  |   |   |-{evolution-calen},4340
+  |   |   |-{evolution-calen},4341
+  |   |   |-{evolution-calen},4342
+  |   |   |-{evolution-calen},4345
+  |   |   |-{evolution-calen},4346
+  |   |   |-{evolution-calen},4349
+  |   |   `-{evolution-calen},4352
+  |   |-evolution-sourc,4324
+  |   |   |-{evolution-sourc},4326
+  |   |   |-{evolution-sourc},4327
+  |   |   |-{evolution-sourc},4328
+  |   |   `-{evolution-sourc},4329
+  |   |-gpg-agent,4025 --supervised
+  |   |   `-{gpg-agent},4029
+  |   |-gvfs-afc-volume,4193
+  |   |   |-{gvfs-afc-volume},4198
+  |   |   |-{gvfs-afc-volume},4199
+  |   |   |-{gvfs-afc-volume},4200
+  |   |   `-{gvfs-afc-volume},4202
+  |   |-gvfs-goa-volume,4222
+  |   |   |-{gvfs-goa-volume},4229
+  |   |   |-{gvfs-goa-volume},4231
+  |   |   `-{gvfs-goa-volume},4232
+  |   |-gvfs-gphoto2-vo,4206
+  |   |   |-{gvfs-gphoto2-vo},4210
+  |   |   |-{gvfs-gphoto2-vo},4211
+  |   |   `-{gvfs-gphoto2-vo},4215
+  |   |-gvfs-mtp-volume,4188
+  |   |   |-{gvfs-mtp-volume},4189
+  |   |   |-{gvfs-mtp-volume},4190
+  |   |   `-{gvfs-mtp-volume},4192
+  |   |-gvfs-udisks2-vo,4172
+  |   |   |-{gvfs-udisks2-vo},4177
+  |   |   |-{gvfs-udisks2-vo},4178
+  |   |   |-{gvfs-udisks2-vo},4179
+  |   |   `-{gvfs-udisks2-vo},4184
+  |   |-gvfsd,3948
+  |   |   |-gvfsd-trash,4278 --spawner :1.9 /org/gtk/gvfs/exec_spaw/0
+  |   |   |   |-{gvfsd-trash},4285
+  |   |   |   |-{gvfsd-trash},4286
+  |   |   |   |-{gvfsd-trash},4288
+  |   |   |   `-{gvfsd-trash},4293
+  |   |   |-{gvfsd},3949
+  |   |   |-{gvfsd},3950
+  |   |   `-{gvfsd},3951
+  |   |-gvfsd-metadata,4302
+  |   |   |-{gvfsd-metadata},4303
+  |   |   |-{gvfsd-metadata},4304
+  |   |   `-{gvfsd-metadata},4305
+  |   |-ibus-portal,3966
+  |   |   |-{ibus-portal},3967
+  |   |   |-{ibus-portal},3968
+  |   |   `-{ibus-portal},3969
+  |   |-pulseaudio,1225 --daemonize=no --log-target=journal
+  |   |   |-{pulseaudio},1263
+  |   |   `-{pulseaudio},1269
+  |   |-xdg-desktop-por,4006
+  |   |   |-{xdg-desktop-por},4013
+  |   |   |-{xdg-desktop-por},4015
+  |   |   |-{xdg-desktop-por},4017
+  |   |   `-{xdg-desktop-por},4060
+  |   |-xdg-desktop-por,4042
+  |   |   |-{xdg-desktop-por},4046
+  |   |   |-{xdg-desktop-por},4047
+  |   |   |-{xdg-desktop-por},4048
+  |   |   `-{xdg-desktop-por},4055
+  |   |-xdg-document-po,4020
+  |   |   |-fusermount3,4039 -o rw,nosuid,nodev,fsname=portal,auto_unmount,subtype=portal -- /run/user/1000/doc
+  |   |   |-{xdg-document-po},4026
+  |   |   |-{xdg-document-po},4027
+  |   |   |-{xdg-document-po},4028
+  |   |   |-{xdg-document-po},4038
+  |   |   |-{xdg-document-po},4040
+  |   |   `-{xdg-document-po},4041
+  |   |-xdg-permission-,4031
+  |   |   |-{xdg-permission-},4033
+  |   |   |-{xdg-permission-},4034
+  |   |   `-{xdg-permission-},4036
+  |   |-xfce4-notifyd,4139
+  |   |   |-{xfce4-notifyd},4146
+  |   |   |-{xfce4-notifyd},4147
+  |   |   `-{xfce4-notifyd},4148
+  |   `-xfconfd,8966
+  |       |-{xfconfd},8967
+  |       |-{xfconfd},8968
+  |       `-{xfconfd},8969
+  |-systemd-hostnam,9591
+  |-systemd-journal,329
+  |-systemd-logind,744
+  |-systemd-network,712
+  |-systemd-resolve,559
+  |-systemd-timedat,9600
+  |-systemd-timesyn,568
+  |   `-{systemd-timesyn},619
+  |-systemd-udevd,387
+  |-udisksd,745
+  |   |-{udisksd},766
+  |   |-{udisksd},767
+  |   |-{udisksd},829
+  |   |-{udisksd},859
+  |   `-{udisksd},860
+  |-unattended-upgr,1060 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal
+  |   `-{unattended-upgr},1086
+  |-upowerd,4068
+  |   |-{upowerd},4070
+  |   |-{upowerd},4071
+  |   `-{upowerd},4072
+  |-wpa_supplicant,603 -c /run/netplan/wpa-wlan0.conf -iwlan0 -Dnl80211,wext
+  |-wpa_supplicant,831 -u -s -O DIR=/run/wpa_supplicant GROUP=netdev
+  |-x-terminal-emul,4391
+  |   |-bash,4394
+  |   |   `-ros2,4423 /opt/ros/jazzy/bin/ros2 launch sweepi_robot_manager master.launch.py launch_sim:=false ...
+  |   |       |-api_bridge_node,4433 /home/sweepi/SweePi/install/sweepi_api_bridge/lib/sweepi_api_bridge/api_bridge_node ...
+  |   |       |   |-{api_bridge_node},4491
+  |   |       |   |-{api_bridge_node},4492
+  |   |       |   |-{api_bridge_node},4532
+  |   |       |   |-{api_bridge_node},4533
+  |   |       |   |-{api_bridge_node},4534
+  |   |       |   |-{api_bridge_node},4535
+  |   |       |   |-{api_bridge_node},4536
+  |   |       |   |-{api_bridge_node},4537
+  |   |       |   |-{api_bridge_node},4538
+  |   |       |   |-{api_bridge_node},4539
+  |   |       |   |-{api_bridge_node},4540
+  |   |       |   |-{api_bridge_node},4542
+  |   |       |   |-{api_bridge_node},4543
+  |   |       |   |-{api_bridge_node},4544
+  |   |       |   |-{api_bridge_node},4546
+  |   |       |   |-{api_bridge_node},4547
+  |   |       |   |-{api_bridge_node},4581
+  |   |       |   |-{api_bridge_node},4585
+  |   |       |   `-{api_bridge_node},4768
+  |   |       |-base_driver_nod,4427 /home/sweepi/SweePi/install/sweepi_base_driver/lib/sweepi_base_driver/base_driver_node ...
+  |   |       |   |-{base_driver_nod},4489
+  |   |       |   |-{base_driver_nod},4490
+  |   |       |   |-{base_driver_nod},4520
+  |   |       |   |-{base_driver_nod},4521
+  |   |       |   |-{base_driver_nod},4522
+  |   |       |   |-{base_driver_nod},4523
+  |   |       |   |-{base_driver_nod},4524
+  |   |       |   |-{base_driver_nod},4525
+  |   |       |   |-{base_driver_nod},4526
+  |   |       |   |-{base_driver_nod},4527
+  |   |       |   |-{base_driver_nod},4528
+  |   |       |   |-{base_driver_nod},4529
+  |   |       |   |-{base_driver_nod},4530
+  |   |       |   `-{base_driver_nod},4531
+  |   |       |-ekf_node,4428 --ros-args -r __node:=ekf_filter_node --params-file/home/sweepi/SweePi/install/sweep
+  |   |       |   |-{ekf_node},4438
+  |   |       |   |-{ekf_node},4439
+  |   |       |   |-{ekf_node},4459
+  |   |       |   |-{ekf_node},4460
+  |   |       |   |-{ekf_node},4466
+  |   |       |   |-{ekf_node},4468
+  |   |       |   |-{ekf_node},4469
+  |   |       |   |-{ekf_node},4470
+  |   |       |   |-{ekf_node},4471
+  |   |       |   |-{ekf_node},4472
+  |   |       |   |-{ekf_node},4473
+  |   |       |   |-{ekf_node},4478
+  |   |       |   |-{ekf_node},4479
+  |   |       |   |-{ekf_node},4480
+  |   |       |   `-{ekf_node},4483
+  |   |       |-python3,4432 ...
+  |   |       |   |-ros2,4580 /opt/ros/jazzy/bin/ros2 launch sweepi_robot_manager exploration_task.launch.py ...
+  |   |       |   |   |-async_slam_tool,4610 --ros-args -r __node:=slam_toolbox -r __ns:=/ --params-file/tmp/launch_para
+  |   |       |   |   |   |-{async_slam_tool},4741
+  |   |       |   |   |   |-{async_slam_tool},4742
+  |   |       |   |   |   |-{async_slam_tool},4753
+  |   |       |   |   |   |-{async_slam_tool},4754
+  |   |       |   |   |   |-{async_slam_tool},4759
+  |   |       |   |   |   |-{async_slam_tool},4760
+  |   |       |   |   |   |-{async_slam_tool},4761
+  |   |       |   |   |   |-{async_slam_tool},4762
+  |   |       |   |   |   |-{async_slam_tool},4763
+  |   |       |   |   |   |-{async_slam_tool},4764
+  |   |       |   |   |   |-{async_slam_tool},4765
+  |   |       |   |   |   |-{async_slam_tool},4779
+  |   |       |   |   |   |-{async_slam_tool},4781
+  |   |       |   |   |   |-{async_slam_tool},4784
+  |   |       |   |   |   |-{async_slam_tool},4797
+  |   |       |   |   |   |-{async_slam_tool},4803
+  |   |       |   |   |   |-{async_slam_tool},4804
+  |   |       |   |   |   |-{async_slam_tool},4842
+  |   |       |   |   |   |-{async_slam_tool},4843
+  |   |       |   |   |   `-{async_slam_tool},4844
+  |   |       |   |   |-behavior_server,4603 --ros-args --log-level info --ros-args -r __node:=behavior_server -puse_sim_time:
+  |   |       |   |   |   |-{behavior_server},4636
+  |   |       |   |   |   |-{behavior_server},4637
+  |   |       |   |   |   |-{behavior_server},4716
+  |   |       |   |   |   |-{behavior_server},4717
+  |   |       |   |   |   |-{behavior_server},4732
+  |   |       |   |   |   |-{behavior_server},4733
+  |   |       |   |   |   |-{behavior_server},4734
+  |   |       |   |   |   |-{behavior_server},4735
+  |   |       |   |   |   |-{behavior_server},4737
+  |   |       |   |   |   |-{behavior_server},4738
+  |   |       |   |   |   |-{behavior_server},4743
+  |   |       |   |   |   |-{behavior_server},4772
+  |   |       |   |   |   |-{behavior_server},4773
+  |   |       |   |   |   |-{behavior_server},4774
+  |   |       |   |   |   `-{behavior_server},4815
+  |   |       |   |   |-bt_navigator,4604 --ros-args --log-level info --ros-args -r __node:=bt_navigator -puse_sim_time:=Fa
+  |   |       |   |   |   |-{bt_navigator},4615
+  |   |       |   |   |   |-{bt_navigator},4616
+  |   |       |   |   |   |-{bt_navigator},4648
+  |   |       |   |   |   |-{bt_navigator},4649
+  |   |       |   |   |   |-{bt_navigator},4658
+  |   |       |   |   |   |-{bt_navigator},4661
+  |   |       |   |   |   |-{bt_navigator},4663
+  |   |       |   |   |   |-{bt_navigator},4664
+  |   |       |   |   |   |-{bt_navigator},4665
+  |   |       |   |   |   |-{bt_navigator},4666
+  |   |       |   |   |   |-{bt_navigator},4670
+  |   |       |   |   |   |-{bt_navigator},4727
+  |   |       |   |   |   |-{bt_navigator},4728
+  |   |       |   |   |   |-{bt_navigator},4729
+  |   |       |   |   |   `-{bt_navigator},4817
+  |   |       |   |   |-collision_monit,4607 --ros-args --log-level info --ros-args -r __node:=collision_monitor -pu
+  |   |       |   |   |   |-{collision_monit},4687
+  |   |       |   |   |   |-{collision_monit},4703
+  |   |       |   |   |   |-{collision_monit},4739
+  |   |       |   |   |   |-{collision_monit},4740
+  |   |       |   |   |   |-{collision_monit},4746
+  |   |       |   |   |   |-{collision_monit},4747
+  |   |       |   |   |   |-{collision_monit},4750
+  |   |       |   |   |   |-{collision_monit},4751
+  |   |       |   |   |   |-{collision_monit},4755
+  |   |       |   |   |   |-{collision_monit},4756
+  |   |       |   |   |   |-{collision_monit},4757
+  |   |       |   |   |   |-{collision_monit},4775
+  |   |       |   |   |   |-{collision_monit},4776
+  |   |       |   |   |   |-{collision_monit},4778
+  |   |       |   |   |   `-{collision_monit},4816
+  |   |       |   |   |-controller_serv,4599 --ros-args --log-level info --ros-args -p use_sim_time:=False --params-file/tm
+  |   |       |   |   |   |-{controller_serv},4630
+  |   |       |   |   |   |-{controller_serv},4631
+  |   |       |   |   |   |-{controller_serv},4671
+  |   |       |   |   |   |-{controller_serv},4672
+  |   |       |   |   |   |-{controller_serv},4673
+  |   |       |   |   |   |-{controller_serv},4674
+  |   |       |   |   |   |-{controller_serv},4675
+  |   |       |   |   |   |-{controller_serv},4676
+  |   |       |   |   |   |-{controller_serv},4677
+  |   |       |   |   |   |-{controller_serv},4678
+  |   |       |   |   |   |-{controller_serv},4679
+  |   |       |   |   |   |-{controller_serv},4680
+  |   |       |   |   |   |-{controller_serv},4681
+  |   |       |   |   |   |-{controller_serv},4682
+  |   |       |   |   |   |-{controller_serv},4799
+  |   |       |   |   |   |-{controller_serv},4800
+  |   |       |   |   |   |-{controller_serv},4801
+  |   |       |   |   |   |-{controller_serv},4802
+  |   |       |   |   |   `-{controller_serv},4820
+  |   |       |   |   |-lifecycle_manag,4609 --ros-args --log-level info --ros-args -r__node:=lifecycle_manager_navi
+  |   |       |   |   |   |-{lifecycle_manag},4623
+  |   |       |   |   |   |-{lifecycle_manag},4624
+  |   |       |   |   |   |-{lifecycle_manag},4642
+  |   |       |   |   |   |-{lifecycle_manag},4645
+  |   |       |   |   |   |-{lifecycle_manag},4653
+  |   |       |   |   |   |-{lifecycle_manag},4657
+  |   |       |   |   |   |-{lifecycle_manag},4659
+  |   |       |   |   |   |-{lifecycle_manag},4667
+  |   |       |   |   |   |-{lifecycle_manag},4668
+  |   |       |   |   |   |-{lifecycle_manag},4669
+  |   |       |   |   |   |-{lifecycle_manag},4683
+  |   |       |   |   |   |-{lifecycle_manag},4691
+  |   |       |   |   |   |-{lifecycle_manag},4694
+  |   |       |   |   |   |-{lifecycle_manag},4700
+  |   |       |   |   |   |-{lifecycle_manag},4769
+  |   |       |   |   |   `-{lifecycle_manag},4798
+  |   |       |   |   |-opennav_docking,4608 --ros-args --log-level info --ros-args -r __node:=docking_server -puse_sim_time:
+  |   |       |   |   |   |-{opennav_docking},4640
+  |   |       |   |   |   |-{opennav_docking},4641
+  |   |       |   |   |   |-{opennav_docking},4688
+  |   |       |   |   |   |-{opennav_docking},4689
+  |   |       |   |   |   |-{opennav_docking},4692
+  |   |       |   |   |   |-{opennav_docking},4693
+  |   |       |   |   |   |-{opennav_docking},4695
+  |   |       |   |   |   |-{opennav_docking},4696
+  |   |       |   |   |   |-{opennav_docking},4697
+  |   |       |   |   |   |-{opennav_docking},4698
+  |   |       |   |   |   |-{opennav_docking},4699
+  |   |       |   |   |   |-{opennav_docking},4706
+  |   |       |   |   |   |-{opennav_docking},4707
+  |   |       |   |   |   |-{opennav_docking},4709
+  |   |       |   |   |   |-{opennav_docking},4818
+  |   |       |   |   |   |-{opennav_docking},4819
+  |   |       |   |   |   `-{opennav_docking},4822
+  |   |       |   |   |-planner_server,4601 --ros-args --log-level info --ros-args -r __node:=planner_server -puse_sim_time:=Fal
+  |   |       |   |   |   |-{planner_server},4634
+  |   |       |   |   |   |-{planner_server},4635
+  |   |       |   |   |   |-{planner_server},4704
+  |   |       |   |   |   |-{planner_server},4705
+  |   |       |   |   |   |-{planner_server},4712
+  |   |       |   |   |   |-{planner_server},4715
+  |   |       |   |   |   |-{planner_server},4718
+  |   |       |   |   |   |-{planner_server},4719
+  |   |       |   |   |   |-{planner_server},4720
+  |   |       |   |   |   |-{planner_server},4721
+  |   |       |   |   |   |-{planner_server},4725
+  |   |       |   |   |   |-{planner_server},4770
+  |   |       |   |   |   |-{planner_server},4771
+  |   |       |   |   |   |-{planner_server},4777
+  |   |       |   |   |   |-{planner_server},4807
+  |   |       |   |   |   |-{planner_server},4808
+  |   |       |   |   |   |-{planner_server},4809
+  |   |       |   |   |   |-{planner_server},4810
+  |   |       |   |   |   |-{planner_server},4811
+  |   |       |   |   |   `-{planner_server},4821
+  |   |       |   |   |-route_server,4602 --ros-args --log-level info --ros-args -r __node:=route_server -p use_sim_time:=False--p
+  |   |       |   |   |   |-{route_server},4632
+  |   |       |   |   |   |-{route_server},4633
+  |   |       |   |   |   |-{route_server},4713
+  |   |       |   |   |   |-{route_server},4714
+  |   |       |   |   |   |-{route_server},4722
+  |   |       |   |   |   |-{route_server},4723
+  |   |       |   |   |   |-{route_server},4724
+  |   |       |   |   |   |-{route_server},4726
+  |   |       |   |   |   |-{route_server},4730
+  |   |       |   |   |   |-{route_server},4731
+  |   |       |   |   |   |-{route_server},4736
+  |   |       |   |   |   |-{route_server},4780
+  |   |       |   |   |   |-{route_server},4782
+  |   |       |   |   |   |-{route_server},4783
+  |   |       |   |   |   |-{route_server},4812
+  |   |       |   |   |   |-{route_server},4813
+  |   |       |   |   |   `-{route_server},4814
+  |   |       |   |   |-smoother_server,4600 --ros-args --log-level info --ros-args -r __node:=smoother_server -puse_sim_time:=
+  |   |       |   |   |   |-{smoother_server},4638
+  |   |       |   |   |   |-{smoother_server},4639
+  |   |       |   |   |   |-{smoother_server},4684
+  |   |       |   |   |   |-{smoother_server},4685
+  |   |       |   |   |   |-{smoother_server},4686
+  |   |       |   |   |   |-{smoother_server},4690
+  |   |       |   |   |   |-{smoother_server},4701
+  |   |       |   |   |   |-{smoother_server},4702
+  |   |       |   |   |   |-{smoother_server},4708
+  |   |       |   |   |   |-{smoother_server},4710
+  |   |       |   |   |   |-{smoother_server},4711
+  |   |       |   |   |   |-{smoother_server},4748
+  |   |       |   |   |   |-{smoother_server},4749
+  |   |       |   |   |   |-{smoother_server},4752
+  |   |       |   |   |   |-{smoother_server},4805
+  |   |       |   |   |   `-{smoother_server},4806
+  |   |       |   |   |-velocity_smooth,4606 --ros-args --log-level info --ros-args -r __node:=velocity_smoother -pu
+  |   |       |   |   |   |-{velocity_smooth},4613
+  |   |       |   |   |   |-{velocity_smooth},4614
+  |   |       |   |   |   |-{velocity_smooth},4617
+  |   |       |   |   |   |-{velocity_smooth},4618
+  |   |       |   |   |   |-{velocity_smooth},4619
+  |   |       |   |   |   |-{velocity_smooth},4620
+  |   |       |   |   |   |-{velocity_smooth},4621
+  |   |       |   |   |   |-{velocity_smooth},4622
+  |   |       |   |   |   |-{velocity_smooth},4625
+  |   |       |   |   |   |-{velocity_smooth},4626
+  |   |       |   |   |   |-{velocity_smooth},4629
+  |   |       |   |   |   |-{velocity_smooth},4646
+  |   |       |   |   |   |-{velocity_smooth},4651
+  |   |       |   |   |   `-{velocity_smooth},4654
+  |   |       |   |   |-waypoint_follow,4605 --ros-args --log-level info --ros-args -r __node:=waypoint_follower -pu
+  |   |       |   |   |   |-{waypoint_follow},4627
+  |   |       |   |   |   |-{waypoint_follow},4628
+  |   |       |   |   |   |-{waypoint_follow},4643
+  |   |       |   |   |   |-{waypoint_follow},4644
+  |   |       |   |   |   |-{waypoint_follow},4647
+  |   |       |   |   |   |-{waypoint_follow},4650
+  |   |       |   |   |   |-{waypoint_follow},4652
+  |   |       |   |   |   |-{waypoint_follow},4655
+  |   |       |   |   |   |-{waypoint_follow},4656
+  |   |       |   |   |   |-{waypoint_follow},4660
+  |   |       |   |   |   |-{waypoint_follow},4662
+  |   |       |   |   |   |-{waypoint_follow},4744
+  |   |       |   |   |   |-{waypoint_follow},4745
+  |   |       |   |   |   `-{waypoint_follow},4758
+  |   |       |   |   |-{ros2},4582
+  |   |       |   |   |-{ros2},4583
+  |   |       |   |   |-{ros2},4586
+  |   |       |   |   |-{ros2},4587
+  |   |       |   |   |-{ros2},4588
+  |   |       |   |   |-{ros2},4589
+  |   |       |   |   |-{ros2},4590
+  |   |       |   |   |-{ros2},4591
+  |   |       |   |   |-{ros2},4592
+  |   |       |   |   |-{ros2},4593
+  |   |       |   |   |-{ros2},4594
+  |   |       |   |   |-{ros2},4595
+  |   |       |   |   |-{ros2},4596
+  |   |       |   |   |-{ros2},4597
+  |   |       |   |   |-{ros2},4598
+  |   |       |   |   `-{ros2},4612
+  |   |       |   |-{python3},4481
+  |   |       |   |-{python3},4482
+  |   |       |   |-{python3},4508
+  |   |       |   |-{python3},4509
+  |   |       |   |-{python3},4510
+  |   |       |   |-{python3},4511
+  |   |       |   |-{python3},4512
+  |   |       |   |-{python3},4513
+  |   |       |   |-{python3},4514
+  |   |       |   |-{python3},4515
+  |   |       |   |-{python3},4516
+  |   |       |   |-{python3},4517
+  |   |       |   |-{python3},4518
+  |   |       |   `-{python3},4519
+  |   |       |-robot_state_pub,4430 --ros-args -r __node:=robot_state_publisher --params-file/tmp/launch
+  |   |       |   |-{robot_state_pub},4436
+  |   |       |   |-{robot_state_pub},4437
+  |   |       |   |-{robot_state_pub},4446
+  |   |       |   |-{robot_state_pub},4447
+  |   |       |   |-{robot_state_pub},4458
+  |   |       |   |-{robot_state_pub},4461
+  |   |       |   |-{robot_state_pub},4462
+  |   |       |   |-{robot_state_pub},4463
+  |   |       |   |-{robot_state_pub},4464
+  |   |       |   |-{robot_state_pub},4465
+  |   |       |   |-{robot_state_pub},4467
+  |   |       |   |-{robot_state_pub},4474
+  |   |       |   |-{robot_state_pub},4475
+  |   |       |   `-{robot_state_pub},4476
+  |   |       |-rviz2,4431 -d /home/sweepi/SweePi/install/sweepi_bringup/share/sweepi_bringup/rviz/urdf_config.rviz --ros-args-
+  |   |       |   |-{rviz2},4456
+  |   |       |   |-{rviz2},4457
+  |   |       |   |-{rviz2},4477
+  |   |       |   |-{rviz2},4484
+  |   |       |   |-{rviz2},4486
+  |   |       |   |-{rviz2},4487
+  |   |       |   |-{rviz2},4488
+  |   |       |   |-{rviz2},4494
+  |   |       |   |-{rviz2},4495
+  |   |       |   |-{rviz2},4496
+  |   |       |   |-{rviz2},4497
+  |   |       |   |-{rviz2},4498
+  |   |       |   |-{rviz2},4499
+  |   |       |   |-{rviz2},4500
+  |   |       |   |-{rviz2},4501
+  |   |       |   |-{rviz2},4502
+  |   |       |   |-{rviz2},4503
+  |   |       |   |-{rviz2},4504
+  |   |       |   |-{rviz2},4505
+  |   |       |   |-{rviz2},4506
+  |   |       |   |-{rviz2},4507
+  |   |       |   `-{rviz2},4545
+  |   |       |-sllidar_node,4429 --ros-args -r __node:=sllidar_node --params-file/tmp/launch_
+  |   |       |   |-{sllidar_node},4434
+  |   |       |   |-{sllidar_node},4435
+  |   |       |   |-{sllidar_node},4440
+  |   |       |   |-{sllidar_node},4441
+  |   |       |   |-{sllidar_node},4442
+  |   |       |   |-{sllidar_node},4443
+  |   |       |   |-{sllidar_node},4444
+  |   |       |   |-{sllidar_node},4445
+  |   |       |   |-{sllidar_node},4448
+  |   |       |   |-{sllidar_node},4449
+  |   |       |   |-{sllidar_node},4450
+  |   |       |   |-{sllidar_node},4451
+  |   |       |   |-{sllidar_node},4452
+  |   |       |   |-{sllidar_node},4453
+  |   |       |   |-{sllidar_node},4454
+  |   |       |   `-{sllidar_node},4455
+  |   |       |-{ros2},4424
+  |   |       `-{ros2},4425
+  |   |-{x-terminal-emul},4392
+  |   `-{x-terminal-emul},4393
+  |-xrdp,1102
+  |   `-xrdp,3847
+  `-xrdp-sesman,1075
+      `-xrdp-sesman,3848
+          |-Xorg,3850 :10 -auth .Xauthority -config xrdp/xorg.conf -noreset -nolisten tcp -logfile .xorgxrdp.%s.log
+          |   |-{Xorg},3871
+          |   `-{Xorg},3878
+          |-bash,3849 /home/sweepi/.xsession
+          |   |-ssh-agent,3926 /usr/bin/im-launch /bin/bash /home/sweepi/.xsession
+          |   `-xfce4-session,3944
+          |       |-Thunar,4079 --daemon
+          |       |   |-{Thunar},4080
+          |       |   |-{Thunar},4081
+          |       |   `-{Thunar},4082
+          |       |-agent,4124
+          |       |   |-{agent},4132
+          |       |   |-{agent},4133
+          |       |   `-{agent},4136
+          |       |-applet.py,4135 /usr/share/system-config-printer/applet.py
+          |       |-evolution-alarm,4150
+          |       |   |-{evolution-alarm},4310
+          |       |   |-{evolution-alarm},4311
+          |       |   |-{evolution-alarm},4312
+          |       |   |-{evolution-alarm},4322
+          |       |   |-{evolution-alarm},4323
+          |       |   |-{evolution-alarm},4335
+          |       |   `-{evolution-alarm},4336
+          |       |-nm-applet,4101
+          |       |   |-{nm-applet},4180
+          |       |   |-{nm-applet},4181
+          |       |   |-{nm-applet},4183
+          |       |   |-{nm-applet},4204
+          |       |   `-{nm-applet},4256
+          |       |-polkit-gnome-au,4151
+          |       |   |-{polkit-gnome-au},4196
+          |       |   |-{polkit-gnome-au},4197
+          |       |   `-{polkit-gnome-au},4203
+          |       |-xfce4-panel,4074
+          |       |   |-panel-10-notifi,4300 /usr/lib/aarch64-linux-gnu/xfce4/panel/plugins/libnotification-plugin.so 1023068
+          |       |   |   |-{panel-10-notifi},4316
+          |       |   |   |-{panel-10-notifi},4317
+          |       |   |   |-{panel-10-notifi},4318
+          |       |   |   `-{panel-10-notifi},4385
+          |       |   |-panel-14-action,4325 /usr/lib/aarch64-linux-gnu/xfce4/panel/plugins/libactions.so 14 23068688 actions
+          |       |   |   |-{panel-14-action},4331
+          |       |   |   |-{panel-14-action},4332
+          |       |   |   |-{panel-14-action},4333
+          |       |   |   `-{panel-14-action},4386
+          |       |   |-panel-6-systray,4283 /usr/lib/aarch64-linux-gnu/xfce4/panel/plugins/libsystray.so 6 23068684 systrayS
+          |       |   |   |-{panel-6-systray},4313
+          |       |   |   |-{panel-6-systray},4314
+          |       |   |   |-{panel-6-systray},4315
+          |       |   |   `-{panel-6-systray},4387
+          |       |   |-panel-8-pulseau,4291 /usr/lib/aarch64-linux-gnu/xfce4/panel/plugins/libpulseaudio-plugin.so 823068685
+          |       |   |   |-{panel-8-pulseau},4306
+          |       |   |   |-{panel-8-pulseau},4307
+          |       |   |   |-{panel-8-pulseau},4308
+          |       |   |   `-{panel-8-pulseau},4373
+          |       |   |-panel-9-power-m,4295 /usr/lib/aarch64-linux-gnu/xfce4/panel/plugins/libxfce4powermanager.so 923068686
+          |       |   |   |-{panel-9-power-m},4319
+          |       |   |   |-{panel-9-power-m},4320
+          |       |   |   |-{panel-9-power-m},4321
+          |       |   |   `-{panel-9-power-m},4376
+          |       |   |-{xfce4-panel},4075
+          |       |   |-{xfce4-panel},4076
+          |       |   |-{xfce4-panel},4078
+          |       |   `-{xfce4-panel},4367
+          |       |-xfce4-power-man,4090
+          |       |   |-{xfce4-power-man},4117
+          |       |   |-{xfce4-power-man},4118
+          |       |   `-{xfce4-power-man},4120
+          |       |-xfdesktop,4085
+          |       |   |-{xfdesktop},4086
+          |       |   |-{xfdesktop},4087
+          |       |   |-{xfdesktop},4088
+          |       |   `-{xfdesktop},4309
+          |       |-xfsettingsd,4064
+          |       |   |-{xfsettingsd},4065
+          |       |   |-{xfsettingsd},4066
+          |       |   `-{xfsettingsd},4067
+          |       |-xfwm4,4032
+          |       |   |-{xfwm4},4043
+          |       |   |-{xfwm4},4044
+          |       |   |-{xfwm4},4045
+          |       |   |-{xfwm4},4054
+          |       |   `-{xfwm4},4063
+          |       |-xiccd,4099
+          |       |   |-{xiccd},4105
+          |       |   |-{xiccd},4106
+          |       |   `-{xiccd},4108
+          |       |-{xfce4-session},3971
+          |       |-{xfce4-session},3983
+          |       |-{xfce4-session},3984
+          |       `-{xfce4-session},3985
+          `-xrdp-chansrv,3853
+              `-{xrdp-chansrv},3863

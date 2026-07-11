@@ -1,0 +1,8 @@
+1783776856.8973150 [INFO] [launch]: All log files can be found below /home/sweepi/.ros/log/2026-07-11-19-04-16-895678-sweepi-2846
+1783776856.8975303 [INFO] [launch]: Default logging verbosity is set to INFO
+1783776857.2342854 [INFO] [base_driver_node-1]: process started with pid [2850]
+1783776857.2346084 [INFO] [ekf_node-2]: process started with pid [2851]
+1783776857.2347274 [INFO] [sllidar_node-3]: process started with pid [2852]
+1783776857.2348263 [INFO] [robot_state_publisher-4]: process started with pid [2853]
+1783776857.2349563 [INFO] [sweepi_robot_manager_node.py-5]: process started with pid [2854]
+1783776857.2350512 [INFO] [api_bridge_node-6]: process started with pid [2855]

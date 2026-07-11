@@ -1,0 +1,1 @@
+/home/sweepi/SweePi/build_diagnostic/sweepi_temp_rpi_hardware/launch/temp_rpi_hardware.launch.py

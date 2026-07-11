@@ -1,0 +1,2 @@
+[console_scripts]
+base_driver_node = sweepi_base_driver.base_driver_node:main
