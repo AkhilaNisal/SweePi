@@ -6,6 +6,9 @@ Protocol:
   {"ssid": "...", "password": "..."}
 - Wi-Fi scan characteristic: read UTF-8 JSON array
 - Wi-Fi status characteristic: read UTF-8 JSON object
+- Wi-Fi provisioning runs in a background thread because BLE WriteValue must not
+  block the BlueZ/GLib main loop. Clients should poll Wi-Fi status until the
+  state becomes connected or failed_unknown.
 
 The UUID values are supplied through /etc/sweepi/ble.env and must match the app.
 """
@@ -20,6 +23,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import threading
 import time
 from typing import Any
 
@@ -56,6 +60,20 @@ NETPLAN_PATH = pathlib.Path(os.environ.get(
     "SWEEPI_NETPLAN_PATH", "/etc/netplan/99-sweepi-provisioned.yaml"
 ))
 CONNECT_TIMEOUT = int(os.environ.get("SWEEPI_CONNECT_TIMEOUT", "60"))
+
+_status_lock = threading.Lock()
+_provisioning_status: dict[str, Any] = {
+    "state": "idle",
+    "robot_id": ROBOT_ID,
+    "hostname": "{{ sweepi_hostname }}.local",
+    "ble_name": BLE_NAME,
+    "interface": WIFI_INTERFACE,
+    "connected": False,
+    "ssid": "",
+    "ip": None,
+    "message": "Waiting for Wi-Fi credentials",
+    "netplan_wifi": NETPLAN_PATH.exists(),
+}
 
 
 def run(command: list[str], timeout: int = 30, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -96,6 +114,58 @@ def wifi_status() -> dict[str, Any]:
         "message": "Wi-Fi connected" if connected else "Waiting for Wi-Fi credentials",
         "netplan_wifi": NETPLAN_PATH.exists(),
     }
+
+
+def cached_wifi_status() -> dict[str, Any]:
+    with _status_lock:
+        return dict(_provisioning_status)
+
+
+def update_cached_wifi_status(**updates: Any) -> None:
+    with _status_lock:
+        _provisioning_status.update(updates)
+        _provisioning_status["netplan_wifi"] = NETPLAN_PATH.exists()
+
+
+def refresh_cached_wifi_status() -> None:
+    try:
+        status = wifi_status()
+    except Exception:
+        LOG.exception("Failed to refresh initial Wi-Fi status")
+        return
+    with _status_lock:
+        _provisioning_status.update(status)
+
+
+def _provision_wifi_worker(ssid: str, password: str) -> None:
+    # BLE WriteValue handlers must return quickly. Netplan writes, apply, and
+    # connection waiting happen here so clients can poll WIFI_STATUS until the
+    # cached state becomes connected or failed_unknown.
+    try:
+        result = provision_wifi(ssid, password)
+        update_cached_wifi_status(
+            state="connected",
+            connected=True,
+            ip=result.get("ip"),
+            ssid=result.get("ssid", ssid),
+            message=str(result.get("message") or "Wi-Fi connected"),
+        )
+        LOG.info(
+            "Provisioning result: success=%s state=%s ssid=%s ip=%s",
+            result.get("success"),
+            result.get("state"),
+            result.get("ssid", ssid),
+            result.get("ip"),
+        )
+    except Exception as exc:
+        LOG.exception("Wi-Fi provisioning worker failed")
+        update_cached_wifi_status(
+            state="failed_unknown",
+            connected=False,
+            ip=None,
+            ssid=ssid,
+            message=str(exc),
+        )
 
 
 def wifi_scan() -> list[dict[str, Any]]:
@@ -334,17 +404,58 @@ class WifiConfigCharacteristic(Characteristic):
 
         try:
             payload = json.loads(self.buffer.decode("utf-8"))
-            result = provision_wifi(str(payload.get("ssid", "")), str(payload.get("password", "")))
-            LOG.info("Provisioning result: %s", result)
+            if not isinstance(payload, dict):
+                raise InvalidArgs("Wi-Fi config must be a JSON object")
+
+            ssid = str(payload.get("ssid") or "").strip()
+            password = str(payload.get("password") or "")
+            if not ssid:
+                raise InvalidArgs("SSID is required")
+
+            with _status_lock:
+                if _provisioning_status.get("state") == "connecting":
+                    raise InvalidArgs("Wi-Fi provisioning is already in progress")
+                _provisioning_status.update(
+                    {
+                        "state": "connecting",
+                        "connected": False,
+                        "ssid": ssid,
+                        "ip": None,
+                        "message": "Connecting to Wi-Fi...",
+                        "netplan_wifi": NETPLAN_PATH.exists(),
+                    }
+                )
+
+            thread = threading.Thread(
+                target=_provision_wifi_worker,
+                args=(ssid, password),
+                name="sweepi-wifi-provision",
+                daemon=True,
+            )
+            try:
+                thread.start()
+            except Exception:
+                update_cached_wifi_status(
+                    state="failed_unknown",
+                    connected=False,
+                    ip=None,
+                    ssid=ssid,
+                    message="Failed to start Wi-Fi provisioning",
+                )
+                raise
+            LOG.info("Started Wi-Fi provisioning for SSID %s", ssid)
             self.buffer.clear()
         except json.JSONDecodeError:
             # Long writes may arrive in multiple fragments.
             if len(self.buffer) > 4096:
                 self.buffer.clear()
                 raise InvalidArgs("JSON payload is too large")
+        except InvalidArgs:
+            self.buffer.clear()
+            raise
         except Exception as exc:
             self.buffer.clear()
-            LOG.exception("Wi-Fi provisioning failed")
+            LOG.exception("Failed to start Wi-Fi provisioning")
             raise InvalidArgs(str(exc))
 
 
@@ -378,7 +489,7 @@ class WifiStatusCharacteristic(Characteristic):
 
     @dbus.service.method(GATT_CHARACTERISTIC, in_signature="a{sv}", out_signature="ay")
     def ReadValue(self, options: dict[str, Any]) -> dbus.Array:
-        return self.bytes_for_read(wifi_status(), options)
+        return self.bytes_for_read(cached_wifi_status(), options)
 
 
 class SetupCommandCharacteristic(Characteristic):
@@ -455,6 +566,8 @@ def main() -> int:
     adapter_props.Set("org.bluez.Adapter1", "Discoverable", dbus.Boolean(True))
     adapter_props.Set("org.bluez.Adapter1", "Pairable", dbus.Boolean(True))
     adapter_props.Set("org.bluez.Adapter1", "Alias", dbus.String(BLE_NAME))
+
+    refresh_cached_wifi_status()
 
     app = Application(bus)
     advertisement = Advertisement(bus, 0)
