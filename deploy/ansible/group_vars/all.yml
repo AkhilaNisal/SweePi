@@ -4,26 +4,26 @@
 # =============================================================================
 
 # BCM GPIO numbering. Do not enter physical header pin numbers.
-sweepi_button_gpio: -1
-sweepi_switch_bulb_gpio: -1
+sweepi_button_gpio: 17
+sweepi_switch_bulb_gpio: 27
 
 # Copy these UUIDs from the Flutter BLE constants so the app and Pi match.
-sweepi_ble_service_uuid: "CHANGE_ME"
-sweepi_ble_wifi_config_uuid: "CHANGE_ME"
-sweepi_ble_wifi_scan_uuid: "CHANGE_ME"
-sweepi_ble_wifi_status_uuid: "CHANGE_ME"
+sweepi_ble_service_uuid: "7a0b0001-4f2a-4f7a-9b7d-9c7b6f000001"
+sweepi_ble_wifi_config_uuid: "7a0b0001-4f2a-4f7a-9b7d-9c7b6f000001"
+sweepi_ble_wifi_scan_uuid: "7a0b0001-4f2a-4f7a-9b7d-9c7b6f000001"
+sweepi_ble_wifi_status_uuid: "7a0b0001-4f2a-4f7a-9b7d-9c7b6f000001"
 
 # =============================================================================
 # Core host identity
 # =============================================================================
 
-sweepi_user: thunderbot
-sweepi_hostname: thunderbots
+sweepi_user: sweepi
+sweepi_hostname: sweepi
 sweepi_timezone: Asia/Colombo
 
 sweepi_repo_url: https://github.com/AkhilaNisal/SweePi.git
 sweepi_repo_version: main
-sweepi_workspace: /home/thunderbot/SweePi
+sweepi_workspace: /home/sweepi/SweePi
 
 sweepi_install_root: /opt/sweepi
 sweepi_config_root: /etc/sweepi
@@ -133,9 +133,9 @@ sweepi_backup_paths:
   - /opt/sweepi
   - /var/lib/sweepi
   - /boot/firmware
-  - /home/thunderbot/SweePi
+  - /home/sweepi/SweePi
 sweepi_backup_excludes:
-  - /home/thunderbot/SweePi/build
-  - /home/thunderbot/SweePi/install
-  - /home/thunderbot/SweePi/log
-  - /home/thunderbot/.ros/log
+  - /home/sweepi/SweePi/build
+  - /home/sweepi/SweePi/install
+  - /home/sweepi/SweePi/log
+  - /home/sweepi/.ros/log
