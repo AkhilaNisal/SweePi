@@ -1,184 +1,441 @@
-# 🤖 SweePi — Adaptive Floor Cleaning Robot
-### *An intelligent cleaning robot with an extendable flexible arm*
+# 🤖 SweePi — Autonomous Floor Cleaning Robot
 
-> **Status:** 🚧 Work In Progress — Semester 4 Engineering Design Realization Project  
-> **Team:** Nexora | Department of Electronic & Telecommunication Engineering
+### Intelligent ROS 2 Powered Indoor Cleaning Robot with Smart Coverage Navigation
 
----
-
-## 📌 Overview
-
-**FlexiClean** is an autonomous floor cleaning robot designed to overcome the physical limitations of conventional robotic vacuums. While standard robots struggle with sharp corners, furniture gaps, and low-clearance areas, FlexiClean deploys an **extendable flexible cleaning arm** to reach where others can't.
-
-The system combines **LiDAR-based SLAM navigation** with a **dual-mode cleaning architecture** — standard bottom cleaning for open areas, and arm-extended cleaning for restricted zones.
+> **Status:** ✅ Completed Engineering Design Realization Project
+>
+> **Team:** Nexora
+>
+> **Department of Electronic & Telecommunication Engineering**
 
 ---
 
-## 🧩 System Architecture
+# 📖 Overview
+
+**SweePi** is a fully autonomous indoor floor cleaning robot designed to perform efficient, systematic, and intelligent cleaning of residential and commercial environments.
+
+Unlike conventional robotic vacuum cleaners that rely on random navigation, SweePi uses **LiDAR-based Simultaneous Localization and Mapping (SLAM)** together with **ROS 2 Navigation (Nav2)** and a **coverage path planning algorithm** to clean every reachable area while avoiding obstacles.
+
+The robot integrates real-time localization, autonomous navigation, intelligent coverage planning, mobile application control, and a custom STM32-based hardware platform.
+
+---
+
+# ✨ Features
+
+- 🗺️ LiDAR-based SLAM Mapping
+- 📍 Autonomous Localization
+- 🚗 ROS 2 Nav2 Navigation Stack
+- 🧹 Intelligent Coverage Path Planning
+- 📊 Real-time Cleaning Progress Tracking
+- 📱 Mobile Application Control
+- 📡 REST API Interface
+- ⚙️ STM32 Real-Time Motor Controller
+- 🔋 Dual Battery Power Architecture
+- 📶 Wi-Fi Robot Communication
+- 🛑 Automatic Obstacle Avoidance
+- 🔄 Modular ROS 2 Package Architecture
+
+---
+
+# 🏗 System Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                   FLEXICLEAN SYSTEM                  │
-├───────────────────┬─────────────────────────────────┤
-│   Sensing Layer   │  LiDAR · Wheel Encoders          │
-│                   │  Proximity Sensors               │
-├───────────────────┼─────────────────────────────────┤
-│   Control Layer   │  Embedded Processor / MCU        │
-│                   │  SLAM Navigation Algorithm       │
-├───────────────────┼─────────────────────────────────┤
-│  Actuation Layer  │  Drive Motors (Differential)     │
-│                   │  Suction Motor · Arm Motor       │
-├───────────────────┼─────────────────────────────────┤
-│   Power System    │  Rechargeable Battery Pack       │
-│                   │  Power Regulation Module         │
-└───────────────────┴─────────────────────────────────┘
+                        +-------------------------+
+                        |     Mobile Application  |
+                        +-----------+-------------+
+                                    |
+                              REST API / Wi-Fi
+                                    |
+                        +-----------v-------------+
+                        |   API Bridge (FastAPI)  |
+                        +-----------+-------------+
+                                    |
+                              Robot Manager
+                                    |
+        +---------------------------+---------------------------+
+        |                           |                           |
+        |                           |                           |
++-------v------+           +---------v---------+       +---------v---------+
+| SLAM Toolbox |           | Navigation (Nav2) |       | Coverage Planner  |
++--------------+           +-------------------+       +-------------------+
+        |                           |                           |
+        +-------------+-------------+---------------------------+
+                      |
+                 ROS 2 Topics
+                      |
+             +--------v---------+
+             | State Estimation |
+             +--------+---------+
+                      |
+             +--------v---------+
+             |  STM32 Controller|
+             +--------+---------+
+                      |
+       +--------------+--------------+
+       |                             |
+ Drive Motors                  Sensor Interfaces
+       |                             |
+ Wheel Encoders              IMU • LiDAR • Power
 ```
 
 ---
 
-## 🔩 Key Subsystems
+# 🧠 Software Stack
 
-### 1. Main Mobile Cleaning Unit
-- Compact **cylindrical body** with differential drive (2 wheels + caster)
-- Bottom-mounted **suction and brushing mechanism**
-- **LiDAR sensor** for real-time environment mapping
-- Onboard microcontroller / embedded processor *(selection in progress)*
-
-### 2. Extendable Flexible Cleaning Arm
-- **Flexible segmented structure** stored within the main body
-- Small wheels for independent arm mobility
-- Dedicated **mini cleaning head** at the tip
-- Motorized **extension and retraction** mechanism
-- Deploys automatically when restricted zones are detected
-
----
-
-## ✨ Key Innovations
-
-| Feature | Description |
-|---|---|
-| 🦾 Deployable Arm | Extends into corners, under furniture & narrow gaps |
-| 🗺️ Map-Based Zone Detection | Classifies areas as *reachable* or *restricted* using SLAM |
-| 🔄 Dual-Mode Cleaning | Seamlessly switches between standard and extended modes |
-| 📦 Compact Form Factor | Full arm mechanism housed within the main robot body |
-| 🔧 Modular Architecture | Designed for future hardware/software upgrades |
+| Layer | Technology |
+|--------|------------|
+| Robot Framework | ROS 2 Jazzy |
+| Operating System | Ubuntu Server 24.04 |
+| SLAM | slam_toolbox |
+| Navigation | Nav2 |
+| Programming | Python, C++, C |
+| Embedded Controller | STM32G474RET6 |
+| SBC | Raspberry Pi 5 |
+| API | FastAPI |
+| Mobile App | Flutter |
+| Version Control | Git & GitHub |
 
 ---
 
-## 🗺️ Roadmap
+# ⚙️ Hardware
 
-- [ ] Literature review & requirement analysis
-- [ ] Mechanical design — chassis & arm
-- [ ] Sensor and processor selection
-- [ ] SLAM mapping & navigation algorithm development
-- [ ] System integration & prototype build
-- [ ] Testing & performance evaluation
+## Main Controller
+
+- Raspberry Pi 5
+
+## Embedded Controller
+
+- STM32G474RET6
+
+## Sensors
+
+- RPLIDAR
+- Wheel Encoders
+- 9-DOF IMU (BNO055)
+
+## Actuators
+
+- Differential Drive Motors
+- Vacuum Motor
+- Side Brush Motors
+- Servo Motors
 
 ---
 
-## 📡 Mobile API Contract
+# 🔋 Power Architecture
 
-The robot/mobile contract lives under `/api` and is documented in
-[`docs/final_api_doc.md`](docs/final_api_doc.md). Robot command responses expose
-top-level lifecycle fields including `accepted`, `completed`, `task_finished`,
-`state`, `command`, `next_steps`, and structured `error`.
+SweePi uses two independent battery systems for improved electrical isolation and reliability.
 
-For cleaning, the app must follow:
+### 14.8V 4S LiPo
 
-```text
-POST /api/cleaning/start
-POST /api/localization/initial-pose
-POST /api/cleaning/validate
-POST /api/cleaning/start-motion
-GET  /api/cleaning/status
+Powers:
+
+- Raspberry Pi
+- STM32 Controller
+- Wheel Drive Motors
+
+Converted using onboard regulators to
+
+- 12V
+- 5.1V
+- 3.3V
+
+---
+
+### 11.1V 3S Battery
+
+Powers:
+
+- Vacuum Motor
+- Front Cleaning Motors
+- Servo Motors
+
+A dedicated 6V buck converter supplies the servos.
+
+---
+
+# 📦 Repository Structure
+
+```
+SweePi/
+│
+├── src/
+│   ├── sweepi_api_bridge/
+│   ├── sweepi_base_driver/
+│   ├── sweepi_bringup/
+│   ├── sweepi_coverage/
+│   ├── sweepi_description/
+│   ├── sweepi_exploration/
+│   ├── sweepi_real_bringup/
+│   ├── sweepi_robot_manager/
+│   ├── sweepi_slam/
+│   └── sweepi_state_estimation/
+│
+├── docs/
+│
+├── launch/
+│
+├── config/
+│
+├── maps/
+│
+└── README.md
 ```
 
-The app should advance to the next step only when the previous command returns
-`success=true` and `completed=true`; `accepted=true` only means the command was
-accepted and sent toward ROS/mock logic. See
-[`docs/command_lifecycle.md`](docs/command_lifecycle.md).
-
 ---
 
-## Real Hardware Bringup
-
-Final STM32-based hardware packages:
+# 🚀 Building the Workspace
 
 ```bash
-colcon build --symlink-install --packages-select sweepi_base_driver sweepi_state_estimation sweepi_real_bringup sweepi_robot_manager sweepi_api_bridge
+mkdir -p ~/sweepi_ws/src
+
+cd ~/sweepi_ws/src
+
+git clone https://github.com/<your_username>/SweePi.git
+
+cd ..
+
+colcon build --symlink-install
+
 source install/setup.bash
 ```
 
-Launch the full real robot stack with robot manager and API bridge:
+---
+
+# 🚀 Running Simulation
 
 ```bash
 ros2 launch sweepi_robot_manager master.launch.py \
-  launch_sim:=false \
-  launch_hardware:=true \
-  use_sim_time:=false \
-  launch_api_bridge:=true \
-  api_host:=0.0.0.0 \
-  api_port:=8080 \
-  launch_lidar:=true
+launch_sim:=true
 ```
 
-Launch only the hardware bringup without LiDAR for the first STM32 UART test:
+---
+
+# 🤖 Running on Real Robot
+
+Build required packages
 
 ```bash
-ros2 launch sweepi_real_bringup hardware_debug.launch.py base_serial_port:=/dev/ttyAMA0 base_baud_rate:=115200 launch_lidar:=false
+colcon build --symlink-install \
+--packages-select \
+sweepi_base_driver \
+sweepi_state_estimation \
+sweepi_real_bringup \
+sweepi_robot_manager \
+sweepi_api_bridge
 ```
 
-Launch with explicit Raspberry Pi UART settings:
+Source workspace
 
 ```bash
-ros2 launch sweepi_real_bringup hardware_debug.launch.py base_serial_port:=/dev/ttyAMA0 base_baud_rate:=115200 launch_lidar:=false
+source install/setup.bash
 ```
 
-USB debug override:
+Launch robot
 
 ```bash
-ros2 launch sweepi_real_bringup hardware_debug.launch.py base_serial_port:=/dev/ttyACM0 base_baud_rate:=115200 launch_lidar:=false
+ros2 launch sweepi_robot_manager master.launch.py \
+launch_sim:=false \
+launch_hardware:=true \
+use_sim_time:=false \
+launch_api_bridge:=true \
+api_host:=0.0.0.0 \
+api_port:=8080 \
+launch_lidar:=true
 ```
 
-Useful checks:
+---
+
+# 🔧 Hardware Debug
+
+Launch without LiDAR
+
+```bash
+ros2 launch sweepi_real_bringup hardware_debug.launch.py \
+base_serial_port:=/dev/ttyAMA0 \
+base_baud_rate:=115200 \
+launch_lidar:=false
+```
+
+USB Debug
+
+```bash
+ros2 launch sweepi_real_bringup hardware_debug.launch.py \
+base_serial_port:=/dev/ttyACM0 \
+base_baud_rate:=115200 \
+launch_lidar:=false
+```
+
+---
+
+# 📡 REST API
+
+The robot communicates with the mobile application through a REST API.
+
+Typical cleaning workflow:
+
+```
+POST /api/localization/initial-pose
+
+POST /api/cleaning/start
+
+POST /api/cleaning/validate
+
+POST /api/cleaning/start-motion
+
+GET /api/cleaning/status
+```
+
+Command lifecycle includes
+
+- accepted
+- completed
+- success
+- task_finished
+- state
+- command
+- next_steps
+- error
+
+---
+
+# 📊 ROS Topics
+
+### Sensor Topics
+
+```
+/scan
+/imu/data
+/wheel/odom
+/odom
+/map
+/tf
+```
+
+### Coverage
+
+```
+/coverage_map
+/coverage_map_updates
+/coverage_path
+/coverage_percentage
+```
+
+### Hardware
+
+```
+/hardware/status
+/cmd_vel
+```
+
+---
+
+# 🔍 Useful Commands
+
+Check odometry
+
+```bash
+ros2 topic echo /odom
+```
+
+Check wheel odometry
+
+```bash
+ros2 topic echo /wheel/odom
+```
+
+Check IMU
+
+```bash
+ros2 topic echo /imu/data
+```
+
+Check hardware status
 
 ```bash
 ros2 topic echo /hardware/status
-ros2 topic echo /wheel/odom
-ros2 topic echo /imu/data
-ros2 topic echo /odom
-ros2 topic hz /wheel/odom
-ros2 topic hz /imu/data
 ```
 
-For a lifted-wheel motor test, publish a small command and then stop:
+Check publishing rate
 
 ```bash
-ros2 topic pub -r 10 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.03}, angular: {z: 0.0}}"
-ros2 topic pub -1 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.0}, angular: {z: 0.0}}"
+ros2 topic hz /wheel/odom
 ```
 
-See [`docs/hardware.md`](docs/hardware.md) for Raspberry Pi UART wiring, STM32 constants, and integration warnings.
+Motor test
+
+```bash
+ros2 topic pub -r 10 /cmd_vel geometry_msgs/msg/Twist \
+"{linear: {x: 0.03}, angular: {z: 0.0}}"
+```
+
+Stop
+
+```bash
+ros2 topic pub -1 /cmd_vel geometry_msgs/msg/Twist \
+"{linear: {x: 0.0}, angular: {z: 0.0}}"
+```
 
 ---
 
-## 👥 Team Nexora
+# 📱 Mobile Application
 
-- Ranasinghe D.P.H.
-- Kumarasinghe M.N. 
-- Ranathunga R.J.K.O.H. 
-- Rathnayake M.A.G.K.N. 
-- Wedamestrige A.N. 
+The Flutter mobile application provides
 
-> Department of Electronic and Telecommunication Engineering  
-> Semester 4 — Engineering Design Realization Project
-
----
-
-## 📄 License
-
-This project is developed for academic purposes as part of the university engineering curriculum.
+- Robot discovery
+- Wi-Fi provisioning
+- Live map visualization
+- Cleaning task selection
+- Cleaning progress monitoring
+- Robot status monitoring
+- Manual control
+- Map management
 
 ---
 
-*Last updated: February 2026*
+# 🎯 Project Objectives
+
+- Autonomous indoor navigation
+- Complete area coverage
+- Intelligent obstacle avoidance
+- Efficient cleaning path planning
+- Mobile application integration
+- Modular ROS 2 architecture
+- Real-time embedded control
+
+---
+
+# 👥 Team Nexora
+
+- D. P. H. Ranasinghe
+- M. N. Kumarasinghe
+- R. J. K. O. H. Ranathunga
+- M. A. G. K. N. Rathnayake
+- A. N. Wedamestrige
+
+Department of Electronic & Telecommunication Engineering
+
+Engineering Design Realization Project
+
+---
+
+# 📄 License
+
+This project is developed for academic and research purposes as part of the Engineering Design Realization module.
+
+---
+
+## ⭐ Acknowledgements
+
+Special thanks to
+
+- ROS 2 Community
+- Open Robotics
+- Nav2 Developers
+- slam_toolbox Contributors
+- Raspberry Pi Foundation
+- STMicroelectronics
+
+---
+
+**SweePi — Intelligent Autonomous Cleaning, Powered by ROS 2**
