@@ -1,1 +1,0 @@
-/home/sweepi/SweePi/src/sweepi_coverage/launch/coverage_system.launch.py

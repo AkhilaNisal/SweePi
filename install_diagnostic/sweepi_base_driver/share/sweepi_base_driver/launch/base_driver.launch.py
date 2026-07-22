@@ -1,1 +1,0 @@
-/home/sweepi/SweePi/build_diagnostic/sweepi_base_driver/launch/base_driver.launch.py

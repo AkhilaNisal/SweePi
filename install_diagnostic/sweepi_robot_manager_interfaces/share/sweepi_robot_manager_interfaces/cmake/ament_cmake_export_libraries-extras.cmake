@@ -1,1 +1,0 @@
-/home/sweepi/SweePi/build_diagnostic/sweepi_robot_manager_interfaces/ament_cmake_export_libraries/ament_cmake_export_libraries-extras.cmake

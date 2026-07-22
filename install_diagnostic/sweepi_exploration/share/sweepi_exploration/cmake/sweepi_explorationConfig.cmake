@@ -1,1 +1,0 @@
-/home/sweepi/SweePi/build_diagnostic/sweepi_exploration/ament_cmake_core/sweepi_explorationConfig.cmake

@@ -1,1 +1,0 @@
-/home/sweepi/SweePi/build_diagnostic/sweepi_coverage/ament_cmake_environment_hooks/pythonpath.sh

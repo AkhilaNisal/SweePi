@@ -1,1 +1,0 @@
-/home/sweepi/SweePi/src/sweepi_real_bringup/launch/hardware_debug.launch.py

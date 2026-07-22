@@ -1,1 +1,0 @@
-/home/sweepi/SweePi/build_diagnostic/sweepi_robot_manager_interfaces/rosidl_typesupport_introspection_c/sweepi_robot_manager_interfaces/msg/rosidl_typesupport_introspection_c__visibility_control.h

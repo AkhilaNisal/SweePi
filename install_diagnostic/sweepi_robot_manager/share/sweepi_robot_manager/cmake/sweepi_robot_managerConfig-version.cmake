@@ -1,1 +1,0 @@
-/home/sweepi/SweePi/build_diagnostic/sweepi_robot_manager/ament_cmake_core/sweepi_robot_managerConfig-version.cmake

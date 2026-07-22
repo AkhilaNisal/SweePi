@@ -1,1 +1,0 @@
-/home/sweepi/SweePi/build_diagnostic/sweepi_robot_manager_interfaces/rosidl_typesupport_fastrtps_c/sweepi_robot_manager_interfaces/srv/detail/start_task__rosidl_typesupport_fastrtps_c.h

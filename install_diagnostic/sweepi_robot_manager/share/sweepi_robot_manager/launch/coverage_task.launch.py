@@ -1,1 +1,0 @@
-/home/sweepi/SweePi/src/sweepi_robot_manager/launch/coverage_task.launch.py

@@ -1,1 +1,0 @@
-/home/sweepi/SweePi/build_diagnostic/sweepi_robot_manager_interfaces/rosidl_generator_rs/sweepi_robot_manager_interfaces/rust/src/srv/rmw.rs
