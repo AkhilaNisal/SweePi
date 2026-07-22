@@ -66,29 +66,48 @@ Alternatively, download the original demonstration video:
 # 🏗 System Architecture
 
 ```text
-                            Mobile Application
-                                    │
-                              REST API (FastAPI)
-                                    │
-                          API Bridge / Robot Manager
-                                    │
-         ┌──────────────┬──────────────┬──────────────┐
-         │              │              │              │
-         ▼              ▼              ▼              ▼
-   SLAM Toolbox      Nav2 Stack    Coverage Node   State Estimation
-         │              │              │              │
-         └──────────────┴──────────────┴──────────────┘
-                            ROS 2 Communication
-                                    │
-                             STM32 Base Driver
-                                    │
-          ┌───────────────┬──────────────┬───────────────┐
-          ▼               ▼              ▼
-     Drive Motors      Wheel Encoders    IMU
-                                    │
-                                  LiDAR
+                              ┌─────────────────────────────┐
+                              │     Flutter Mobile App      │
+                              └──────────────┬──────────────┘
+                                             │
+                                       REST API (FastAPI)
+                                             │
+                              ┌──────────────▼──────────────┐
+                              │ API Bridge / Robot Manager  │
+                              └──────────────┬──────────────┘
+                                             │
+                     ┌───────────────────────┼────────────────────────┐
+                     │                       │                        │
+                     ▼                       ▼                        ▼
+             ┌────────────────┐     ┌────────────────┐     ┌─────────────────┐
+             │  SLAM Toolbox  │     │ Navigation 2   │     │ Coverage Planner │
+             │   (Mapping)    │     │    (Nav2)      │     │ & Task Manager   │
+             └────────┬───────┘     └────────┬───────┘     └────────┬─────────┘
+                      └──────────────────────┼───────────────────────┘
+                                             ▼
+                                ┌────────────────────────┐
+                                │  State Estimation EKF  │
+                                └────────────┬───────────┘
+                                             │
+                                    ROS 2 Communication
+                                             │
+                          ┌──────────────────┼──────────────────┐
+                          │                  │                  │
+                          ▼                  ▼                  ▼
+                 ┌────────────────┐   ┌──────────────┐   ┌────────────────┐
+                 │ Raspberry Pi 5 │◄──│    LiDAR     │   │  API Services  │
+                 └───────┬────────┘   └──────────────┘   └────────────────┘
+                         │
+                  UART Serial Link
+                         │
+                 ┌───────▼────────┐
+                 │ STM32 Controller│
+                 └───────┬─────────┘
+                         │
+          ┌──────────────┼──────────────┐
+          ▼              ▼              ▼
+   Drive Motors    Wheel Encoders      IMU
 ```
-
 ---
 
 # 📸 Hardware Gallery
