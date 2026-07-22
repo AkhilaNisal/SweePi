@@ -1,1 +1,0 @@
-rclpy;std_msgs;std_srvs;nav2_msgs;sweepi_robot_manager_interfaces;ament_index_python;launch;launch_ros;sweepi_bringup;sweepi_exploration;sweepi_coverage;sweepi_api_bridge;sweepi_real_bringup;nav2_bringup;rviz2;ament_copyright;ament_flake8;ament_pep257;python3-pytest

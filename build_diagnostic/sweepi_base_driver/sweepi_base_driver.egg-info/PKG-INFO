@@ -1,7 +1,0 @@
-Metadata-Version: 2.1
-Name: sweepi-base-driver
-Version: 0.1.0
-Summary: Real STM32 base driver for SweePi wheel odometry, IMU, and command forwarding.
-Maintainer: akhila-wedamestrige
-Maintainer-email: wedamestrigean@gmail.com
-License: Apache-2.0

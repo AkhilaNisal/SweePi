@@ -1,9 +1,0 @@
-/home/sweepi/SweePi/build_diagnostic/sweepi_real_bringup/CMakeFiles/uninstall.dir
-/home/sweepi/SweePi/build_diagnostic/sweepi_real_bringup/CMakeFiles/sweepi_real_bringup_uninstall.dir
-/home/sweepi/SweePi/build_diagnostic/sweepi_real_bringup/CMakeFiles/test.dir
-/home/sweepi/SweePi/build_diagnostic/sweepi_real_bringup/CMakeFiles/edit_cache.dir
-/home/sweepi/SweePi/build_diagnostic/sweepi_real_bringup/CMakeFiles/rebuild_cache.dir
-/home/sweepi/SweePi/build_diagnostic/sweepi_real_bringup/CMakeFiles/list_install_components.dir
-/home/sweepi/SweePi/build_diagnostic/sweepi_real_bringup/CMakeFiles/install.dir
-/home/sweepi/SweePi/build_diagnostic/sweepi_real_bringup/CMakeFiles/install/local.dir
-/home/sweepi/SweePi/build_diagnostic/sweepi_real_bringup/CMakeFiles/install/strip.dir

@@ -1,1 +1,0 @@
-/home/sweepi/SweePi/src/sweepi_temp_rpi_hardware/setup.py

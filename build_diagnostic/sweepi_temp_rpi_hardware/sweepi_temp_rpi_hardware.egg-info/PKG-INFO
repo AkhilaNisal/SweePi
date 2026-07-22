@@ -1,7 +1,0 @@
-Metadata-Version: 2.1
-Name: sweepi-temp-rpi-hardware
-Version: 0.1.0
-Summary: Temporary Raspberry Pi GPIO stepper and MPU6050 hardware layer for SweePi testing.
-Maintainer: akhila-wedamestrige
-Maintainer-email: wedamestrigean@gmail.com
-License: Apache-2.0

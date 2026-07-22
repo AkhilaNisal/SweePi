@@ -1,8 +1,0 @@
-# CMake generated Testfile for 
-# Source directory: /home/sweepi/SweePi/src/sweepi_coverage
-# Build directory: /home/sweepi/SweePi/build_diagnostic/sweepi_coverage
-# 
-# This file includes the relevant testing commands required for 
-# testing this directory and lists subdirectories to be tested as well.
-add_test(coverage_arm_follow_path_executor_test "/usr/bin/python3" "-u" "/opt/ros/jazzy/share/ament_cmake_test/cmake/run_test.py" "/home/sweepi/SweePi/build_diagnostic/sweepi_coverage/test_results/sweepi_coverage/coverage_arm_follow_path_executor_test.xunit.xml" "--package-name" "sweepi_coverage" "--output-file" "/home/sweepi/SweePi/build_diagnostic/sweepi_coverage/ament_cmake_pytest/coverage_arm_follow_path_executor_test.txt" "--command" "/usr/bin/python3" "-u" "-m" "pytest" "/home/sweepi/SweePi/src/sweepi_coverage/test/test_coverage_arm_follow_path_executor.py" "-o" "cache_dir=/home/sweepi/SweePi/build_diagnostic/sweepi_coverage/ament_cmake_pytest/coverage_arm_follow_path_executor_test/.cache" "--junit-xml=/home/sweepi/SweePi/build_diagnostic/sweepi_coverage/test_results/sweepi_coverage/coverage_arm_follow_path_executor_test.xunit.xml" "--junit-prefix=sweepi_coverage")
-set_tests_properties(coverage_arm_follow_path_executor_test PROPERTIES  LABELS "pytest" TIMEOUT "60" WORKING_DIRECTORY "/home/sweepi/SweePi/build_diagnostic/sweepi_coverage" _BACKTRACE_TRIPLES "/opt/ros/jazzy/share/ament_cmake_test/cmake/ament_add_test.cmake;125;add_test;/opt/ros/jazzy/share/ament_cmake_pytest/cmake/ament_add_pytest_test.cmake;177;ament_add_test;/home/sweepi/SweePi/src/sweepi_coverage/CMakeLists.txt;52;ament_add_pytest_test;/home/sweepi/SweePi/src/sweepi_coverage/CMakeLists.txt;0;")

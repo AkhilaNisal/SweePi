@@ -1,1 +1,0 @@
-sweepi_robot_manager

@@ -1,1 +1,0 @@
-/home/sweepi/SweePi/src/sweepi_base_driver/setup.py

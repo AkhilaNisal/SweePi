@@ -1,6 +1,0 @@
-{
-  "package_name": "sweepi_robot_manager_interfaces",
-  "non_idl_tuples": [
-    "/home/sweepi/SweePi/src/sweepi_robot_manager_interfaces:srv/StartTask.srv"
-  ]
-}

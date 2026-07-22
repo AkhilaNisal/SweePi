@@ -1,9 +1,0 @@
-/home/sweepi/SweePi/build_diagnostic/sweepi_slam/CMakeFiles/uninstall.dir
-/home/sweepi/SweePi/build_diagnostic/sweepi_slam/CMakeFiles/sweepi_slam_uninstall.dir
-/home/sweepi/SweePi/build_diagnostic/sweepi_slam/CMakeFiles/test.dir
-/home/sweepi/SweePi/build_diagnostic/sweepi_slam/CMakeFiles/edit_cache.dir
-/home/sweepi/SweePi/build_diagnostic/sweepi_slam/CMakeFiles/rebuild_cache.dir
-/home/sweepi/SweePi/build_diagnostic/sweepi_slam/CMakeFiles/list_install_components.dir
-/home/sweepi/SweePi/build_diagnostic/sweepi_slam/CMakeFiles/install.dir
-/home/sweepi/SweePi/build_diagnostic/sweepi_slam/CMakeFiles/install/local.dir
-/home/sweepi/SweePi/build_diagnostic/sweepi_slam/CMakeFiles/install/strip.dir
