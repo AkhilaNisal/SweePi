@@ -1,7 +1,0 @@
-Filesystem      Inodes  IUsed   IFree IUse% Mounted on
-tmpfs          1015960   1759 1014201    1% /run
-/dev/mmcblk0p2 5700800 279508 5421292    5% /
-tmpfs          1015960    175 1015785    1% /dev/shm
-tmpfs          1015960      3 1015957    1% /run/lock
-/dev/mmcblk0p1       0      0       0     - /boot/firmware
-tmpfs           203192    122  203070    1% /run/user/1000

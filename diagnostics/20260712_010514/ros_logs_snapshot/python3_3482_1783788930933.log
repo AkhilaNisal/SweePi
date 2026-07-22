@@ -1,4 +1,0 @@
-[INFO] [1783788931.298731302] [sweepi_api_bridge]: SweePi API bridge listening on http://0.0.0.0:8080/api
-[INFO] [1783789019.418673311] [sweepi_api_bridge]: HTTP "GET /api/system/health HTTP/1.1" 200 -
-[INFO] [1783789055.672758654] [sweepi_api_bridge]: HTTP "GET /api/system/health HTTP/1.1" 200 -
-[INFO] [1783789055.735660271] [sweepi_api_bridge]: HTTP "GET /favicon.ico HTTP/1.1" 404 -

@@ -1,4 +1,0 @@
-[INFO] [1783789545.512260189] [collision_monitor]: 
-	collision_monitor lifecycle node launched. 
-	Waiting on external lifecycle transitions to activate
-	See https://design.ros2.org/articles/node_lifecycle.html for more information.

@@ -1,4 +1,0 @@
-[INFO] [1783783411.798961187] [base_driver_node]: SweePi base driver starting on /dev/ttyAMA0 at 115200 baud
-[INFO] [1783783411.799911442] [base_driver_node]: Base driver parameters: serial_port=/dev/ttyAMA0, baud_rate=115200, wheel_radius=0.0615, wheel_separation=0.29, ticks_per_revolution=7392.0, left_encoder_sign=1.0, right_encoder_sign=1.0, left_motor_command_sign=1.0, right_motor_command_sign=1.0, command_rate_hz=50.0, feedback_poll_rate_hz=100.0, cmd_vel_timeout=0.5, gyro_units=rad_s, accel_units=m_s2
-[INFO] [1783783411.801503299] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783783411.829325845] [base_driver_node]: Ignoring unknown STM32 packet: LKLKLKL	���b�r����b�r����b�r����FB,17697,375265000,0,0,0.0012,-0.0007,-0.0002,0.3401,0.1988,11.0806,12.0,0,OK

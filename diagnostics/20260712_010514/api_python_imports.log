@@ -1,7 +1,0 @@
-OK rclpy
-OK yaml
-OK PIL.Image
-OK numpy
-OK cv2
-MISSING fastapi: ModuleNotFoundError: No module named 'fastapi'
-MISSING uvicorn: ModuleNotFoundError: No module named 'uvicorn'

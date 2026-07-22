@@ -1,9 +1,0 @@
-[INFO] [1783784384.889941860] [sweepi_robot_manager]: SweePi robot manager ready for service commands
-[INFO] [1783784390.872343783] [sweepi_robot_manager]: coverage launch started: /opt/ros/jazzy/bin/ros2 launch sweepi_robot_manager coverage_task.launch.py map_name:=living_room auto_start:=false use_sim_time:=false use_robot_arm:=false
-[INFO] [1783784450.857121364] [sweepi_robot_manager]: Last coverage summary: task=coverage status=FAILED map_name=living_room started_at=2026-07-11 21:09:50 finished_at=2026-07-11 21:10:50 duration_sec=60.0 stats="covered=45 uncovered=7348 total=7393 percentage=0.6 path_length_m=5.02 segments=5 poses=73 max_jump_m=0.447 follow_path_ready=true robot_start_used=true nav_costmap_used=true nav_blocked_cells=618 nav_filtered_cells=618 reachability_used=true reachable_cells=329 unreachable_filtered_cells=1351 cleanup_pass=0" map="coverage_map frame=map size=161x127 resolution=0.050 covered_cells=45 uncovered_cells=7348 coverable_cells=7393 percentage=0.6"
-[INFO] [1783784450.858623677] [sweepi_robot_manager]: Coverage finished with status=FAILED. Clearing coverage visuals before returning manager to idle.
-[INFO] [1783784450.895913642] [sweepi_robot_manager]: /reset_coverage_tracker result: Coverage tracker reset; /coverage_map cleared
-[INFO] [1783784450.922939747] [sweepi_robot_manager]: /reset_coverage_planner result: Coverage planner reset; /coverage_path cleared
-[INFO] [1783784450.928441477] [sweepi_robot_manager]: /reset_coverage_follow_path result: Coverage FollowPath cache reset; waiting for /coverage_path
-[INFO] [1783784452.857511782] [sweepi_robot_manager]: Closing coverage launch and returning idle.
-[INFO] [1783784452.859701970] [sweepi_robot_manager]: Stopping active coverage launch

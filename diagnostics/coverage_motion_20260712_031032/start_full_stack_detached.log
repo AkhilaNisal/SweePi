@@ -1,4 +1,0 @@
-===== start_full_stack_detached =====
-$ bash -lc cd /home/sweepi/SweePi && setsid bash -lc "source /opt/ros/jazzy/setup.bash && source /home/sweepi/SweePi/install/setup.bash && ros2 launch sweepi_robot_manager master.launch.py use_sim_time:=false launch_sim:=false launch_hardware:=true launch_rviz:=false launch_api_bridge:=true use_arm_assist:=false api_host:=0.0.0.0 api_port:=8080 base_serial_port:=/dev/ttyAMA0 base_baud_rate:=115200 lidar_serial_port:=/dev/ttyUSB0 lidar_baud_rate:=460800 lidar_frame_id:=lidar_link" > "$DIAG/full_stack_detached.log" 2>&1 < /dev/null & echo $! > "$DIAG/full_stack_detached.pid"; echo started_pid=$(cat "$DIAG/full_stack_detached.pid")
-started_pid=9784
-exit=0

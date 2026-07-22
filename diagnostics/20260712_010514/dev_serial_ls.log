@@ -1,7 +1,0 @@
-crw-rw---- 1 root dialout 204, 64 Jul 12 01:15 /dev/ttyAMA0
-crwxrwxrwx 1 root dialout 188,  0 Jul 12 00:44 /dev/ttyUSB0
-
-/dev/serial:
-total 0
-drwxr-xr-x 2 root root 60 Jul 11 23:09 by-id
-drwxr-xr-x 2 root root 80 Jul 11 23:09 by-path

@@ -1,6 +1,0 @@
-Action: /follow_path
-Action clients: 2
-    /bt_navigator_navigate_to_pose_rclcpp_node
-    /bt_navigator_navigate_through_poses_rclcpp_node
-Action servers: 1
-    /controller_server

@@ -1,2 +1,0 @@
-[INFO] [1783789382.012833826] [sweepi_robot_manager]: SweePi robot manager ready for service commands
-[INFO] [1783789387.369613465] [sweepi_robot_manager]: exploration launch started: /opt/ros/jazzy/bin/ros2 launch sweepi_robot_manager exploration_task.launch.py map_name:=living_room start_mode:=auto use_sim_time:=false

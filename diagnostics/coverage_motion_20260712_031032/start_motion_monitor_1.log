@@ -1,8 +1,0 @@
-MOTION_CHAIN_MONITOR duration=35.0
-/cmd_vel_nav count=0 nonzero=0 max_lin=0.0000 max_ang=0.0000 first_nonzero=None last=None
-/cmd_vel_smoothed count=0 nonzero=0 max_lin=0.0000 max_ang=0.0000 first_nonzero=None last=None
-/cmd_vel count=0 nonzero=0 max_lin=0.0000 max_ang=0.0000 first_nonzero=None last=None
-/wheel/odom first=(0.31811885100000836, 0.0, 0.0, 0.0) last=(35.01415312799986, 0.0, 0.0, 0.0) delta_xy=0.0000
-/hardware/status count=0 faults=[]
-/coverage_execution_status transitions=[(1.0336345529999562, 'IDLE')]
-/follow_path action status transitions=[]

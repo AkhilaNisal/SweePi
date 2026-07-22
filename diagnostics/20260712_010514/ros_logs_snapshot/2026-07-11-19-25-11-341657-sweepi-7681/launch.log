@@ -1,9 +1,0 @@
-1783778111.3433449 [INFO] [launch]: All log files can be found below /home/sweepi/.ros/log/2026-07-11-19-25-11-341657-sweepi-7681
-1783778111.3436100 [INFO] [launch]: Default logging verbosity is set to INFO
-1783778111.6905904 [INFO] [base_driver_node-1]: process started with pid [7705]
-1783778111.6909983 [INFO] [ekf_node-2]: process started with pid [7707]
-1783778111.6921563 [INFO] [robot_state_publisher-3]: process started with pid [7708]
-1783778146.7459259 [WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
-1783778146.9260912 [INFO] [robot_state_publisher-3]: process has finished cleanly [pid 7708]
-1783778146.9270144 [INFO] [ekf_node-2]: process has finished cleanly [pid 7707]
-1783778147.1655085 [ERROR] [base_driver_node-1]: process has died [pid 7705, exit code 1, cmd '/home/sweepi/SweePi/install/sweepi_base_driver/lib/sweepi_base_driver/base_driver_node --ros-args -r __node:=base_driver_node --params-file /home/sweepi/SweePi/install/sweepi_base_driver/share/sweepi_base_driver/config/base_driver_params.yaml --params-file /tmp/launch_params_4mg55qvj'].

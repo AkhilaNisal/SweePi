@@ -1,1 +1,0 @@
-{"success":true,"message":"API server is healthy.","error":null,"timestamp":"2026-07-11T20:07:29Z","status":"ok","robot_connected":true,"server":"sweepi_api_bridge","api":{"host":"0.0.0.0","port":8080,"prefix":"/api"},"manager_status":"task=idle map_name=(unset) arm_assist=false latest_coverage_status=(none) latest_exploration_mode=(none)","ros_time_sec":1783800449.1871464}

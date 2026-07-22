@@ -1,8 +1,0 @@
-/base_driver_node
-Boolean value is: False
-/ekf_filter_node
-Boolean value is: False
-/robot_state_publisher
-Boolean value is: False
-/sllidar_node
-Boolean value is: False

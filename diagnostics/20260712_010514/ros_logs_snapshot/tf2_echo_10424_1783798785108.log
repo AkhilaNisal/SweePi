@@ -1,2 +1,0 @@
-[INFO] [1783798785.241465965] [tf2_echo]: Waiting for transform base_link ->  lidar_link: Invalid frame ID "base_link" passed to canTransform argument target_frame - frame does not exist
-[INFO] [1783798790.452500434] [rclcpp]: signal_handler(SIGINT/SIGTERM)

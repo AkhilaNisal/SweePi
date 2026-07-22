@@ -1,8 +1,0 @@
-/dev/serial/by-id:
-total 0
-lrwxrwxrwx 1 root root 13 Jul 11 23:09 usb-Silicon_Labs_CP2102N_USB_to_UART_Bridge_Controller_1c341230b5d5ef11bfaa744b49d2c684-if00-port0 -> ../../ttyUSB0
-
-/dev/serial/by-path:
-total 0
-lrwxrwxrwx 1 root root 13 Jul 11 23:09 platform-xhci-hcd.1-usb-0:1:1.0-port0 -> ../../ttyUSB0
-lrwxrwxrwx 1 root root 13 Jul 11 23:09 platform-xhci-hcd.1-usbv2-0:1:1.0-port0 -> ../../ttyUSB0

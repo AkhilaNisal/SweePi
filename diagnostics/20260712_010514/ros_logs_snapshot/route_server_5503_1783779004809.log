@@ -1,4 +1,0 @@
-[INFO] [1783779006.011161978] [route_server]: 
-	route_server lifecycle node launched. 
-	Waiting on external lifecycle transitions to activate
-	See https://design.ros2.org/articles/node_lifecycle.html for more information.

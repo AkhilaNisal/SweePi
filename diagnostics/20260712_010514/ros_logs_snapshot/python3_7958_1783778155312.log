@@ -1,487 +1,0 @@
-[INFO] [1783778155.447443802] [base_driver_node]: SweePi base driver starting on /dev/ttyAMA0 at 115200 baud
-[INFO] [1783778155.448269334] [base_driver_node]: Base driver parameters: serial_port=/dev/ttyAMA0, baud_rate=115200, wheel_radius=0.0615, wheel_separation=0.29, ticks_per_revolution=7392.0, left_encoder_sign=1.0, right_encoder_sign=1.0, left_motor_command_sign=1.0, right_motor_command_sign=1.0, command_rate_hz=50.0, feedback_poll_rate_hz=100.0, cmd_vel_timeout=0.5, gyro_units=rad_s, accel_units=m_s2
-[INFO] [1783778155.449777707] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778320.801899345] [base_driver_node]: Feedback sequence jump: expected 84491, got 84492
-[WARN] [1783778320.842340538] [base_driver_node]: Ignoring short feedback packet: FB,84494,1778003000,0,0-0.23269,.1,1.,,K
-[WARN] [1783778320.900990622] [base_driver_node]: Feedback sequence jump: expected 84493, got 84497
-[WARN] [1783778320.940229643] [base_driver_node]: Ignoring unknown STM32 packet: 84817060,,,000,000,000,.72010,095,200OFB,84499,1778107000,0,0,0.0013,0.0005,-0.0002,0.3126,0.1724,11.0698,12.0,0,OK
-[WARN] [1783778320.990687938] [base_driver_node]: Feedback sequence jump: expected 84498, got 84501
-[WARN] [1783778321.301052163] [base_driver_node]: Feedback sequence jump: expected 84502, got 84504
-[WARN] [1783778321.635600687] [base_driver_node]: Feedback sequence jump: expected 84505, got 84532
-[ERROR] [1783778321.659304072] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778321.661404020] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778321.694833944] [base_driver_node]: Ignoring unknown STM32 packet: ,,0.01-.07000,.35018,103,200OFB,84535,1778863000,0,0,0.0003,0.0004,-0.0006,0.3425,0.1736,11.0171,12.0,0,OK
-[ERROR] [1783778321.718920484] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778322.668841834] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[ERROR] [1783778322.689970148] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778323.678716351] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778323.708575553] [base_driver_node]: Ignoring unknown STM32 packet: 006000,000,.4702,103,200OFB,84631,1780879000,0,0,0.0007,-0.0003,-0.0001,0.3185,0.1868,11.0183,12.0,0,OK
-[WARN] [1783778323.729143484] [base_driver_node]: Ignoring unknown STM32 packet: 100,,,000,000,.02034,.881.191.,,K
-[WARN] [1783778323.759031039] [base_driver_node]: Ignoring unknown STM32 packet: 001-.01-.02036,.761.341.,,K
-[ERROR] [1783778323.798992916] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778324.679157381] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778324.699520918] [base_driver_node]: Feedback sequence jump: expected 84533, got 84678
-[WARN] [1783778324.778350775] [base_driver_node]: Ignoring unknown STM32 packet: .0,.00-.05037,.511108,200OFB,84682,1781950000,0,0,0.0001,-0.0004,0.0000,0.3473,0.1892,11.0003,12.0,0,OK
-[WARN] [1783778324.799390787] [base_driver_node]: Ignoring unknown STM32 packet: ,0,000,.01-.02039,.531.441.,,K
-[WARN] [1783778324.829564160] [base_driver_node]: Feedback sequence jump: expected 84680, got 84684
-[WARN] [1783778325.748993833] [base_driver_node]: Ignoring unknown STM32 packet: 0,.02037,.681.271.,,K
-[WARN] [1783778325.805338181] [base_driver_node]: Ignoring unknown STM32 packet: .00000,.17012,109,200OFB,84731,1782979000,0,0,0.0002,0.0009,0.0008,0.3197,0.1641,11.0267,12.0,0,OK
-[ERROR] [1783778325.868327526] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778325.870007966] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778325.890378334] [base_driver_node]: Feedback sequence jump: expected 84728, got 84735
-[WARN] [1783778325.930797954] [base_driver_node]: Ignoring unknown STM32 packet: 0.03000,000,.21011,104,200OFB,84737,1783105000,0,0,0.0009,-0.0003,0.0006,0.3245,0.1377,11.0195,12.0,0,OK
-[ERROR] [1783778325.959526982] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778326.878777973] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[ERROR] [1783778326.899418289] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778327.879141978] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778327.888908829] [base_driver_node]: Ignoring unknown STM32 packet: 005.01-.01038,.511.461.,,K
-[WARN] [1783778327.928923675] [base_driver_node]: Ignoring unknown STM32 packet: 5003-.01037,.801.581.,,K
-[WARN] [1783778327.986071715] [base_driver_node]: Ignoring unknown STM32 packet: -.000-.05000,.94013,105,200OFB,84835,1785163000,0,0,0.0009,0.0001,0.0000,0.3329,0.1868,11.0219,12.0,0,OK
-[WARN] [1783778328.048917247] [base_driver_node]: Ignoring unknown STM32 packet: 184000000,001,000,.39018,108,200OFB,84837,1785205000,0,0,-0.0002,-0.0009,0.0000,0.3281,0.1952,11.0542,12.0,0,KFB,848,7520000000,001,.02030,.451.331.,,K
-[WARN] [1783778328.112080728] [base_driver_node]: Ignoring unknown STM32 packet: 0001,.07000,.47010,108,200OFB,84841,1785289000,0,0,-0.0001,0.0008,-0.0009,0.3078,0.1545,11.0566,12.0,0,OK
-[WARN] [1783778328.139393778] [base_driver_node]: Ignoring unknown STM32 packet: 000,00,000,.00034,.651.391.,,K
-[WARN] [1783778328.179032206] [base_driver_node]: Ignoring unknown STM32 packet: 03-0.04-.02036,.671.581.,,K
-[WARN] [1783778328.219014345] [base_driver_node]: Ignoring unknown STM32 packet: 06000,.07036,.691.481.,,K
-[WARN] [1783778328.259143987] [base_driver_node]: Ignoring unknown STM32 packet: .1,001,.02039,.721.031.,,K
-[WARN] [1783778328.309036904] [base_driver_node]: Ignoring unknown STM32 packet: ,01,.03-.08034,.901.251.,,K
-[WARN] [1783778328.328977167] [base_driver_node]: Ignoring unknown STM32 packet: 0.09-.04030,.801.721.,,K
-[WARN] [1783778328.369196663] [base_driver_node]: Ignoring unknown STM32 packet: 0000-.02-.09035,.761.881.,,K
-[WARN] [1783778328.408963297] [base_driver_node]: Ignoring unknown STM32 packet: 000,.07-.08025,.801.561.,,K
-[WARN] [1783778328.449211441] [base_driver_node]: Ignoring unknown STM32 packet: ,0000,000,.04038,.721.621.,,K
-[WARN] [1783778328.468709881] [base_driver_node]: Ignoring unknown STM32 packet: 82,1.071.,,K
-[WARN] [1783778328.499496088] [base_driver_node]: Feedback sequence jump: expected 84736, got 84859
-[WARN] [1783778329.350210463] [base_driver_node]: Ignoring unknown STM32 packet: 02000,.43014,104,200OFB,84900,1786528000,0,0,-0.0001,-0.0011,-0.0004,0.3161,0.1712,11.0722,12.0,0,OK
-[WARN] [1783778329.378818553] [base_driver_node]: Ignoring unknown STM32 packet: 0000038,.701.441.,,K
-[ERROR] [1783778329.419084749] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778329.420285420] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778329.439040048] [base_driver_node]: Ignoring unknown STM32 packet: 02-.004-.02036,.631.341.,,K
-[WARN] [1783778329.459237944] [base_driver_node]: Feedback sequence jump: expected 84899, got 84905
-[WARN] [1783778330.339241760] [base_driver_node]: Ignoring unknown STM32 packet: .001.01037,.511.481.,,K
-[WARN] [1783778330.359638528] [base_driver_node]: Feedback sequence jump: expected 84947, got 84948
-[ERROR] [1783778331.348931509] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778331.358982343] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778331.403808155] [base_driver_node]: Ignoring unknown STM32 packet: 140000001-.01000,.53018,106,200OFB,84997,1788565000,0,0,0.0002,-0.0003,-0.0004,0.3114,0.1FB,84998,1788586000,0,0,0.0014,0.0008,-0.0001,0.3581,0.1760,11.0398,12.0,0,OK
-[WARN] [1783778331.448929842] [base_driver_node]: Ignoring unknown STM32 packet: 00,-000,.00038,.821.361.,,K
-[ERROR] [1783778331.489419054] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778332.368762881] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778332.399030587] [base_driver_node]: Ignoring unknown STM32 packet: 0,.03000,.04032,.841.3271,,K
-[WARN] [1783778332.439251551] [base_driver_node]: Ignoring unknown STM32 packet: 02,001,.07028,.881.761.,,K
-[WARN] [1783778332.479093674] [base_driver_node]: Ignoring unknown STM32 packet: .01001-.04033,.611.271,,K
-[WARN] [1783778332.519158061] [base_driver_node]: Ignoring unknown STM32 packet: ,00,.03-.04032,.981.151.,,K
-[WARN] [1783778332.539208801] [base_driver_node]: Ignoring unknown STM32 packet: 0,.02034,.721.211.,,K
-[WARN] [1783778332.579046943] [base_driver_node]: Ignoring unknown STM32 packet: ,,0,.05-.05-.05037,.741.211.,,K
-[ERROR] [1783778332.628740470] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778333.379277109] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778333.438933538] [base_driver_node]: Ignoring unknown STM32 packet: .01-.04000,.19010,108,200OFB,85095,1790620000-.03-.07-.06032,.781.331.,,K
-[WARN] [1783778333.469723566] [base_driver_node]: Feedback sequence jump: expected 84994, got 85096
-[WARN] [1783778333.565163410] [base_driver_node]: Ignoring unknown STM32 packet: 0000,.23019,109,200OFB,85101,1790749000,0,0,0.0006,0.0005,-0.0001,0.3497,0.1964,11.0075,12.0,0,OK
-[WARN] [1783778333.606904269] [base_driver_node]: Ignoring unknown STM32 packet: 05000,000,.37016,091,200OFB,85103,1790791000,0,0,0.0009,0.0009,0.0007,0.3281,0.1892,11.0602,12.0,0,OK
-[WARN] [1783778333.648172193] [base_driver_node]: Ignoring unknown STM32 packet: 0,0,.0,.05003032,.701105,200OFB,85105,1790833000,0,0,0.0001,-0.0013,-0.0002,0.3257,0.1677,11.0422,12.0,0,OK
-[WARN] [1783778333.690082759] [base_driver_node]: Ignoring unknown STM32 packet: 0,000,000,.41016,106,200OFB,85107,1790875000,0,0,0.0003,0.0008,-0.0005,0.3090,0.1593,11.0470,12.0,0,OK
-[WARN] [1783778333.718748248] [base_driver_node]: Ignoring unknown STM32 packet: 1-002034,.901.401.,,K
-[WARN] [1783778333.759152823] [base_driver_node]: Ignoring unknown STM32 packet: 01-.01-.05030,.721.381.,,K
-[WARN] [1783778333.799647714] [base_driver_node]: Ignoring unknown STM32 packet: 79080000000,.03,-0000,.45013,100,2.,,K
-[WARN] [1783778333.819604692] [base_driver_node]: Feedback sequence jump: expected 85100, got 85113
-[WARN] [1783778334.559033257] [base_driver_node]: Ignoring unknown STM32 packet: ,0-000,001,.00035,.741.681.,,K
-[WARN] [1783778334.599584183] [base_driver_node]: Ignoring unknown STM32 packet: 1700000-05001,.07037,.881.441.,,K
-[WARN] [1783778334.641553950] [base_driver_node]: Ignoring unknown STM32 packet: 0000,.7034,.821.561.,,K
-[WARN] [1783778334.679030801] [base_driver_node]: Ignoring unknown STM32 packet: .003000,000,.35016,1067,1.,,K
-[WARN] [1783778334.699606677] [base_driver_node]: Feedback sequence jump: expected 85148, got 85155
-[WARN] [1783778335.577767514] [base_driver_node]: Ignoring unknown STM32 packet: 0,,,.03-.03000,.43019,104,200OFB,85197,1792765000,0,0,0.0019,0.0003,-0.0004,0.3281,0.1724,11.0566,12.0,0,OK
-[WARN] [1783778335.619928448] [base_driver_node]: Ignoring unknown STM32 packet: 000000,.27014,105,00,OFB,85199,1792808000,0,0,0.0013,0.0000,-0.0004,0.3425,0.1916,11.0602,12.0,0,OK
-[WARN] [1783778335.661692041] [base_driver_node]: Ignoring unknown STM32 packet: .0,000,.02031,.001.251.,,KFB,85201,1792849000,0,0,-0.0001,-0.0005,0.0007,0.3281,0.1796,11.0578,12.0,0,OK
-[WARN] [1783778335.703242649] [base_driver_node]: Ignoring unknown STM32 packet: ,-02-.02-.06034,.801.971.,,KFB,85203,1792891000,0,0,0.0011,0.0005,-0.0009,0.3221,0.1605,11.0398,12.0,0,OK
-[WARN] [1783778335.745890017] [base_driver_node]: Ignoring unknown STM32 packet: 03-.007000,.21010,103,200OFB,85205,1792933000,0,0,0.0002,-0.0009,-0.0002,0.3605,0.1856,11.0470,12.0,0,OK
-[WARN] [1783778335.769003512] [base_driver_node]: Ignoring unknown STM32 packet: 0-.08-.06033,.021.381.,,K
-[WARN] [1783778335.809142316] [base_driver_node]: Ignoring unknown STM32 packet: ,00,.04-.01034,.761.331.,,K
-[ERROR] [1783778335.829301572] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778335.838862061] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778335.871582879] [base_driver_node]: Ignoring unknown STM32 packet: 0000,000,.39012,097,200OFB,85211,1793059000,0,0,0.0002,0.0007,-0.0004,0.3137,0.1820,11.0518,12.0,0,OK
-[ERROR] [1783778335.898719613] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778336.839902987] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[ERROR] [1783778336.858830571] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778337.850406116] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778337.869011730] [base_driver_node]: Ignoring unknown STM32 packet: 0.00000,.31012,109,2.,,K
-[WARN] [1783778337.926767679] [base_driver_node]: Ignoring unknown STM32 packet: 000,.08000,.39011,101,200OFB,85309,1795117000,0,0,0.0002,-0.0004,-0.0005,0.3173,0.1772,11.0518,12.0,0,OK
-[ERROR] [1783778337.948986191] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778338.858744626] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778338.879097288] [base_driver_node]: Ignoring unknown STM32 packet: 3001,.00034,.591.1111.,,K
-[ERROR] [1783778338.919122248] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778339.858977986] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778339.897941868] [base_driver_node]: Ignoring unknown STM32 packet: FBFB,85403,1797091000,0,0,0.0011,0.0013,-0.0002,0.3161,0.2060,11.0590,12.0,0,OK
-[WARN] [1783778339.919176451] [base_driver_node]: Ignoring unknown STM32 packet: 0000000,.00038,.68100,2,,K
-[ERROR] [1783778339.969022250] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778340.868873273] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778340.908689241] [base_driver_node]: Ignoring unknown STM32 packet: 11-.00036,.821.291.,,K
-[ERROR] [1783778340.948910105] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778341.868679913] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778341.931851180] [base_driver_node]: Ignoring unknown STM32 packet: 002,.08000,.00013,106,200OFB,85500,1799128000,0,0,0.0005,-0.0008,-0.0013,0.3209,0.1688,11.0374,12.0,0,OK
-[ERROR] [1783778341.959161979] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778342.868693349] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[ERROR] [1783778342.878785212] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778343.878759256] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[ERROR] [1783778343.888973583] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778344.888704100] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778344.939275115] [base_driver_node]: Ignoring unknown STM32 packet: 0000,001,.6032,.881.821.,,K
-[WARN] [1783778344.978932308] [base_driver_node]: Ignoring unknown STM32 packet: 0001-.04030,.671.381.,,K
-[WARN] [1783778345.036020879] [base_driver_node]: Ignoring unknown STM32 packet: .0,001,.00034,.981.461.,,KFB,85648,1802236000,0,0,-0.0003,-0.0021,-0.0001,0.3149,0.1712,11.0279,12.0,0,OK
-[WARN] [1783778345.059130874] [base_driver_node]: Ignoring unknown STM32 packet: .00-.01000,.8,.841.401.,,K
-[WARN] [1783778345.099131404] [base_driver_node]: Ignoring unknown STM32 packet: ,0,.05-.02035,.761.191.,,K
-[WARN] [1783778345.161559528] [base_driver_node]: Ignoring unknown STM32 packet: 000,001,000,.12012,100,200OFB,85654,1802362000,0,0,0.0007,-0.0001,-0.0006,0.3245,0.1677,11.0207,12.0,0,OK
-[WARN] [1783778345.189276178] [base_driver_node]: Ignoring unknown STM32 packet: 0,.003-.00037,.701.891.,,K
-[WARN] [1783778345.245633011] [base_driver_node]: Ignoring unknown STM32 packet: ,.07-.04000,.19019,103,200OFB,85658,1802446000,0,0,0.0002,-0.0011,-0.0001,0.3281,0.1653,11.0482,12.0,0,OK
-[WARN] [1783778345.268925213] [base_driver_node]: Ignoring unknown STM32 packet: ,.03-.02036,.781.621.,,K
-[WARN] [1783778345.289291901] [base_driver_node]: Ignoring unknown STM32 packet: 00-0008-.02038,.681.741.,,K
-[WARN] [1783778345.309386214] [base_driver_node]: Feedback sequence jump: expected 85196, got 85661
-[WARN] [1783778346.299028040] [base_driver_node]: Ignoring unknown STM32 packet: 002-.01034,.821.091.,,K
-[WARN] [1783778346.339365647] [base_driver_node]: Ignoring unknown STM32 packet: -00,000,.000821.171.,,K
-[ERROR] [1783778346.379119096] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778346.380354877] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778346.420059732] [base_driver_node]: Ignoring unknown STM32 packet: 8571,800000000003,.06,.00038,.741.29,200OFB,85714,1803623000,0,0,0.0001,0.0007,-0.0004,0.3018,0.1892,10.9979,12.0,0,OK
-[WARN] [1783778346.443458415] [base_driver_node]: Feedback sequence jump: expected 85707, got 85715
-[ERROR] [1783778346.468982802] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778347.388886819] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[ERROR] [1783778347.428964066] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778348.398706891] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778348.419176910] [base_driver_node]: Ignoring unknown STM32 packet: 006035,.801.501.,,K
-[WARN] [1783778348.474941183] [base_driver_node]: Ignoring unknown STM32 packet: ,.06-.09000,.41014,105,200OFB,85812,1805680000,0,0,0.0001,0.0013,-0.0009,0.3245,0.1593,11.0255,12.0,0,OK
-[WARN] [1783778348.517460284] [base_driver_node]: Ignoring unknown STM32 packet: 00,0.05000,.13019,105,200OFB,85814,1805722000,0,0,0.0015,-0.0009,0.0003,0.3197,0.1557,11.0758,12.0,0,OK
-[WARN] [1783778348.578930341] [base_driver_node]: Ignoring unknown STM32 packet: -00,000,.02018,09,200OFB,85816,1805764000,0,,03-.01-.00033,.801.4,200O
-[WARN] [1783778348.580632796] [base_driver_node]: Feedback sequence jump: expected 85716, got 85817
-[WARN] [1783778348.609113990] [base_driver_node]: Ignoring unknown STM32 packet: 0.06000,.00038,.741.501.,,K
-[WARN] [1783778348.629445154] [base_driver_node]: Feedback sequence jump: expected 85818, got 85819
-[WARN] [1783778349.419386313] [base_driver_node]: Ignoring unknown STM32 packet: ,-000,0004-.01038,.311.721.,,K
-[WARN] [1783778349.449470606] [base_driver_node]: Feedback sequence jump: expected 85857, got 85858
-[WARN] [1783778350.446354542] [base_driver_node]: Ignoring unknown STM32 packet: 000,000,000,.23014,106,200OFB,85906,1807654000,0,0,-0.0003,-0.0016,-0.0005,0.3185,0.1892,11.0231,12.0,0,OK
-[WARN] [1783778350.468795925] [base_driver_node]: Ignoring unknown STM32 packet: 00-.00030,.531.071.,,K
-[WARN] [1783778350.489858839] [base_driver_node]: Feedback sequence jump: expected 85904, got 85908
-[WARN] [1783778351.451238669] [base_driver_node]: Ignoring unknown STM32 packet: 0,000,.39014,109,200OFB,85954,1808662000,0,0,0.0003,-0.0009,0.0007,0.3676,0.1665,11.0099,12.0,0,OK
-[WARN] [1783778351.478645412] [base_driver_node]: Ignoring unknown STM32 packet: 008036,.841.741.,,K
-[WARN] [1783778351.519118636] [base_driver_node]: Ignoring unknown STM32 packet: 0-.01-.05036,.741.171.,,K
-[WARN] [1783778351.559790678] [base_driver_node]: Ignoring short feedback packet: FB,85959,180760000-.07-.09-.08039,.741.271.,,K
-[WARN] [1783778351.600096306] [base_driver_node]: Ignoring unknown STM32 packet: 003-.01-.09031,.941.421.,,K
-[WARN] [1783778351.618913921] [base_driver_node]: Ignoring unknown STM32 packet: 0000-.06-.09-.01036,.651.721.,,K
-[WARN] [1783778351.681966195] [base_driver_node]: Ignoring unknown STM32 packet: ,.002000,000,.14012,104,200OFB,85965,1808893000,0,0,0.0003,-0.0003,0.0000,0.3281,0.1700,11.0494,12.0,0,OK
-[WARN] [1783778351.725016759] [base_driver_node]: Ignoring unknown STM32 packet: ,.07000,000,.43014,1104,200OFB,85967,1808936000,0,0,0.0001,-0.0009,0.0006,0.3149,0.1425,11.0518,12.0,0,OK
-[WARN] [1783778351.748954331] [base_driver_node]: Ignoring unknown STM32 packet: 2,0001-.09030,.631.541.,,K
-[WARN] [1783778351.769614571] [base_driver_node]: Feedback sequence jump: expected 85952, got 85969
-[WARN] [1783778352.458840378] [base_driver_node]: Ignoring unknown STM32 packet: 06-.02030,1,107,200OFB,86002,1809670000,0,0,0.0010,0.0001,-0.0005,0.3377,0.1868,11.0398,12.0,0,OK
-[WARN] [1783778352.499002816] [base_driver_node]: Ignoring unknown STM32 packet: -.003034.72,108,200O
-[WARN] [1783778352.500711974] [base_driver_node]: Feedback sequence jump: expected 86001, got 86004
-[WARN] [1783778352.542571830] [base_driver_node]: Ignoring unknown STM32 packet: 00,000,000,.17011,108,200OFB,86006,1809754000,0,0,0.0002,-0.0007,-0.0010,0.3425,0.1653,11.0470,12.0,0,OK
-[WARN] [1783778352.568813569] [base_driver_node]: Ignoring unknown STM32 packet: 1,000,000030,.801.291.,,K
-[WARN] [1783778352.625603232] [base_driver_node]: Ignoring unknown STM32 packet: 3-0.01000,.12015,105,200OFB,86010,1809838000,0,0,0.0001,-0.0005,0.0000,0.3341,0.1629,11.0303,12.0,0,OK
-[WARN] [1783778352.649823364] [base_driver_node]: Ignoring unknown STM32 packet: 0,-000,.03039,.921.291.,,K
-[WARN] [1783778352.689218622] [base_driver_node]: Ignoring unknown STM32 packet: 0.06000,000,.52,.721.401.,,K
-[WARN] [1783778352.709154736] [base_driver_node]: Ignoring unknown STM32 packet: B80410920,,,.,0.05-.01032,.531.271.,,K
-[WARN] [1783778352.772337433] [base_driver_node]: Ignoring unknown STM32 packet: 003-.03000,.47016,108,200KFB,86017,1809985000,0,0,0.0003,0.0001,-0.0004,0.3317,0.1545,11.0422,12.0,0,OK
-[WARN] [1783778352.814137695] [base_driver_node]: Ignoring unknown STM32 packet: .,000,.21011,104,200OFB,86019,1810027000,0,0,0.0003,0.0001,-0.0006,0.3185,0.1593,11.0746,12.0,0,OK
-[ERROR] [1783778352.839524549] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778352.841114835] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[ERROR] [1783778352.859060064] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778353.848561179] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778353.889467608] [base_driver_node]: Ignoring unknown STM32 packet: ,.000001,000,.12018,103,1.,,K
-[WARN] [1783778353.908902360] [base_driver_node]: Ignoring unknown STM32 packet: 1,.01-.06023,.511.401.,,K
-[WARN] [1783778353.930967324] [base_driver_node]: Feedback sequence jump: expected 86005, got 86072
-[WARN] [1783778354.919195765] [base_driver_node]: Ignoring unknown STM32 packet: ,0-.010000,.02032,.591.291.,,K
-[WARN] [1783778354.939828832] [base_driver_node]: Feedback sequence jump: expected 86118, got 86120
-[WARN] [1783778355.919199256] [base_driver_node]: Ignoring unknown STM32 packet: 1-0002-.00032,.08104,200OK
-[WARN] [1783778355.939762321] [base_driver_node]: Feedback sequence jump: expected 86167, got 86168
-[WARN] [1783778356.944452796] [base_driver_node]: Ignoring unknown STM32 packet: .1,-.9000,.00019,108,200OFB,86216,1814164000,0,0,0.0001,-0.0008,-0.0012,0.3449,0.1461,11.0363,12.0,0,OK
-[WARN] [1783778356.986573884] [base_driver_node]: Ignoring unknown STM32 packet: 50,,,.00-.00,000,.29011,101,200OFB,86218,1814206000,0,0,0.0006,0.0005,-0.0006,0.3329,0.1557,11.0674,12.0,0,OK
-[WARN] [1783778357.028469596] [base_driver_node]: Ignoring unknown STM32 packet: ,.03-.01000,.35016,110,200OFB,86220,1814248000,0,0,0.0001,-0.0012,0.0008,0.3305,0.1413,11.0518,12.,,K
-[WARN] [1783778357.070608015] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '120O\rFB': FB,86221,1814269000,0,0,0.0005,0.0003,-0.0005,0.3341,0.1952,10.9967,120OFB,86222,1814290000,0,0,0.0003,0.0011,-0.0002,0.3413,0.1748,11.0518,12.0,0,OK
-[WARN] [1783778357.111895364] [base_driver_node]: Ignoring unknown STM32 packet: .,.05000,.90018,103,200OFB,86224,1814332000,0,0,0.0006,-0.0008,0.0000,0.3114,0.1808,11.0291,12.0,0,OK
-[WARN] [1783778357.139091720] [base_driver_node]: Ignoring unknown STM32 packet: 001033,.451.621.,,K
-[WARN] [1783778357.159870786] [base_driver_node]: Feedback sequence jump: expected 86214, got 86226
-[WARN] [1783778357.939216275] [base_driver_node]: Ignoring unknown STM32 packet: -00,000,.02030,.571.091.,,K
-[WARN] [1783778357.979162305] [base_driver_node]: Ignoring unknown STM32 packet: .0,.09-.05035,.271.931.,,K
-[WARN] [1783778358.034709610] [base_driver_node]: Ignoring unknown STM32 packet: 06,-.01000,.14017,109,200OFB,86268,1815256000,0,0,0.0006,-0.0009,0.0003,0.3425,0.1545,11.0422,12.0,0,OK
-[WARN] [1783778358.059455591] [base_driver_node]: Ignoring unknown STM32 packet: 002,000,.07037,.411.661.,,K
-[ERROR] [1783778358.098776553] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778358.099822385] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778358.119368151] [base_driver_node]: Ignoring unknown STM32 packet: 0,-001,.08035,.681.441.,,K
-[WARN] [1783778358.149716243] [base_driver_node]: Feedback sequence jump: expected 86263, got 86273
-[WARN] [1783778358.957149526] [base_driver_node]: Ignoring unknown STM32 packet: 0,000,000,.49020,106,200OFB,86312,1816180000,0,0,0.0007,0.0011,-0.0009,0.3473,0.1856,11.0698,12.0,0,OK
-[WARN] [1783778358.979077516] [base_driver_node]: Ignoring unknown STM32 packet: .0,.07-.04035,.861.401.,,K
-[WARN] [1783778359.019514791] [base_driver_node]: Ignoring unknown STM32 packet: 0,001,000,.35010,109,200O
-[WARN] [1783778359.021355507] [base_driver_node]: Feedback sequence jump: expected 86310, got 86315
-[WARN] [1783778359.049283446] [base_driver_node]: Ignoring unknown STM32 packet: 0,,000,002,.00038,.511.151.,,K
-[WARN] [1783778359.089051875] [base_driver_node]: Ignoring unknown STM32 packet: 06000,000,32,.841.741.,,K
-[WARN] [1783778359.129073253] [base_driver_node]: Ignoring unknown STM32 packet: 03-.09-.09030,.451.441.,,K
-[WARN] [1783778359.169064963] [base_driver_node]: Ignoring unknown STM32 packet: 1,.016-.08032,.511.501.,,K
-[WARN] [1783778359.189710135] [base_driver_node]: Feedback sequence jump: expected 86316, got 86323
-[WARN] [1783778359.943379886] [base_driver_node]: Ignoring invalid feedback packet: invalid literal for int() with base 10: '0FB': FB,86358,1817146000,0,0FB,86359,1817167000,0,0,0.0007,-0.0004,-0.0012,0.3209,0.1772,11.0255,12.0,0,OK
-[WARN] [1783778359.968923286] [base_driver_node]: Ignoring unknown STM32 packet: 0.07001,.00036,.761.991.,0,K
-[WARN] [1783778359.989676293] [base_driver_node]: Feedback sequence jump: expected 86358, got 86361
-[WARN] [1783778360.969598940] [base_driver_node]: Ignoring unknown STM32 packet: 0,000,0.359014,100,200OFB,86408,1818196000,0,0,0.0011,0.0019,0.0000,0.3461,0.1916,11.0554,12.0,0,OK
-[WARN] [1783778361.011486770] [base_driver_node]: Ignoring unknown STM32 packet: 0,.01,.09-.0243017,104,200OFB,86410,1818238000,0,0,0.0005,-0.0013,-0.0012,0.3449,0.1557,11.0482,12.0,0,OK
-[WARN] [1783778361.053196188] [base_driver_node]: Ignoring unknown STM32 packet: 000-.06037,.741.271.,,FB,86412,1818280000,0,0,0.0002,0.0007,0.0002,0.3137,0.1760,11.0494,12.0,0,OK
-[WARN] [1783778361.095998346] [base_driver_node]: Ignoring unknown STM32 packet: .00,.00,000,.08017,103,200OFB,86414,1818322000,0,0,-0.0009,0.0004,-0.0006,0.3365,0.1581,11.0339,12.0,0,OK
-[WARN] [1783778361.118984442] [base_driver_node]: Ignoring unknown STM32 packet: 0,001,000,.29012,109,2,,K
-[WARN] [1783778361.179824985] [base_driver_node]: Ignoring unknown STM32 packet: 000.00,000,.11018,105,200OFB,86418,1818407000,0,0,0.0007,0.0009,-0.0004,0.3437,0.1748,11.0818,12.0,0,OK
-[ERROR] [1783778361.199795791] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778361.201134053] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778361.228902708] [base_driver_node]: Ignoring unknown STM32 packet: 0,000,.02033,.511.271.,,K
-[WARN] [1783778361.249474394] [base_driver_node]: Feedback sequence jump: expected 86407, got 86421
-[WARN] [1783778361.959310862] [base_driver_node]: Ignoring unknown STM32 packet: ,.004-.05031,.651.621.,,K
-[WARN] [1783778361.979225056] [base_driver_node]: Feedback sequence jump: expected 86455, got 86456
-[WARN] [1783778362.968828535] [base_driver_node]: Ignoring unknown STM32 packet: 003-.04032,.701.051.,,K
-[WARN] [1783778363.024240984] [base_driver_node]: Ignoring unknown STM32 packet: ,.03000,0.00,.06016,101,200OFB,86506,1820255000,0,0,-0.0002,-0.0007,0.0003,0.3413,0.1700,11.0590,12.0,0,OK
-[WARN] [1783778363.066218271] [base_driver_node]: Ignoring unknown STM32 packet: 0,000,.39016,101,200OFB,86508,1820296000,0,0,0.0006,0.0012,-0.0004,0.3257,0.1928,11.0602,12.0,0,OK
-[WARN] [1783778363.089017416] [base_driver_node]: Ignoring unknown STM32 packet: 05000,.00037,.571.761.,,K
-[WARN] [1783778363.129484882] [base_driver_node]: Feedback sequence jump: expected 86502, got 86511
-[ERROR] [1783778363.158731778] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778363.159787406] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778363.192013369] [base_driver_node]: Ignoring unknown STM32 packet: .005001,000,.43011,107,200OFB,86514,1820422000,0,0,-0.0001,-0.0003,-0.0001,0.3413,0.1964,11.0195,12.0,0,OK
-[WARN] [1783778363.233625058] [base_driver_node]: Ignoring unknown STM32 packet: 009000,.23013,109,200OFB,86516,1820464000,0,0,0.0003,-0.0007,-0.0001,0.3114,0.1712,11.0770,12.0,0,OK
-[WARN] [1783778363.259104912] [base_driver_node]: Ignoring unknown STM32 packet: 0000,-.01-.02039,.721.351.,,K
-[ERROR] [1783778363.300299945] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778364.169095822] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778364.178927165] [base_driver_node]: Ignoring unknown STM32 packet: 02000,.00036,.101.39.,,K
-[WARN] [1783778364.219542389] [base_driver_node]: Ignoring unknown STM32 packet: 05,000,000,.12016,103,200OFB,86563,1821451000,0,0,-0.0002,-0.0015,-0.0001,0.3126,0.1581,11.0806,12.0,0,OK
-[WARN] [1783778364.261359782] [base_driver_node]: Ignoring unknown STM32 packet: 0,01000,.29017,104,200OFB,86565,1821493000,0,0,0.0007,0.0015,-0.0008,0.3317,0.1653,11.0530,12.0,0,OK
-[WARN] [1783778364.289146690] [base_driver_node]: Ignoring unknown STM32 packet: .02001,000,.1,.881.561.,,K
-[WARN] [1783778364.329804915] [base_driver_node]: Feedback sequence jump: expected 86512, got 86568
-[WARN] [1783778364.365819492] [base_driver_node]: Ignoring unknown STM32 packet: 0000,000,.19017,109,200OFB,86570,1821598000,0,0,0.0007,0.0013,0.0002,0.3066,0.1653,11.0003,12.0,0,OK
-[ERROR] [1783778364.389011623] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778365.178760319] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778365.191022607] [base_driver_node]: Ignoring unknown STM32 packet: O
-[WARN] [1783778365.229090066] [base_driver_node]: Ignoring unknown STM32 packet: 0,000,000,.07032,.651.741.,,K
-[WARN] [1783778365.268885831] [base_driver_node]: Ignoring unknown STM32 packet: 00,.09-.04032,.881.661.,,K
-[WARN] [1783778365.309743575] [base_driver_node]: Feedback sequence jump: expected 86569, got 86615
-[WARN] [1783778365.339053765] [base_driver_node]: Ignoring unknown STM32 packet: ,.07000,.47,.651151.,,K
-[WARN] [1783778365.392744473] [base_driver_node]: Ignoring unknown STM32 packet: 0001,000,.35014,104,200OFB,86619,1822627000,0,0,0.0017,-0.0004,0.0003,0.3209,0.1677,11.0183,12.0,0,OK
-[WARN] [1783778365.419027374] [base_driver_node]: Ignoring unknown STM32 packet: 0,,,000,000,.02036,.671.621.,,K
-[ERROR] [1783778365.458866806] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778366.179785200] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778366.198665426] [base_driver_node]: Ignoring unknown STM32 packet: .08038,.551.481.,,K
-[WARN] [1783778366.252252647] [base_driver_node]: Ignoring unknown STM32 packet: 0000,.06000,.43013,103,200OFB,86660,1823488000,0,0,0.0006,0.0012,-0.0010,0.3102,0.1545,11.0099,12.0,0,OK
-[WARN] [1783778366.315561726] [base_driver_node]: Ignoring unknown STM32 packet: 07-.01000,.37017,109,200OFB,86663,1823551000,0,0,-0.0001,-0.0017,-0.0002,0.3245,0.1784,11.0159,12.0,0,OK
-[ERROR] [1783778366.339064914] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778367.179115020] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778367.216413999] [base_driver_node]: Ignoring unknown STM32 packet: -000.02011,102,200OFB,86706,1824454000,0,0,0.0009,-0.0009,0.0000,0.3341,0.1521,11.0135,12.0,0,OK
-[WARN] [1783778367.241364486] [base_driver_node]: Ignoring unknown STM32 packet: 02,095,200O
-[ERROR] [1783778367.290913362] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778368.188760748] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778368.244205454] [base_driver_node]: Ignoring unknown STM32 packet: 0000,000,000,.29015,1090,200OFB,86755,1825484000,0,0,-0.0003,-0.0004,-0.0006,0.3569,0.1605,11.0327,12.0,0,OK
-[WARN] [1783778368.268680617] [base_driver_node]: Ignoring unknown STM32 packet: ,-.05035,.701.251.,,K
-[ERROR] [1783778368.308841286] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778369.189320595] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778369.209268723] [base_driver_node]: Feedback sequence jump: expected 86616, got 86801
-[WARN] [1783778389.151583767] [base_driver_node]: Feedback sequence jump: expected 87751, got 87752
-[WARN] [1783778389.281813208] [base_driver_node]: Feedback sequence jump: expected 87756, got 87758
-[WARN] [1783778390.281834896] [base_driver_node]: Feedback sequence jump: expected 87791, got 87806
-[WARN] [1783778390.449589790] [base_driver_node]: Feedback sequence jump: expected 87807, got 87814
-[WARN] [1783778390.659490915] [base_driver_node]: Feedback sequence jump: expected 87818, got 87824
-[WARN] [1783778390.869782990] [base_driver_node]: Feedback sequence jump: expected 87828, got 87834
-[WARN] [1783778391.099565375] [base_driver_node]: Feedback sequence jump: expected 87839, got 87845
-[WARN] [1783778391.309457505] [base_driver_node]: Feedback sequence jump: expected 87849, got 87855
-[WARN] [1783778391.539299326] [base_driver_node]: Feedback sequence jump: expected 87860, got 87866
-[WARN] [1783778391.749562406] [base_driver_node]: Feedback sequence jump: expected 87870, got 87876
-[WARN] [1783778391.979705898] [base_driver_node]: Feedback sequence jump: expected 87880, got 87887
-[WARN] [1783778392.189695906] [base_driver_node]: Feedback sequence jump: expected 87891, got 87897
-[WARN] [1783778392.399533948] [base_driver_node]: Feedback sequence jump: expected 87901, got 87907
-[WARN] [1783778392.610458172] [base_driver_node]: Feedback sequence jump: expected 87911, got 87917
-[WARN] [1783778392.839577876] [base_driver_node]: Feedback sequence jump: expected 87922, got 87928
-[WARN] [1783778393.050160610] [base_driver_node]: Feedback sequence jump: expected 87932, got 87938
-[WARN] [1783778393.280199405] [base_driver_node]: Feedback sequence jump: expected 87942, got 87949
-[WARN] [1783778393.489624224] [base_driver_node]: Feedback sequence jump: expected 87952, got 87959
-[WARN] [1783778393.719869559] [base_driver_node]: Feedback sequence jump: expected 87963, got 87970
-[WARN] [1783778393.929536640] [base_driver_node]: Feedback sequence jump: expected 87973, got 87980
-[WARN] [1783778394.139706221] [base_driver_node]: Feedback sequence jump: expected 87984, got 87990
-[WARN] [1783778394.349488328] [base_driver_node]: Feedback sequence jump: expected 87994, got 88000
-[WARN] [1783778394.579760945] [base_driver_node]: Feedback sequence jump: expected 88005, got 88011
-[WARN] [1783778394.789445199] [base_driver_node]: Feedback sequence jump: expected 88015, got 88021
-[WARN] [1783778395.019990559] [base_driver_node]: Feedback sequence jump: expected 88025, got 88032
-[WARN] [1783778395.229656910] [base_driver_node]: Feedback sequence jump: expected 88036, got 88042
-[WARN] [1783778395.439674249] [base_driver_node]: Feedback sequence jump: expected 88046, got 88052
-[WARN] [1783778395.649791014] [base_driver_node]: Feedback sequence jump: expected 88057, got 88062
-[WARN] [1783778395.879418033] [base_driver_node]: Feedback sequence jump: expected 88067, got 88073
-[WARN] [1783778396.089746333] [base_driver_node]: Feedback sequence jump: expected 88077, got 88083
-[WARN] [1783778396.320211720] [base_driver_node]: Feedback sequence jump: expected 88087, got 88094
-[WARN] [1783778396.529673167] [base_driver_node]: Feedback sequence jump: expected 88098, got 88104
-[WARN] [1783778396.739990274] [base_driver_node]: Feedback sequence jump: expected 88108, got 88114
-[WARN] [1783778396.969625704] [base_driver_node]: Feedback sequence jump: expected 88118, got 88125
-[WARN] [1783778397.179632777] [base_driver_node]: Feedback sequence jump: expected 88129, got 88135
-[WARN] [1783778397.389688127] [base_driver_node]: Feedback sequence jump: expected 88139, got 88145
-[WARN] [1783778397.619474786] [base_driver_node]: Feedback sequence jump: expected 88150, got 88156
-[WARN] [1783778397.829464801] [base_driver_node]: Feedback sequence jump: expected 88160, got 88166
-[WARN] [1783778398.059607777] [base_driver_node]: Feedback sequence jump: expected 88171, got 88177
-[WARN] [1783778398.270887260] [base_driver_node]: Feedback sequence jump: expected 88181, got 88187
-[WARN] [1783778398.479372352] [base_driver_node]: Feedback sequence jump: expected 88191, got 88197
-[WARN] [1783778398.709085718] [base_driver_node]: Feedback sequence jump: expected 88202, got 88208
-[WARN] [1783778398.939648856] [base_driver_node]: Feedback sequence jump: expected 88212, got 88219
-[WARN] [1783778399.129140382] [base_driver_node]: Feedback sequence jump: expected 88222, got 88228
-[WARN] [1783778399.359810933] [base_driver_node]: Feedback sequence jump: expected 88233, got 88239
-[WARN] [1783778399.569357194] [base_driver_node]: Feedback sequence jump: expected 88243, got 88249
-[WARN] [1783778399.799600220] [base_driver_node]: Feedback sequence jump: expected 88254, got 88260
-[WARN] [1783778400.009706932] [base_driver_node]: Feedback sequence jump: expected 88264, got 88270
-[WARN] [1783778400.239706792] [base_driver_node]: Feedback sequence jump: expected 88274, got 88281
-[WARN] [1783778400.450147275] [base_driver_node]: Feedback sequence jump: expected 88284, got 88291
-[WARN] [1783778400.659666893] [base_driver_node]: Feedback sequence jump: expected 88295, got 88301
-[WARN] [1783778400.889258636] [base_driver_node]: Feedback sequence jump: expected 88305, got 88312
-[WARN] [1783778401.099181569] [base_driver_node]: Feedback sequence jump: expected 88316, got 88322
-[WARN] [1783778401.310033192] [base_driver_node]: Feedback sequence jump: expected 88326, got 88332
-[WARN] [1783778401.415529291] [base_driver_node]: Ignoring short feedback packet: FB,88337,1858705000,0,0,-0.0009,-0.0008,0.0002,0.3220K
-[WARN] [1783778401.539309824] [base_driver_node]: Feedback sequence jump: expected 88337, got 88343
-[WARN] [1783778401.749576977] [base_driver_node]: Feedback sequence jump: expected 88347, got 88353
-[WARN] [1783778401.979674787] [base_driver_node]: Feedback sequence jump: expected 88357, got 88364
-[WARN] [1783778402.189534348] [base_driver_node]: Feedback sequence jump: expected 88367, got 88374
-[WARN] [1783778402.400248086] [base_driver_node]: Feedback sequence jump: expected 88378, got 88384
-[WARN] [1783778402.609558398] [base_driver_node]: Feedback sequence jump: expected 88388, got 88394
-[WARN] [1783778402.840717246] [base_driver_node]: Feedback sequence jump: expected 88399, got 88405
-[WARN] [1783778403.049628957] [base_driver_node]: Feedback sequence jump: expected 88409, got 88415
-[WARN] [1783778403.279787907] [base_driver_node]: Feedback sequence jump: expected 88419, got 88426
-[WARN] [1783778403.489946439] [base_driver_node]: Feedback sequence jump: expected 88430, got 88436
-[WARN] [1783778403.719488973] [base_driver_node]: Feedback sequence jump: expected 88440, got 88447
-[WARN] [1783778403.929426855] [base_driver_node]: Feedback sequence jump: expected 88451, got 88457
-[WARN] [1783778404.160144414] [base_driver_node]: Feedback sequence jump: expected 88461, got 88468
-[WARN] [1783778404.350127256] [base_driver_node]: Feedback sequence jump: expected 88471, got 88477
-[WARN] [1783778404.579482292] [base_driver_node]: Feedback sequence jump: expected 88482, got 88488
-[WARN] [1783778404.809085832] [base_driver_node]: Feedback sequence jump: expected 88492, got 88499
-[WARN] [1783778405.019674134] [base_driver_node]: Feedback sequence jump: expected 88503, got 88509
-[WARN] [1783778405.229532341] [base_driver_node]: Feedback sequence jump: expected 88513, got 88519
-[WARN] [1783778405.440443191] [base_driver_node]: Feedback sequence jump: expected 88523, got 88529
-[WARN] [1783778405.669598433] [base_driver_node]: Feedback sequence jump: expected 88533, got 88540
-[WARN] [1783778405.879583234] [base_driver_node]: Feedback sequence jump: expected 88544, got 88550
-[WARN] [1783778406.109773058] [base_driver_node]: Feedback sequence jump: expected 88554, got 88561
-[WARN] [1783778406.319604640] [base_driver_node]: Feedback sequence jump: expected 88565, got 88571
-[WARN] [1783778406.529833376] [base_driver_node]: Feedback sequence jump: expected 88575, got 88581
-[WARN] [1783778406.759616576] [base_driver_node]: Feedback sequence jump: expected 88585, got 88592
-[WARN] [1783778406.969556993] [base_driver_node]: Feedback sequence jump: expected 88596, got 88602
-[WARN] [1783778407.201060482] [base_driver_node]: Feedback sequence jump: expected 88606, got 88613
-[WARN] [1783778407.409711610] [base_driver_node]: Feedback sequence jump: expected 88616, got 88623
-[WARN] [1783778407.619932871] [base_driver_node]: Feedback sequence jump: expected 88627, got 88633
-[WARN] [1783778407.829774571] [base_driver_node]: Feedback sequence jump: expected 88638, got 88643
-[WARN] [1783778408.059596716] [base_driver_node]: Feedback sequence jump: expected 88648, got 88654
-[WARN] [1783778408.269504775] [base_driver_node]: Feedback sequence jump: expected 88658, got 88664
-[WARN] [1783778408.499603896] [base_driver_node]: Feedback sequence jump: expected 88669, got 88675
-[WARN] [1783778408.709646030] [base_driver_node]: Feedback sequence jump: expected 88679, got 88685
-[WARN] [1783778408.939624390] [base_driver_node]: Feedback sequence jump: expected 88689, got 88696
-[WARN] [1783778409.149696645] [base_driver_node]: Feedback sequence jump: expected 88699, got 88706
-[WARN] [1783778409.379995310] [base_driver_node]: Feedback sequence jump: expected 88710, got 88717
-[WARN] [1783778409.589984098] [base_driver_node]: Feedback sequence jump: expected 88721, got 88727
-[WARN] [1783778409.799619789] [base_driver_node]: Feedback sequence jump: expected 88731, got 88737
-[WARN] [1783778410.009690800] [base_driver_node]: Feedback sequence jump: expected 88741, got 88747
-[WARN] [1783778410.219632778] [base_driver_node]: Feedback sequence jump: expected 88752, got 88757
-[WARN] [1783778410.450174174] [base_driver_node]: Feedback sequence jump: expected 88762, got 88768
-[WARN] [1783778410.679646425] [base_driver_node]: Feedback sequence jump: expected 88772, got 88779
-[WARN] [1783778410.889631256] [base_driver_node]: Feedback sequence jump: expected 88783, got 88789
-[WARN] [1783778411.100073680] [base_driver_node]: Feedback sequence jump: expected 88793, got 88799
-[WARN] [1783778411.329762773] [base_driver_node]: Feedback sequence jump: expected 88803, got 88810
-[WARN] [1783778411.539785592] [base_driver_node]: Feedback sequence jump: expected 88814, got 88820
-[WARN] [1783778411.749230515] [base_driver_node]: Feedback sequence jump: expected 88824, got 88830
-[WARN] [1783778411.979380817] [base_driver_node]: Feedback sequence jump: expected 88835, got 88841
-[WARN] [1783778412.190031541] [base_driver_node]: Feedback sequence jump: expected 88845, got 88851
-[WARN] [1783778412.419687064] [base_driver_node]: Feedback sequence jump: expected 88855, got 88862
-[WARN] [1783778412.629665093] [base_driver_node]: Feedback sequence jump: expected 88866, got 88872
-[WARN] [1783778412.840430909] [base_driver_node]: Feedback sequence jump: expected 88876, got 88882
-[WARN] [1783778413.069565496] [base_driver_node]: Feedback sequence jump: expected 88886, got 88893
-[WARN] [1783778413.280369893] [base_driver_node]: Feedback sequence jump: expected 88897, got 88903
-[WARN] [1783778413.489216598] [base_driver_node]: Feedback sequence jump: expected 88907, got 88913
-[WARN] [1783778413.719969474] [base_driver_node]: Feedback sequence jump: expected 88918, got 88924
-[WARN] [1783778413.929660634] [base_driver_node]: Feedback sequence jump: expected 88928, got 88934
-[WARN] [1783778414.159713714] [base_driver_node]: Feedback sequence jump: expected 88938, got 88945
-[WARN] [1783778414.370026426] [base_driver_node]: Feedback sequence jump: expected 88949, got 88955
-[WARN] [1783778414.599455864] [base_driver_node]: Feedback sequence jump: expected 88959, got 88966
-[WARN] [1783778414.809596481] [base_driver_node]: Feedback sequence jump: expected 88970, got 88976
-[WARN] [1783778415.040194617] [base_driver_node]: Feedback sequence jump: expected 88980, got 88987
-[WARN] [1783778415.249159244] [base_driver_node]: Feedback sequence jump: expected 88990, got 88997
-[WARN] [1783778415.479583200] [base_driver_node]: Feedback sequence jump: expected 89001, got 89008
-[WARN] [1783778415.669466176] [base_driver_node]: Feedback sequence jump: expected 89011, got 89017
-[WARN] [1783778415.899444108] [base_driver_node]: Feedback sequence jump: expected 89022, got 89028
-[WARN] [1783778416.109498428] [base_driver_node]: Feedback sequence jump: expected 89032, got 89038
-[WARN] [1783778416.319858764] [base_driver_node]: Feedback sequence jump: expected 89042, got 89048
-[WARN] [1783778416.529551869] [base_driver_node]: Feedback sequence jump: expected 89053, got 89058
-[WARN] [1783778416.761513072] [base_driver_node]: Feedback sequence jump: expected 89063, got 89069
-[WARN] [1783778416.990035583] [base_driver_node]: Feedback sequence jump: expected 89073, got 89080
-[WARN] [1783778417.199313524] [base_driver_node]: Feedback sequence jump: expected 89084, got 89090
-[WARN] [1783778417.410070742] [base_driver_node]: Feedback sequence jump: expected 89094, got 89100
-[WARN] [1783778417.640178112] [base_driver_node]: Feedback sequence jump: expected 89104, got 89111
-[WARN] [1783778417.849536701] [base_driver_node]: Feedback sequence jump: expected 89115, got 89121
-[WARN] [1783778418.081526053] [base_driver_node]: Feedback sequence jump: expected 89125, got 89132
-[WARN] [1783778418.289588928] [base_driver_node]: Feedback sequence jump: expected 89135, got 89142
-[WARN] [1783778418.499645866] [base_driver_node]: Feedback sequence jump: expected 89147, got 89152
-[WARN] [1783778418.710287219] [base_driver_node]: Feedback sequence jump: expected 89156, got 89162
-[WARN] [1783778418.939896347] [base_driver_node]: Feedback sequence jump: expected 89167, got 89173
-[WARN] [1783778419.149529734] [base_driver_node]: Feedback sequence jump: expected 89177, got 89183
-[WARN] [1783778419.379702337] [base_driver_node]: Feedback sequence jump: expected 89187, got 89194
-[WARN] [1783778419.589655132] [base_driver_node]: Feedback sequence jump: expected 89198, got 89204
-[WARN] [1783778419.819676734] [base_driver_node]: Feedback sequence jump: expected 89208, got 89215
-[WARN] [1783778420.029225726] [base_driver_node]: Feedback sequence jump: expected 89218, got 89225
-[WARN] [1783778420.131926228] [base_driver_node]: Feedback sequence jump: expected 89229, got 89230
-[WARN] [1783778420.239177268] [base_driver_node]: Feedback sequence jump: expected 89231, got 89235
-[WARN] [1783778420.469767567] [base_driver_node]: Feedback sequence jump: expected 89239, got 89246
-[WARN] [1783778420.699515097] [base_driver_node]: Feedback sequence jump: expected 89250, got 89257
-[WARN] [1783778420.889738782] [base_driver_node]: Feedback sequence jump: expected 89260, got 89266
-[WARN] [1783778421.119974385] [base_driver_node]: Feedback sequence jump: expected 89271, got 89277
-[WARN] [1783778421.329462409] [base_driver_node]: Feedback sequence jump: expected 89281, got 89287
-[WARN] [1783778421.559107332] [base_driver_node]: Feedback sequence jump: expected 89291, got 89298
-[WARN] [1783778421.769864539] [base_driver_node]: Feedback sequence jump: expected 89302, got 89308
-[WARN] [1783778421.999444997] [base_driver_node]: Feedback sequence jump: expected 89312, got 89319
-[WARN] [1783778422.189566752] [base_driver_node]: Feedback sequence jump: expected 89322, got 89328
-[WARN] [1783778422.419612426] [base_driver_node]: Feedback sequence jump: expected 89333, got 89339
-[WARN] [1783778422.629616353] [base_driver_node]: Feedback sequence jump: expected 89343, got 89349
-[WARN] [1783778422.859538488] [base_driver_node]: Feedback sequence jump: expected 89353, got 89360
-[WARN] [1783778423.070239363] [base_driver_node]: Feedback sequence jump: expected 89364, got 89370
-[WARN] [1783778423.299740647] [base_driver_node]: Feedback sequence jump: expected 89374, got 89381
-[WARN] [1783778423.509690839] [base_driver_node]: Feedback sequence jump: expected 89385, got 89391
-[WARN] [1783778423.720265186] [base_driver_node]: Feedback sequence jump: expected 89395, got 89401
-[WARN] [1783778423.929322423] [base_driver_node]: Feedback sequence jump: expected 89405, got 89411
-[WARN] [1783778424.160429069] [base_driver_node]: Feedback sequence jump: expected 89416, got 89422
-[WARN] [1783778424.369674926] [base_driver_node]: Feedback sequence jump: expected 89426, got 89432
-[WARN] [1783778424.599467904] [base_driver_node]: Feedback sequence jump: expected 89437, got 89443
-[WARN] [1783778424.809375324] [base_driver_node]: Feedback sequence jump: expected 89447, got 89453
-[WARN] [1783778425.019311780] [base_driver_node]: Feedback sequence jump: expected 89457, got 89463
-[WARN] [1783778425.229388043] [base_driver_node]: Feedback sequence jump: expected 89467, got 89473
-[WARN] [1783778425.459449789] [base_driver_node]: Feedback sequence jump: expected 89478, got 89484
-[WARN] [1783778425.669653553] [base_driver_node]: Feedback sequence jump: expected 89488, got 89494
-[WARN] [1783778425.899553334] [base_driver_node]: Feedback sequence jump: expected 89499, got 89505
-[WARN] [1783778426.109202826] [base_driver_node]: Feedback sequence jump: expected 89509, got 89515
-[WARN] [1783778426.339404988] [base_driver_node]: Feedback sequence jump: expected 89519, got 89526
-[WARN] [1783778426.549669315] [base_driver_node]: Feedback sequence jump: expected 89529, got 89536
-[WARN] [1783778426.759703509] [base_driver_node]: Feedback sequence jump: expected 89540, got 89546
-[WARN] [1783778426.971132276] [base_driver_node]: Feedback sequence jump: expected 89550, got 89556
-[WARN] [1783778427.199947817] [base_driver_node]: Feedback sequence jump: expected 89561, got 89567
-[WARN] [1783778427.409281621] [base_driver_node]: Feedback sequence jump: expected 89571, got 89577
-[WARN] [1783778427.639625327] [base_driver_node]: Feedback sequence jump: expected 89581, got 89588
-[WARN] [1783778427.849514045] [base_driver_node]: Feedback sequence jump: expected 89591, got 89598
-[WARN] [1783778428.061124503] [base_driver_node]: Feedback sequence jump: expected 89602, got 89608
-[WARN] [1783778428.289836454] [base_driver_node]: Feedback sequence jump: expected 89612, got 89619
-[WARN] [1783778428.519164301] [base_driver_node]: Feedback sequence jump: expected 89623, got 89630
-[WARN] [1783778428.709496755] [base_driver_node]: Feedback sequence jump: expected 89633, got 89639
-[WARN] [1783778428.959862095] [base_driver_node]: Feedback sequence jump: expected 89643, got 89651
-[WARN] [1783778429.149952093] [base_driver_node]: Feedback sequence jump: expected 89654, got 89660
-[WARN] [1783778429.379378429] [base_driver_node]: Feedback sequence jump: expected 89664, got 89671
-[WARN] [1783778429.590071449] [base_driver_node]: Feedback sequence jump: expected 89675, got 89681
-[WARN] [1783778429.799563694] [base_driver_node]: Feedback sequence jump: expected 89685, got 89691
-[WARN] [1783778430.029274755] [base_driver_node]: Feedback sequence jump: expected 89695, got 89702
-[WARN] [1783778430.241156554] [base_driver_node]: Feedback sequence jump: expected 89706, got 89712
-[WARN] [1783778430.449624999] [base_driver_node]: Feedback sequence jump: expected 89716, got 89722
-[WARN] [1783778430.679639848] [base_driver_node]: Feedback sequence jump: expected 89727, got 89733
-[WARN] [1783778430.889551087] [base_driver_node]: Feedback sequence jump: expected 89737, got 89743
-[WARN] [1783778431.119636282] [base_driver_node]: Feedback sequence jump: expected 89747, got 89754
-[WARN] [1783778431.329784791] [base_driver_node]: Feedback sequence jump: expected 89758, got 89764
-[WARN] [1783778431.559744145] [base_driver_node]: Feedback sequence jump: expected 89768, got 89775
-[WARN] [1783778431.769759967] [base_driver_node]: Feedback sequence jump: expected 89778, got 89785
-[WARN] [1783778432.000074326] [base_driver_node]: Feedback sequence jump: expected 89789, got 89796
-[WARN] [1783778432.189700377] [base_driver_node]: Feedback sequence jump: expected 89799, got 89805
-[WARN] [1783778432.419904629] [base_driver_node]: Feedback sequence jump: expected 89810, got 89816
-[WARN] [1783778432.629556139] [base_driver_node]: Feedback sequence jump: expected 89820, got 89826
-[WARN] [1783778432.859716705] [base_driver_node]: Feedback sequence jump: expected 89831, got 89837
-[WARN] [1783778433.069723012] [base_driver_node]: Feedback sequence jump: expected 89841, got 89847
-[WARN] [1783778433.301569882] [base_driver_node]: Feedback sequence jump: expected 89851, got 89858
-[WARN] [1783778433.510726633] [base_driver_node]: Feedback sequence jump: expected 89862, got 89868
-[WARN] [1783778433.719719643] [base_driver_node]: Feedback sequence jump: expected 89872, got 89878
-[WARN] [1783778433.951037451] [base_driver_node]: Feedback sequence jump: expected 89882, got 89889
-[WARN] [1783778434.159714855] [base_driver_node]: Feedback sequence jump: expected 89893, got 89899
-[WARN] [1783778434.369828033] [base_driver_node]: Feedback sequence jump: expected 89903, got 89909
-[WARN] [1783778434.599433142] [base_driver_node]: Feedback sequence jump: expected 89913, got 89920
-[WARN] [1783778434.809610691] [base_driver_node]: Feedback sequence jump: expected 89924, got 89930
-[WARN] [1783778435.039594228] [base_driver_node]: Feedback sequence jump: expected 89935, got 89941
-[WARN] [1783778435.249548689] [base_driver_node]: Feedback sequence jump: expected 89944, got 89951
-[WARN] [1783778435.479517234] [base_driver_node]: Feedback sequence jump: expected 89955, got 89962
-[WARN] [1783778435.669460648] [base_driver_node]: Feedback sequence jump: expected 89965, got 89971
-[WARN] [1783778435.899254709] [base_driver_node]: Feedback sequence jump: expected 89976, got 89982
-[WARN] [1783778436.059133899] [base_driver_node]: Feedback sequence jump: expected 89986, got 89989

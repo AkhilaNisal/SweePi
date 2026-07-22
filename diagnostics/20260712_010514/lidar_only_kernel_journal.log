@@ -1,6 +1,0 @@
-Jul 11 23:09:50 sweepi kernel: hci_uart_bcm serial0-0: supply vbat not found, using dummy regulator
-Jul 11 23:09:50 sweepi kernel: hci_uart_bcm serial0-0: supply vddio not found, using dummy regulator
-Jul 12 00:43:34 sweepi kernel: cp210x ttyUSB0: failed set request 0x12 status: -110
-Jul 12 00:44:12 sweepi kernel: pl011-axi 1f00030000.serial: DMA channel TX dma2chan2
-Jul 12 00:44:12 sweepi kernel: pl011-axi 1f00030000.serial: DMA channel RX dma2chan3
-Jul 12 01:18:41 sweepi kernel: cp210x ttyUSB0: failed set request 0x12 status: -110

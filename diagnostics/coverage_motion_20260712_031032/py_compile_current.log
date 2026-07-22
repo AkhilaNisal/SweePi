@@ -1,3 +1,0 @@
-===== py_compile_current =====
-$ bash -lc cd /home/sweepi/SweePi && python3 -m py_compile src/sweepi_api_bridge/sweepi_api_bridge/api_bridge_node.py src/sweepi_api_bridge/sweepi_api_bridge/runtime_state.py src/sweepi_robot_manager/sweepi_robot_manager/sweepi_robot_manager_node.py src/sweepi_coverage/sweepi_coverage/coverage_follow_path_executor_node.py
-exit=0

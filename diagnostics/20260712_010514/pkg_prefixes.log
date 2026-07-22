@@ -1,7 +1,0 @@
-sweepi_robot_manager /home/sweepi/SweePi/install/sweepi_robot_manager
-sweepi_api_bridge /home/sweepi/SweePi/install/sweepi_api_bridge
-sweepi_exploration /home/sweepi/SweePi/install/sweepi_exploration
-sweepi_coverage /home/sweepi/SweePi/install/sweepi_coverage
-sweepi_base_driver /home/sweepi/SweePi/install/sweepi_base_driver
-sweepi_real_bringup /home/sweepi/SweePi/install/sweepi_real_bringup
-sllidar_ros2 /home/sweepi/SweePi/install/sllidar_ros2

@@ -1,5 +1,0 @@
-[INFO] [1783784395.690907893] [coverage_tracker_node]: Coverage tracker started: map=/map, coverage=/coverage_map, TF=map -> base_footprint
-[INFO] [1783784396.738715440] [coverage_tracker_node]: Initialized coverage map: 161x127 at 0.050 m/cell
-[WARN] [1783784396.893176361] [coverage_tracker_node]: Could not get TF map -> base_footprint: "map" passed to lookupTransform argument target_frame does not exist. 
-[WARN] [1783784401.996111815] [coverage_tracker_node]: Could not get TF map -> base_footprint: "map" passed to lookupTransform argument target_frame does not exist. 
-[INFO] [1783784450.873146437] [coverage_tracker_node]: Coverage tracker reset; /coverage_map cleared

@@ -1,3 +1,0 @@
-/home/sweepi/.bashrc:119:source /opt/ros/jazzy/setup.bash
-/home/sweepi/.bashrc:120:source ~/SweePi/install/setup.bash
-/home/sweepi/.bashrc:121:source "$HOME/SweePi/install/setup.bash"

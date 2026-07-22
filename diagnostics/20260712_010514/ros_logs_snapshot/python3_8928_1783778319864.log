@@ -1,287 +1,0 @@
-[INFO] [1783778320.766853720] [base_driver_node]: SweePi base driver starting on /dev/ttyAMA0 at 115200 baud
-[INFO] [1783778320.768987502] [base_driver_node]: Base driver parameters: serial_port=/dev/ttyAMA0, baud_rate=115200, wheel_radius=0.0615, wheel_separation=0.29, ticks_per_revolution=7392.0, left_encoder_sign=1.0, right_encoder_sign=1.0, left_motor_command_sign=1.0, right_motor_command_sign=1.0, command_rate_hz=50.0, feedback_poll_rate_hz=100.0, cmd_vel_timeout=0.5, gyro_units=rad_s, accel_units=m_s2
-[INFO] [1783778320.769804574] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778320.813928060] [base_driver_node]: Feedback sequence jump: expected 84492, got 84493
-[WARN] [1783778320.857208697] [base_driver_node]: Ignoring unknown STM32 packet: ,0002,0.0007,-0.000,0.01856,11.064200OFB,84495,1778023000,0,0,0.0005,-0.0004,-0.0009,0.3281,0.1820,11.0147,12.0,0,OK
-[WARN] [1783778320.882090477] [base_driver_node]: Feedback sequence jump: expected 84494, got 84496
-[WARN] [1783778320.919284292] [base_driver_node]: Ignoring short feedback packet: FB,49,7880000-.02-.07-.02031,.881.951.,,K
-[WARN] [1783778320.973607625] [base_driver_node]: Feedback sequence jump: expected 84497, got 84500
-[WARN] [1783778321.011178168] [base_driver_node]: Feedback sequence jump: expected 84501, got 84502
-[WARN] [1783778321.364938824] [base_driver_node]: Feedback sequence jump: expected 84504, got 84505
-[WARN] [1783778321.659265330] [base_driver_node]: Ignoring short feedback packet: FB,84533,1778822000,,.07000,.,K
-[WARN] [1783778321.678904914] [base_driver_node]: Ignoring short feedback packet: FB,84534,1778842000,0001,000,.06030,.981.211.,,K
-[WARN] [1783778321.718884205] [base_driver_node]: Ignoring short feedback packet: FB,84536,1778884000,0,0,0.004,000,.03039,.741.341.,,K
-[WARN] [1783778321.739541697] [base_driver_node]: Feedback sequence jump: expected 84532, got 84537
-[ERROR] [1783778322.668872946] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778322.670244231] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778322.689273616] [base_driver_node]: Ignoring short feedback packet: FB,84582,1779850000,0,,000,04001,.1,.941.721.,,K
-[WARN] [1783778322.709324021] [base_driver_node]: Feedback sequence jump: expected 84581, got 84583
-[WARN] [1783778323.689308480] [base_driver_node]: Ignoring short feedback packet: FB,84630,1780858000,0,0,.00,.08-.02033,.0481.501.,,K
-[ERROR] [1783778323.729097706] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778323.730207949] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778323.771294718] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,84633,1780922000,0,0,-.00,001,000,.35013,107,200OFB,84634,1780942000,0,0,0.0011,0.0003,-0.0010,0.3437,0.1712,11.0351,12.0,0,OK
-[WARN] [1783778323.798971082] [base_driver_node]: Ignoring short feedback packet: FB,84635,1780963000,0,0,0.00,.00-.02034,.981.391.,,K
-[WARN] [1783778323.819367825] [base_driver_node]: Feedback sequence jump: expected 84630, got 84636
-[ERROR] [1783778324.679213512] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778324.739096025] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778324.758973627] [base_driver_node]: Ignoring short feedback packet: FB,84681,1781929000,0,0,0002000,000,.37012,.071.,,K
-[ERROR] [1783778324.799288415] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778325.738684989] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778325.763752946] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,84728,1782916000,0,0,-0.0010,-0.013000,.13018,100,200OFB,84729,1782937000,0,0,-0.0011,-0.0005,-0.0005,0.3078,0.1557,11.0722,12.0,0,OK
-[WARN] [1783778325.788775033] [base_driver_node]: Ignoring short feedback packet: FB,84730,1782958000,0,0,0.0009,005,-.04033,.981.211.,,K
-[WARN] [1783778325.830082837] [base_driver_node]: Feedback sequence jump: expected 84677, got 84732
-[WARN] [1783778325.848969399] [base_driver_node]: Ignoring short feedback packet: FB,84733,1783021000,0,0,0.005-.09-.02039,.671.721.,,K
-[WARN] [1783778325.868362379] [base_driver_node]: Ignoring unknown STM32 packet: K
-[WARN] [1783778325.919021620] [base_driver_node]: Ignoring short feedback packet: FB,84736,1783085000,0,,000,.07-.06038,.671.821.,,K
-[WARN] [1783778325.959434851] [base_driver_node]: Ignoring short feedback packet: FB,84738,1783127000,0,0,0.000,000,000,.33,.701.721.,,K
-[WARN] [1783778325.980362174] [base_driver_node]: Feedback sequence jump: expected 84733, got 84739
-[ERROR] [1783778326.878815047] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778326.888834959] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778326.899374399] [base_driver_node]: Ignoring short feedback packet: FB,8478384010,,,000,.09-.02037,.881.641.,,K
-[WARN] [1783778326.919725951] [base_driver_node]: Feedback sequence jump: expected 84782, got 84784
-[WARN] [1783778327.902388268] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,84830,1785059000,0,0,-0.0,-000,000,.21018,104,200OFB,84831,1785079000,0,0,0.0005,-0.0001,-0.0002,0.3521,0.1940,11.0494,12.0,0,OK
-[WARN] [1783778327.944852235] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,84832,1785100000,0,0,0.000,.00,000,.08012,101,200OFB,84833,1785121000,0,0,0.0001,-0.0015,-0.0001,0.3257,0.1844,11.0434,12.0,0,OK
-[WARN] [1783778327.969123970] [base_driver_node]: Ignoring short feedback packet: FB,84834,1785142000,0,0,01,000,.00029,.821.191.,,K
-[WARN] [1783778328.009272726] [base_driver_node]: Ignoring short feedback packet: FB,84836,178500,,,.06.03-.09032,.741.661.,,K
-[WARN] [1783778328.028383140] [base_driver_node]: Ignoring unknown STM32 packet: O
-[WARN] [1783778328.069079403] [base_driver_node]: Ignoring unknown STM32 packet: 3818260,,,.02-.02000,.65018,106,200O
-[WARN] [1783778328.071244184] [base_driver_node]: Feedback sequence jump: expected 84830, got 84839
-[WARN] [1783778328.098994946] [base_driver_node]: Ignoring short feedback packet: FB,84840,1785268000,0,0,.4000,.06033,.701.071.,,K
-[WARN] [1783778328.154448079] [base_driver_node]: Ignoring invalid feedback packet: invalid literal for int() with base 10: '': FB,84842,178531000,,.005-.05000,.31010,103,200OFB,84843,1785332000,0,0,-0.0011,-0.0013,-0.0001,0.3509,0.1413,11.0973,12.0,0,OK
-[WARN] [1783778328.196111082] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,84844,1785352000,0,0,0.00,00,000,.11011,107,200OFB,84845,1785373000,0,0,0.0003,0.0008,0.0000,0.3341,0.1916,11.0267,12.0,0,OK
-[WARN] [1783778328.238408209] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,84846,1785394000,0,0,0.00,.00000,.06012,105,200OFB,84847,1785415000,0,0,-0.0002,-0.0004,0.0003,0.3449,0.1700,11.0590,12.0,0,OK
-[WARN] [1783778328.279992100] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '-0000-.05000': FB,84848,1785436000,0,0,-0000-.05000,.17017,100,200OFB,84849,1785457000,0,0,0.0006,0.0007,-0.0004,0.3473,0.1808,11.0315,12.0,0,OK
-[ERROR] [1783778328.308992811] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778328.310402356] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778328.343031246] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,84851,1785499000,0,0,0.009,000,000,.29018,102,200OFB,84852,1785520000,0,0,0.0002,-0.0008,0.0003,0.2994,0.1964,11.0865,12.0,0,OK
-[WARN] [1783778328.384945217] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,84853,1785541000,0,0,-.1,001,000,.27013,094,200OFB,84854,1785562000,0,0,0.0005,0.0005,-0.0006,0.3329,0.1641,11.0327,12.0,0,OK
-[WARN] [1783778328.426928523] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,84855,1785583000,0,0,.09000,000,.98018,106,200OFB,84856,1785604000,0,0,0.0007,0.0004,-0.0002,0.3377,0.1772,11.0518,12.0,0,OK
-[ERROR] [1783778328.468671306] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778329.319117049] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778329.328795230] [base_driver_node]: Ignoring short feedback packet: FB,84899,1786507000,0,0,0.0010,-0.01,.06037,.841.231.,,K
-[WARN] [1783778329.391202210] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,84901,1786550000,0,0,-0.0006,-0.009,.07,.15010,103,200OFB,84902,1786570000,0,0,0.0010,0.0017,0.0000,0.3114,0.1940,11.0255,12.0,0,OK
-[WARN] [1783778329.419064767] [base_driver_node]: Ignoring short feedback packet: FB,84903,1786591000,,0001,.05-.02022,.611.441.,,K
-[ERROR] [1783778329.438996306] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778330.328434892] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[ERROR] [1783778330.339167296] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778331.328522335] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778331.348904212] [base_driver_node]: Ignoring short feedback packet: FB,84995,1788523000,0,0,001-.07-.01038,.721.291.,,K
-[WARN] [1783778331.369432018] [base_driver_node]: Ignoring short feedback packet: FB,84996,788550,,,.00,001,.00033,.681.621.,,K
-[WARN] [1783778331.389529853] [base_driver_node]: Ignoring unknown STM32 packet: 557,11.0422,12.0,0,OK
-[WARN] [1783778331.429445722] [base_driver_node]: Feedback sequence jump: expected 84840, got 84999
-[WARN] [1783778331.467386276] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '-0.03.05000': FB,85000,1788629000,0,0,-0.03.05000,.45019,108,200OFB,85001,1788649000,0,0,-0.0006,-0.0011,-0.0002,0.3066,0.1964,11.0315,12.0,0,OK
-[WARN] [1783778331.489209199] [base_driver_node]: Ignoring short feedback packet: FB,85002,1788670000,0,0,0.0001,0.0008,0.01032,.531.971.,,K
-[WARN] [1783778331.519341979] [base_driver_node]: Feedback sequence jump: expected 85000, got 85003
-[WARN] [1783778332.411461575] [base_driver_node]: Ignoring invalid feedback packet: invalid literal for int() with base 10: '': FB,85045,1789574000,,0000,.05000,.21014,10,2.00OFB,85046,1789594000,0,0,-0.0001,0.0004,-0.0001,0.3078,0.2060,11.0183,12.0,0,OK
-[WARN] [1783778332.453075861] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '0.00-.03000': FB,85047,1789615000,0,0,0.00-.03000,.92016,104,200OFB,85048,1789636000,0,0,-0.0003,-0.0013,0.0004,0.3317,0.1868,11.0267,12.0,0,OK
-[WARN] [1783778332.495037653] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '2.00O\rFB': FB,85049,1789657000,0,0,000,.00,000,.17014,100,2.00OFB,85050,1789678000,0,0,0.0003,0.0000,0.0003,0.3054,0.1736,11.0530,12.0,0,OK
-[ERROR] [1783778332.519124393] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778332.528555641] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778332.558403469] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,85052,1789720000,0,0,-0.0006,-0.012000,.19017,103,200OFB,85053,1789741000,0,0,-0.0011,-0.0004,0.0002,0.3185,0.1533,11.0386,12.0,0,OK
-[WARN] [1783778332.599968884] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,85054,17897620000000,000,000,.43018,109,200OFB,85055,1789783000,0,0,0.0002,0.0017,-0.0006,0.3329,0.1976,11.0650,12.0,0,OK
-[WARN] [1783778332.628732136] [base_driver_node]: Ignoring short feedback packet: FB,85056,1789805000,0,0,0.0010,00,.04030,.821.581.,,K
-[WARN] [1783778332.649432833] [base_driver_node]: Feedback sequence jump: expected 85044, got 85057
-[WARN] [1783778333.396504351] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '0.0003FB': FB,85092,1790560000,0,0,0.0005,0.0003FB,85093,1790581000,0,0,0.0003,0.0019,-0.0004,0.3185,0.1892,11.0590,12.0,0,OK
-[WARN] [1783778333.419001116] [base_driver_node]: Ignoring short feedback packet: FB,85094,1790602000,0,0,000,000,.04034,.881.661.,,K
-[ERROR] [1783778333.438839573] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778333.538784278] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778333.548669256] [base_driver_node]: Ignoring short feedback packet: FB,85100,1790728000,0,0,-0.0003,-0.011,-.08039,.821.681.,,K
-[WARN] [1783778333.588958014] [base_driver_node]: Ignoring short feedback packet: FB,85102,1790770000,0,0,0.00,.08-.09031,.651.991.,,K
-[WARN] [1783778333.629324977] [base_driver_node]: Ignoring short feedback packet: FB,85104,1790812000,0001000,.00,.39016,.781.,,K
-[WARN] [1783778333.678925906] [base_driver_node]: Ignoring short feedback packet: FB,85106,1790854000,0,0,0.005-.01-.02036,.651.031.,,K
-[WARN] [1783778333.732090196] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,85108,1790897000,0,0,0.0009,0.007,0.0,.31014,107,200OFB,85109,1790917000,0,0,-0.0010,-0.0007,0.0003,0.3257,0.1868,11.0614,12.0,0,OK
-[WARN] [1783778333.774223599] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,85110,1790938000,0,0,0.00,002,000,.06011,109,200OFB,85111,1790959000,0,0,0.0010,0.0003,-0.0009,0.3557,0.1653,11.0075,12.0,0,OK
-[ERROR] [1783778333.799582176] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778334.538910555] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778334.571229072] [base_driver_node]: Ignoring invalid feedback packet: invalid literal for int() with base 10: '.01-.06000': FB,85148,1791737000,0,.01-.06000,.27018,103,200OFB,85149,1791757000,0,0,0.0001,0.0004,-0.0009,0.3413,0.1856,11.0458,12.0,0,OK
-[WARN] [1783778334.613097596] [base_driver_node]: Ignoring invalid feedback packet: invalid literal for int() with base 10: '': FB,85150,17978,,,0.00,.01000,.37010,103,200OFB,85151,1791799000,0,0,0.0006,0.0009,0.0004,0.3233,0.1677,11.0207,12.0,0,OK
-[WARN] [1783778334.655086030] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,85152,1791820000,0,0,0.0011,.50000,.49019,100,200OFB,85153,1791842000,0,0,0.0005,-0.0011,-0.0004,0.3173,0.1844,11.0674,12.0,0,OK
-[ERROR] [1783778334.678965245] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778335.548655169] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778335.559315622] [base_driver_node]: Ignoring short feedback packet: FB,85196,17927440000000,001,.02031,.531.231.,,K
-[WARN] [1783778335.599123902] [base_driver_node]: Ignoring short feedback packet: FB,85198,1792786000,0,0,0.011,0.03,-.04035,.841.5412.,K
-[WARN] [1783778335.649012477] [base_driver_node]: Ignoring short feedback packet: FB,85200,1792828000,0,0,0003-.03000,.37020,105,200O
-[WARN] [1783778335.689269524] [base_driver_node]: Ignoring short feedback packet: FB,85202,1792870000,0,00.00,001,000,.31012,096,200O
-[WARN] [1783778335.728933024] [base_driver_node]: Ignoring short feedback packet: FB,85204,1792912000,0,0,0.00,00,.07032,.651.681.,,K
-[WARN] [1783778335.787923597] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,85206,1792954000,0,0,-0.005,000,000,.53021,109,200OFB,85207,1792975000,0,0,0.0005,0.0005,-0.0012,0.3329,0.1844,11.0243,12.0,0,OK
-[WARN] [1783778335.829592689] [base_driver_node]: Ignoring short feedback packet: FB,85208,1792996000,0,00.05000,000,.31013,100,200O.,.02038,.741.481.,,K
-[WARN] [1783778335.858923333] [base_driver_node]: Ignoring short feedback packet: FB,85210,1793038000,0,0,0.003,-.09-.01032,.511.991.,,K
-[WARN] [1783778335.898706854] [base_driver_node]: Ignoring short feedback packet: FB,85212,1793081000,0,0,0.000001,.00030,.761.621.,,K
-[WARN] [1783778335.919161115] [base_driver_node]: Feedback sequence jump: expected 85092, got 85213
-[WARN] [1783778336.858816348] [base_driver_node]: Ignoring short feedback packet: FB,85258,1794046000,0,0,-0.000.00,.02034,.721.291.,,K
-[WARN] [1783778336.879218440] [base_driver_node]: Feedback sequence jump: expected 85258, got 85259
-[ERROR] [1783778337.850497729] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778337.852048831] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778337.884686846] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '.741.38100O\rFB': FB,85306,1795054000,0,0,0.005,000,.08034,.741.38100OFB,85307,1795075000,0,0,0.0005,-0.0001,-0.0001,0.3293,0.1796,11.0398,12.0,0,OK
-[WARN] [1783778337.909112564] [base_driver_node]: Ignoring short feedback packet: FB,85308,1795096000,0,0,.07000,.02032,.721.401.,,K
-[WARN] [1783778337.948993987] [base_driver_node]: Ignoring short feedback packet: FB,85310,1795138000,0,0,-.00,001,.03030,.531.561.,,K
-[WARN] [1783778337.970127480] [base_driver_node]: Feedback sequence jump: expected 85305, got 85311
-[ERROR] [1783778338.858779145] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778338.868654823] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778338.891366083] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,85354,1796062000,0,0,0.000,-.03000,.55016,10,200OFB,85355,1796084000,0,0,0.0015,0.0013,-0.0002,0.3293,0.1916,11.0351,12.0,0,OK
-[WARN] [1783778338.919110562] [base_driver_node]: Ignoring short feedback packet: FB,85356,1796104000,0,0,007.04000,0.30,.901.541.,,K
-[WARN] [1783778338.941378684] [base_driver_node]: Feedback sequence jump: expected 85353, got 85357
-[ERROR] [1783778339.859056358] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778339.879245144] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778339.940433665] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '1.331.00O\rFB': FB,85404,1797112000,0,0,.6,-.03000,.21018,1.331.00OFB,85405,1797133000,0,0,-0.0002,-0.0015,0.0002,0.2922,0.1665,11.0626,12.0,0,OK
-[WARN] [1783778339.969001324] [base_driver_node]: Ignoring short feedback packet: FB,85406,1797155000,0,0,00,000,.00037,.611.361.,,K
-[WARN] [1783778339.989583377] [base_driver_node]: Feedback sequence jump: expected 85401, got 85407
-[WARN] [1783778340.883391864] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '-0.FB': FB,85449,1798057000,0,0,-0.0005,-0.FB,85450,1798078000,0,0,0.0006,0.0005,-0.0013,0.3149,0.1868,11.0255,12.0,0,OK
-[WARN] [1783778340.925765008] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,85451,1798099000,0,0,0.0015,0.00,001,.29019,107,200OFB,85452,1798120000,0,0,0.0011,0.0003,-0.0006,0.3102,0.1700,11.0279,12.0,0,OK
-[WARN] [1783778340.948897012] [base_driver_node]: Ignoring short feedback packet: FB,85453,1798141000,0,0,-0.001,-001,.06035,.741.231.,,K
-[WARN] [1783778340.969479693] [base_driver_node]: Feedback sequence jump: expected 85449, got 85454
-[WARN] [1783778341.889178017] [base_driver_node]: Ignoring short feedback packet: FB,85497,1799065000,0,0,0.0010,0.0
-[WARN] [1783778341.891178200] [base_driver_node]: Feedback sequence jump: expected 85497, got 85498
-[WARN] [1783778341.918962137] [base_driver_node]: Ignoring short feedback packet: FB,85499,1799108000,0,0,0.0000,.02039,.821.271.,,K
-[WARN] [1783778341.959138849] [base_driver_node]: Ignoring short feedback packet: FB,85501,1799149000,0,0,0.002-.01000,.47018,113,200OK
-[WARN] [1783778341.979301651] [base_driver_node]: Feedback sequence jump: expected 85499, got 85502
-[WARN] [1783778342.878761082] [base_driver_node]: Ignoring short feedback packet: FB,85545,1800073000,0,0,0.0006,0007-.07036,.681.931.,,K
-[WARN] [1783778342.899151276] [base_driver_node]: Feedback sequence jump: expected 85545, got 85546
-[WARN] [1783778343.888950083] [base_driver_node]: Ignoring short feedback packet: FB,85593,1801081000,0,0,0.000,.06-.06034,.741.461.,,K
-[WARN] [1783778343.909498740] [base_driver_node]: Feedback sequence jump: expected 85593, got 85594
-[WARN] [1783778344.908827841] [base_driver_node]: Ignoring short feedback packet: FB,85641,1802089000,0,0,-0.0002,-0.0
-[WARN] [1783778344.910735708] [base_driver_node]: Feedback sequence jump: expected 85641, got 85642
-[WARN] [1783778344.951824630] [base_driver_node]: Ignoring invalid feedback packet: invalid literal for int() with base 10: '': FB,85643,1802132000,0,,-.06-.010000,.21016,104,200OFB,85644,1802152000,0,0,-0.0006,-0.0012,0.0003,0.3377,0.1844,11.0159,12.0,0,OK
-[WARN] [1783778344.993656547] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,85645,1802173000,0,0,0.0007,.0,001,.59011,109,200OFB,85646,1802194000,0,0,0.0010,0.0001,-0.0002,0.3293,0.1581,11.0746,12.0,0,OK
-[WARN] [1783778345.018993878] [base_driver_node]: Ignoring short feedback packet: FB,85647,1802215000,0,0,-0005-.06000,.25012,104,200O
-[WARN] [1783778345.077870367] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,85649,1802257000,0,0,-002,000,.000339014,101,200OFB,85650,1802278000,0,0,0.0003,0.0012,-0.0001,0.3485,0.1557,11.0327,12.0,0,OK
-[WARN] [1783778345.120023675] [base_driver_node]: Ignoring invalid feedback packet: invalid literal for int() with base 10: '00.009001': FB,85651,1802299000,0,00.009001,000,.04019,105,200OFB,85652,1802320000,0,0,-0.0003,-0.0005,-0.0002,0.3102,0.1904,11.0291,12.0,0,OK
-[WARN] [1783778345.149019513] [base_driver_node]: Ignoring short feedback packet: FB,85653,1802342000,0,0,.02-.05-.02030,.691.331.,,K
-[WARN] [1783778345.203065881] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,85655,1802383000,0,0,0.00101,001,.08016,108,200OFB,85656,1802404000,0,0,0.0002,0.0000,0.0002,0.2994,0.2120,11.0363,12.0,0,OK
-[WARN] [1783778345.229021462] [base_driver_node]: Ignoring short feedback packet: FB,85657,1802425000,0,0-000,000,.00034,.821.211.,,K
-[ERROR] [1783778345.268858730] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778345.270283014] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[ERROR] [1783778345.289272197] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778346.278673891] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778346.315117356] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,85708,1803496000,0,0,0.0006,0.1,000,.19019,109,200OFB,85709,1803517000,0,0,0.0002,0.0001,-0.0001,0.3233,0.1712,11.0279,12.0,0,OK
-[WARN] [1783778346.357164623] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '0.02-.08000': FB,85710,1803538000,0,0,0.02-.08000,0.3173,.19,104,200OFB,85711,1803559000,0,0,-0.0001,-0.0003,-0.0008,0.3401,0.1736,11.0446,12.0,0,OK
-[WARN] [1783778346.379114096] [base_driver_node]: Ignoring short feedback packet: FB,85712,1803580000,0,00.05000,.02035,.861.091.,,K
-[WARN] [1783778346.399244667] [base_driver_node]: Ignoring short feedback packet: FB,313610,,,.001000,.15012,1011.,,K
-[WARN] [1783778346.468974895] [base_driver_node]: Ignoring short feedback packet: FB,85716,1803664000,0,0,00,000,.08038,.671.361.,,K
-[WARN] [1783778346.489497269] [base_driver_node]: Feedback sequence jump: expected 85643, got 85717
-[WARN] [1783778347.405682646] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '0.325FB': FB,85760,1804588000,0,0,0.0005,0.0011,-0.0013,0.325FB,85761,1804609000,0,0,0.0001,0.0009,-0.0006,0.3078,0.1808,11.0470,12.0,0,OK
-[WARN] [1783778347.428955899] [base_driver_node]: Ignoring short feedback packet: FB,85762,1804630000,0,0,0.011-.06-.02035,.881.761.,,K
-[WARN] [1783778347.449071858] [base_driver_node]: Feedback sequence jump: expected 85760, got 85763
-[ERROR] [1783778348.398727595] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778348.408510319] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778348.432745569] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,85809,1805618000,0,0,0.0001,-0.0008,0.0,.27012,109,200OFB,85810,1805638000,0,0,0.0006,-0.0015,0.0006,0.3054,0.1688,11.0746,12.0,0,OK
-[WARN] [1783778348.459361915] [base_driver_node]: Ignoring short feedback packet: FB,85811,1805659000,0,0-000,000,.00036,.781.251.,,K
-[WARN] [1783778348.498922725] [base_driver_node]: Ignoring short feedback packet: FB,85813,1805701000,0,0,0.0600,.06037,.531.541.,,K
-[WARN] [1783778348.539015822] [base_driver_node]: Ignoring short feedback packet: FB,85815,1805743000,0,0,0.0001,0.05-.01034,.4511.151.,,K
-[WARN] [1783778348.558748698] [base_driver_node]: Ignoring unknown STM32 packet: 00.00,000,001,.47012,10341.,,K
-[ERROR] [1783778348.609053452] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778349.408576165] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[ERROR] [1783778349.419357553] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778350.408698641] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778350.428887485] [base_driver_node]: Ignoring short feedback packet: FB,85905,1807633000,0,0,-.02-.01-.05039,.841.561.,,K
-[ERROR] [1783778350.468734090] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778351.420414054] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778351.438924405] [base_driver_node]: Ignoring short feedback packet: FB,85953,1808642000,0,0,-0.0001,-0.011-.04032,.551.741.,,K
-[WARN] [1783778351.493587166] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,85955,1808684000,0,0,0.0005,0.0005,-0.0,.35014,103,200OFB,85956,1808704000,0,0,0.0013,0.0001,-0.0008,0.3233,0.1832,11.0566,12.0,0,OK
-[WARN] [1783778351.535654953] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,85957,1808725000,0,0,-0.009,000,000,.11018,104,200OFB,85958,1808746000,0,0,-0.0005,-0.0009,-0.0005,0.3461,0.1832,11.0123,12.0,0,OK
-[WARN] [1783778351.577207399] [base_driver_node]: Ignoring unknown STM32 packet: 870,,,000,000,000,.76018,106,200OFB,85960,1808788000,0,0,0.0006,0.0008,-0.0006,0.3425,0.1880,11.0351,12.0,0,OK
-[WARN] [1783778351.639410251] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,85961,1808809000,0,0,0.0,000,000,.43010,108,200OFB,85962,18088300,,,000,000,000,.41010,102,200O
-[WARN] [1783778351.641260449] [base_driver_node]: Feedback sequence jump: expected 85808, got 85963
-[WARN] [1783778351.669037161] [base_driver_node]: Ignoring short feedback packet: FB,85964,1808873000,0,000,.07-.09031,.451.461.,,K
-[WARN] [1783778351.709049210] [base_driver_node]: Ignoring short feedback packet: FB,85966,1808914000,0,0000,.05-.06037,.78.991.,,K
-[ERROR] [1783778351.748857996] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778352.428490625] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778352.438771261] [base_driver_node]: Ignoring short feedback packet: FB,86001,1809649000,0,0,0.0005,-0.01,000,.410.2021.341.,,K
-[WARN] [1783778352.478747881] [base_driver_node]: Ignoring short feedback packet: FB,86003,1809691000,0,0,0.0002,0.0019,01,.25,0141.661.,,K
-[WARN] [1783778352.528955229] [base_driver_node]: Ignoring short feedback packet: FB,86005,1809733000,0,0,-0.05-.03-.04033,.721.421.,,K
-[WARN] [1783778352.583717580] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '-0.001-.03-.04': FB,86007,1809775000,0,0,-0.001-.03-.04,.35018,107,200OFB,86008,1809796000,0,0,0.0014,0.0008,0.0002,0.3329,0.1868,11.0099,12.0,0,OK
-[WARN] [1783778352.609026915] [base_driver_node]: Ignoring short feedback packet: FB,86009,1809817000,0,0,0.000,00,.06030,.631.541.,,K
-[WARN] [1783778352.667787204] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '0.005.09000': FB,86011,1809859000,0,0,0.005.09000,.23015,101,200OFB,86012,1809880000,0,0,0.0006,0.0003,-0.0004,0.3425,0.1677,11.0698,12.0,0,OK
-[WARN] [1783778352.730097719] [base_driver_node]: Ignoring invalid feedback packet: invalid literal for int() with base 10: '': FB,86013,1809901000,0,,000,.03-.04031011,107,200OF,61,89200000001400,000,.39019,106,200O
-[WARN] [1783778352.732087809] [base_driver_node]: Feedback sequence jump: expected 85964, got 86015
-[WARN] [1783778352.759077913] [base_driver_node]: Ignoring short feedback packet: FB,86016,1809964000,0,0,0.0,000,.06033,.591.421.,,O
-[WARN] [1783778352.798728323] [base_driver_node]: Ignoring short feedback packet: FB,86018,1810006000,0,0,0.0013,00007-.09032,.721.461.,,K
-[WARN] [1783778352.839494956] [base_driver_node]: Ignoring short feedback packet: FB,86020,18100480000000,000,.000.32,.631.621.,,K
-[WARN] [1783778352.859053083] [base_driver_node]: Ignoring short feedback packet: FB,86021,1810069000,0,0,000000,.02038,.631.681.,,K
-[WARN] [1783778352.879176367] [base_driver_node]: Feedback sequence jump: expected 86016, got 86022
-[WARN] [1783778353.863026700] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '0.000FB': FB,86068,1811056000,0,0,0.0001,-0.0011,0.000FB,86069,1811077000,0,0,0.0006,0.0008,-0.0009,0.3329,0.1808,11.0710,12.0,0,OK
-[ERROR] [1783778353.889382069] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778353.891281879] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[ERROR] [1783778353.908852545] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778354.898408917] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[ERROR] [1783778354.919176672] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778355.908368334] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[ERROR] [1783778355.919130514] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778356.908441458] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778356.929136561] [base_driver_node]: Ignoring short feedback packet: FB,86215,1814144000,0,0,-00000000,.02039,.761.661.,,K
-[WARN] [1783778356.969229485] [base_driver_node]: Ignoring short feedback packet: FB,86217,1814180000001,005-.09030,.721.291.,,K
-[WARN] [1783778357.008895921] [base_driver_node]: Ignoring short feedback packet: FB,86219,1814227000,0,0000,001,.04036,.941.091.,,K
-[WARN] [1783778357.048636596] [base_driver_node]: Ignoring unknown STM32 packet: 00O
-[WARN] [1783778357.049612816] [base_driver_node]: Ignoring unknown STM32 packet: .,0,K
-[WARN] [1783778357.098940409] [base_driver_node]: Ignoring short feedback packet: FB,86223,1814312000,0,0,00005000,.02027,.741.681.,,K
-[ERROR] [1783778357.139051720] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778357.918573823] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778357.950707650] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '0.06-.08000': FB,86263,1815152000,0,0,0.06-.08000,.12015,103,200OFB,86264,1815172000,0,0,0.0006,-0.0001,0.0000,0.3078,0.1449,11.0339,12.0,0,OK
-[WARN] [1783778357.992719455] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,86265,1815194000,0,0,0001000,000,.27015,094,200OFB,86266,1815214000,0,0,0.0002,0.0003,-0.0004,0.3149,0.1916,11.0674,12.0,0,OK
-[WARN] [1783778358.019060445] [base_driver_node]: Ignoring short feedback packet: FB,86267,1815235000,0,0,0.00000,.00031,.671.211.,,K
-[WARN] [1783778358.076854951] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '-0.0-.04000': FB,86269,1815277000,0,0,-0.0-.04000,.13016,108,200OFB,86270,1815298000,0,0,0.0003,0.0011,-0.0009,0.3209,0.1700,11.0398,12.0,0,OK
-[WARN] [1783778358.098757997] [base_driver_node]: Ignoring short feedback packet: FB,86271,1815319000,0,0,0.0006,0.00,.02032,.701.331.,,K
-[ERROR] [1783778358.119217259] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778358.918746542] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778358.939310899] [base_driver_node]: Ignoring short feedback packet: FB,86311,1816159000,0,0,-0.011-.08-.02034,.001.621.,,K
-[WARN] [1783778358.998943399] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,86313,1816201000,0,0,0005001,001,.27015,101,200OFB,86314,1816222000,0,0,-0.002-.01-.05036,.591.501.,,K
-[WARN] [1783778359.061562388] [base_driver_node]: Ignoring invalid feedback packet: invalid literal for int() with base 10: '00-.01-.01001': FB,86316,181626400,00-.01-.01001,.45018,109,200OFB,86317,1816285000,0,0,0.0005,0.0004,-0.0002,0.3090,0.1796,11.0171,12.0,0,OK
-[WARN] [1783778359.104156604] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '.03-.080.39014': FB,86318,1816306000,0,0,0.00,.03-.080.39014,103,200OFB,86319,1816327000,0,0,-0.0003,-0.0009,-0.0002,0.3042,0.1856,11.0746,12.0,0,OK
-[WARN] [1783778359.146029345] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,86320,1816348000,0,0,-0.00,001,000,.06018,103,200OFB,86321,1816369000,0,0,0.0009,-0.0007,-0.0009,0.3161,0.1736,11.0458,12.0,0,OK
-[ERROR] [1783778359.168981610] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778359.930851644] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[ERROR] [1783778359.968843118] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778360.938867550] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778360.949119884] [base_driver_node]: Ignoring short feedback packet: FB,86407,1818175000,0,0,0.0007,0.003-.050,.781.331.,,K
-[WARN] [1783778360.999657671] [base_driver_node]: Ignoring short feedback packet: FB,86409,1818218000,0,000000,000,0.31,.431.461.,,K
-[WARN] [1783778361.039024236] [base_driver_node]: Ignoring short feedback packet: FB,86411,1818260000,0,0,-0.0005,.00,000,.13018,100,200OK
-[WARN] [1783778361.078844401] [base_driver_node]: Ignoring short feedback packet: FB,86413,1818301000,0,0,009008-.04031,.961.441.,,K
-[WARN] [1783778361.137530428] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '-0.005-.05-.01036': FB,86415,1818343000,0,0,-0.005-.05-.01036,.741.211.00OFB,86416,1818364000,0,0,-0.0003,-0.0009,-0.0004,0.3245,0.1772,11.0291,12.0,0,OK
-[WARN] [1783778361.159397264] [base_driver_node]: Ignoring short feedback packet: FB,86417,1818385000,0,0,0.01,09-.01036,.681.251.,,K
-[WARN] [1783778361.199933200] [base_driver_node]: Ignoring unknown STM32 packet: ,4911470,,,.09000,.02038,.631.211.,,K
-[ERROR] [1783778361.228836095] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778361.948336110] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[ERROR] [1783778361.959187342] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778362.948613541] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778362.982715963] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,86503,1820191000,0,0,0.0007,.00,000,.16010,107,200OFB,86504,1820212000,0,0,-0.0006,0.0005,-0.0006,0.3281,0.1461,11.0853,12.0,0,OK
-[WARN] [1783778363.009042110] [base_driver_node]: Ignoring short feedback packet: FB,86505,1820233000,0,0000,.04-01030,.701.401.,,K
-[WARN] [1783778363.048677878] [base_driver_node]: Ignoring short feedback packet: FB,86507,1820275000,0,0,0.0007,-0.008-.04032,.881.291.,,K
-[WARN] [1783778363.108359320] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,86509,1820317000,0,0,0.00,.03000,.13015,104,200OFB,86510,1820338000,0,0,-0.0005,-0.0012,0.0002,0.3377,0.1796,11.0865,12.0,0,OK
-[WARN] [1783778363.158716908] [base_driver_node]: Ignoring short feedback packet: FB,86512,1820381000,0,0,0.00070.03-.005037,.721.331.,,K
-[WARN] [1783778363.178965696] [base_driver_node]: Ignoring short feedback packet: FB,86513,1820401000,0,0,00,.03-.06037,.721.401.,,K
-[WARN] [1783778363.218731725] [base_driver_node]: Ignoring short feedback packet: FB,86515,1820444000,0,0,0.0007,-.00,.04033,.821.211.,,K
-[WARN] [1783778363.275651938] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,86517,1820485000,0,0,.1000,000,.17017,101,200OFB,86518,1820506000,0,0,0.0002,0.0011,0.0000,0.3305,0.1748,10.9979,12.0,0,OK
-[WARN] [1783778363.300410595] [base_driver_node]: Ignoring short feedback packet: FB,86519,1820527000,0,0,0.000,.0-.02031,.721.211.,,K
-[WARN] [1783778363.318890615] [base_driver_node]: Feedback sequence jump: expected 86068, got 86520
-[ERROR] [1783778364.178885386] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778364.188663617] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778364.199381437] [base_driver_node]: Ignoring short feedback packet: FB,86562,1821430000,0,0,0.00-.03-.06030,.701.501.,,K
-[WARN] [1783778364.248899193] [base_driver_node]: Ignoring short feedback packet: FB,86564,1821473000,0,0,-0.009-0.01,.03030,.671.521.,,K
-[WARN] [1783778364.302844261] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '.02-.060337016': FB,86566,1821514000,0,0,000,.02-.060337016,106,200OFB,86567,1821535000,0,0,0.0011,-0.0012,0.0000,0.3197,0.1856,11.0650,12.0,0,OK
-[WARN] [1783778364.348782071] [base_driver_node]: Ignoring short feedback packet: FB,86569,1821577000,0,0,0.007,.04-.09034,.671.441.,,K
-[WARN] [1783778364.389007475] [base_driver_node]: Ignoring short feedback packet: FB,86571,1821619000,0,0,0.0011.06-.04032,.761.641.,,K
-[WARN] [1783778364.409323541] [base_driver_node]: Feedback sequence jump: expected 86561, got 86572
-[WARN] [1783778365.246648495] [base_driver_node]: Ignoring invalid feedback packet: invalid literal for int() with base 10: '-.05-.04000': FB,86611,1822459000,0,-.05-.04000,.39010,109,200OFB,86612,1822480000,0,0,-0.0011,0.0001,-0.0010,0.3293,0.1904,11.0386,12.0,0,OK
-[WARN] [1783778365.288970577] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,86613,1822501000,0,0,0.07001,000,.21010,102,200OFB,86614,1822522000,0,0,0.0007,0.0007,-0.0012,0.3305,0.1832,11.0195,12.0,0,OK
-[WARN] [1783778365.352481498] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '-0.0009-000': FB,86616,1822565000,0,0,-0.0009-000,.03033016,1.03,200OFB,86617,1822585000,0,0,0.0005,-0.0007,0.0003,0.3401,0.1617,11.0231,12.0,0,OK
-[WARN] [1783778365.378854307] [base_driver_node]: Ignoring short feedback packet: FB,86618,1822606000,0,0,0.0002,.6-.05036,.841.461.,,K
-[WARN] [1783778365.435288041] [base_driver_node]: Ignoring invalid feedback packet: invalid literal for int() with base 10: '18226480000-.02-.05000': FB,86620,18226480000-.02-.05000,.06011,100,200OFB,86621,1822669000,0,0,0.0001,-0.0016,-0.0005,0.3389,0.1581,11.0327,12.0,0,OK
-[WARN] [1783778365.458862935] [base_driver_node]: Ignoring short feedback packet: FB,86622,1822690000,0,0,0.0007,0.0000,38,.351.581.,,K
-[WARN] [1783778365.479964920] [base_driver_node]: Feedback sequence jump: expected 86610, got 86623
-[WARN] [1783778366.211038659] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,86657,1823425000,0,0,0.0001,0.0009,000,.15014,105,200OFB,86658,1823447000,0,0,0.0002,-0.0005,0.0008,0.3126,0.1712,11.0195,12.0,0,OK
-[WARN] [1783778366.239112753] [base_driver_node]: Ignoring short feedback packet: FB,86659,1823467000,0,0,-.6001,.00037,.821.391.,,K
-[WARN] [1783778366.279464764] [base_driver_node]: Feedback sequence jump: expected 86657, got 86661
-[WARN] [1783778366.298834664] [base_driver_node]: Ignoring short feedback packet: FB,86662,1823530000,0,0,-0.00,000,.03037,.671.381.,,K
-[WARN] [1783778366.339053044] [base_driver_node]: Ignoring short feedback packet: FB,86664,182357200,,,000,000,.04031,.691.4101.,,K
-[WARN] [1783778366.358792672] [base_driver_node]: Feedback sequence jump: expected 86662, got 86665
-[ERROR] [1783778367.179207577] [base_driver_node]: Serial read failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
-[INFO] [1783778367.188761210] [base_driver_node]: Connected to STM32 on /dev/ttyAMA0
-[WARN] [1783778367.198746331] [base_driver_node]: Ignoring short feedback packet: FB,86705,1824433000,0,0,0.0005,0.0003,.005,34,.961.371.,,K
-[WARN] [1783778367.258439904] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '.1801.951.': FB,86707,1824475000,0,0,0.0002,-0.0007,-0.0005,0.3209,.1801.951.,,KFB,86708,1824496000,0,0,0.0006,0.0015,-0.0005,0.3126,0.1665,11.0710,12.0,0,OK
-[WARN] [1783778367.290867417] [base_driver_node]: Ignoring short feedback packet: FB,86709,1824518000,00,0.010,.00,000,.3901821.371.,,K
-[WARN] [1783778367.308971944] [base_driver_node]: Feedback sequence jump: expected 86704, got 86710
-[WARN] [1783778368.201979659] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '-0FB': FB,86752,1825420000,0,0,0.0002,0.0005,-0FB,86753,1825441000,0,0,-0.0006,-0.0009,0.0000,0.3173,0.1784,11.0542,12.0,0,OK
-[WARN] [1783778368.229046863] [base_driver_node]: Ignoring short feedback packet: FB,86754,1825462000,0,,.01-.01-.05036,.631.51.,,K
-[WARN] [1783778368.286204467] [base_driver_node]: Ignoring invalid feedback packet: could not convert string to float: '200O\rFB': FB,86756,1825504000,0,0,0.0010,0.0007000,.27016,105,200OFB,86757,1825525000,0,0,-0.0002,0.0000,-0.0005,0.3090,0.1772,11.0255,12.0,0,OK
-[WARN] [1783778368.308823619] [base_driver_node]: Ignoring short feedback packet: FB,86758,1825546000,0,0,-0.0006,-.09-.01039,.721.361.,,K
-[WARN] [1783778368.329685984] [base_driver_node]: Feedback sequence jump: expected 86752, got 86759
