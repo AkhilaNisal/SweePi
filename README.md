@@ -3,7 +3,7 @@
 ### Intelligent ROS 2 Powered Indoor Cleaning Robot with Smart Coverage Navigation
 
 <p align="center">
-  <img src="Media/SweePi.jpg" alt="SweePi Robot" width="900">
+  <img src="Media/SweePi.jpeg" alt="SweePi Robot" width="500">
 </p>
 
 <p align="center">
@@ -96,7 +96,7 @@ Alternatively, download the original demonstration video:
 ## Final Robot
 
 <p align="center">
-<img src="Media/SweePi.jpg" width="850">
+<img src="Media/SweePi.jpeg" width="60">
 </p>
 
 ---
@@ -445,7 +445,7 @@ The Flutter mobile application supports
 # 👥 Team Nexora
 
 <p align="center">
-<img src="Media/Team_Nexora.jpeg" width="900">
+<img src="Media/Team_Nexora.jpeg" width="500">
 </p>
 
 | Name |
