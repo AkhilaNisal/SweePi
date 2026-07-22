@@ -3,7 +3,7 @@
 ### Intelligent ROS 2 Powered Indoor Cleaning Robot with Smart Coverage Navigation
 
 <p align="center">
-  <img src="Media/SweePi.jpeg" alt="SweePi Robot" width="500">
+  <img src="Media/SweePi.jpeg" alt="SweePi Robot" width="300">
 </p>
 
 <p align="center">
@@ -96,15 +96,15 @@ Alternatively, download the original demonstration video:
 ## Final Robot
 
 <p align="center">
-<img src="Media/SweePi.jpeg" width="60">
+<img src="Media/SweePi.jpeg" width="300">
 </p>
 
 ---
 
-## Custom STM32 PCB
+## Custom PCB
 
 <p align="center">
-<img src="Media/PCB.jpeg" width="850">
+<img src="Media/PCB.jpeg" width="500">
 </p>
 
 Custom PCB Features
